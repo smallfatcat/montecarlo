@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react'
 import { LayoutGroup, motion, AnimatePresence } from 'framer-motion'
 import type { Card, RoundOutcome } from '../blackjack'
 import { evaluateHand } from '../blackjack'
+// Table engine imports are present for the next iteration where Table UI will be swapped to multi-seat
 import { suggestAction } from '../blackjack/strategy'
 import { Card3D } from './components/Card3D'
 import { createShoe, shuffleInPlace } from '../blackjack/deck'
 
+// Temporary bridge: render table UI driven from existing single-seat flow for player; upgrade gradually to full TableState
 export function Table({ state, available, canSplit, deal, finalize, hit, stand, double, surrender, split, insure, noInsure, newShoe, resetBankroll }: any) {
   const [bet, setBet] = useState(10)
   const [decks, setDecks] = useState(6)
