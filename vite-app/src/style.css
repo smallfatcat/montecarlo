@@ -84,6 +84,7 @@ h1 {
 .hand { border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1rem; background: rgba(0,0,0,0.25); min-height: 340px; }
 .hand-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.5rem; }
 .seat-bankroll { margin-left: 0.5rem; }
+.casino-bank { margin-left: auto; margin-right: 0.5rem; opacity: 0.85; font-weight: 600; }
 .hand-total { font-weight: 700; color: var(--text); opacity: 0.9; margin-left: auto; margin-right: 0.5rem; }
 .hand-total.is-soft { color: #58d0c5; }
 .hand-total.is-bj { color: #ffd54f; }

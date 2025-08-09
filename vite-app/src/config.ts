@@ -10,6 +10,7 @@ export const CONFIG = {
   },
   bankroll: {
     initialPerSeat: 100,
+    casinoInitial: 10000,
   },
   bets: {
     defaultPerSeat: 10,
@@ -23,6 +24,9 @@ export const CONFIG = {
   layout: {
     appMaxWidthPx: 1280,
     handsColumns: 3,
+  },
+  simulation: {
+    handsPerRun: 10000,
   },
 } as const
 

@@ -11,6 +11,8 @@ export function TableMulti() {
     table,
     bankrolls,
     setBankrolls,
+    casinoBank,
+    setCasinoBank,
     numPlayers,
     setPlayers,
     betsBySeat,
@@ -33,6 +35,7 @@ export function TableMulti() {
 
   const [bet, setBet] = useState<number>(CONFIG.bets.defaultPerSeat)
   const [decks, setDecks] = useState(deckCount)
+  const [handsPerRun, setHandsPerRun] = useState<number>(CONFIG.simulation.handsPerRun)
 
   const seats = table.seats
   const activeSeat = table.activeSeatIndex
@@ -48,10 +51,28 @@ export function TableMulti() {
         <span className="sep" />
         <label htmlFor="decks-input">Shoe decks: <input id="decks-input" type="number" value={decks} min={1} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDecks(parseInt(e.target.value || '1') as number)} /></label>
         <button id="new-shoe-button" onClick={() => newShoe(decks)}>New Shoe</button>
+        <label htmlFor="hands-input">Hands to simulate: <input id="hands-input" type="number" value={handsPerRun} min={1} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHandsPerRun(Math.max(1, Math.floor(parseInt(e.target.value || '1'))))} /></label>
         <button id="reset-bankroll-button" onClick={() => setBankrolls(bankrolls.map(() => CONFIG.bankroll.initialPerSeat))}>Reset Bankrolls</button>
         <span className="cards-left" id="cards-left">Cards left: {table.deck?.length ?? 0}</span>
         <span className="sep" />
         <button id="log-history-button" onClick={() => console.log('Table histories', histories)}>Log History</button>
+        <span className="sep" />
+        <button id="simulate-button" onClick={() => {
+          import('../blackjack/simulate').then(({ simulateSession }) => {
+            const result = simulateSession({
+              numHands: handsPerRun,
+              numPlayers,
+              deckCount: deckCount,
+              reshuffleCutoffRatio: 0.2,
+              initialBankrolls: bankrolls,
+              casinoInitial: casinoBank,
+              betsBySeat,
+            })
+            setBankrolls(result.finalBankrolls)
+            setCasinoBank(result.finalCasinoBank)
+            console.log('Simulation result', result)
+          })
+        }}>Simulate</button>
       </div>
 
       <div className="actions">
@@ -69,6 +90,7 @@ export function TableMulti() {
           <div className="hand" id="dealer-hand">
             <div className="hand-header" id="dealer-hand-header">
               <h2 id="dealer-title">Dealer</h2>
+              <span className="casino-bank" id="casino-bank">Casino Bank: ${casinoBank}</span>
               <span id="dealer-total" className={`hand-total ${revealed && dealerEval.isBust ? 'is-bust' : revealed && dealerEval.isBlackjack ? 'is-bj' : ''}`}>{revealed ? handTotalLabel(dealerEval) : ''}</span>
             </div>
             <div className="cards" id="dealer-cards">

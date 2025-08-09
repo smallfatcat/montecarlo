@@ -12,6 +12,7 @@ export function useTableGame() {
   const [shoe, setShoe] = useState<Card[] | undefined>(undefined)
   const [table, setTable] = useState<TableState>(() => createInitialTable(3, [1, 2]))
   const [bankrolls, setBankrolls] = useState<number[]>([CONFIG.bankroll.initialPerSeat, CONFIG.bankroll.initialPerSeat, CONFIG.bankroll.initialPerSeat])
+  const [casinoBank, setCasinoBank] = useState<number>(CONFIG.bankroll.casinoInitial)
   const [numPlayers, setNumPlayers] = useState<number>(3)
   const [autoPlay, setAutoPlay] = useState<boolean>(false)
   const [lastBet, setLastBet] = useState<number>(CONFIG.bets.defaultPerSeat)
@@ -253,6 +254,9 @@ export function useTableGame() {
       }
       return copy
     })
+    // Update casino bank as the counterparty to all player seat deltas
+    const totalDelta = deltas.reduce((a, b) => a + b, 0)
+    if (totalDelta !== 0) setCasinoBank((c) => c - totalDelta)
     setSettledRoundId(roundId)
   }, [table.status])
 
@@ -289,6 +293,8 @@ export function useTableGame() {
     table,
     bankrolls,
     setBankrolls,
+    casinoBank,
+    setCasinoBank,
     betsBySeat,
     setBetsBySeat,
     numPlayers,
