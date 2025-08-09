@@ -1,4 +1,5 @@
 import { createShoe, shuffleInPlace } from './deck'
+import { CONFIG } from '../config'
 import type { Card } from './types'
 import type { TableState } from './table'
 import { createInitialTable, startTableRound, getSeatAvailableActions, getActiveSeat, seatHit, seatStand, seatDouble, seatSplit } from './table'
@@ -85,8 +86,8 @@ export function simulateSession(opts: SimulationOptions): SimulationResult {
         seat.outcomes.forEach((o, hi) => {
           const bet = seat.betsByHand[hi] ?? betVector[i]
           switch (o) {
-            case 'player_blackjack':
-              d += bet * 1.5
+          case 'player_blackjack':
+            d += bet * CONFIG.rules.blackjackPayout
               break
             case 'player_win':
             case 'dealer_bust':

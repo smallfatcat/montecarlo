@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import type { Card } from '../types'
 import { suggestAction, type SuggestedAction } from '../strategy'
+import { CONFIG } from '../../config'
 
 const C = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit })
 
@@ -44,20 +45,39 @@ describe('strategy: pairs', () => {
 })
 
 describe('strategy: soft totals', () => {
+  const rulesBackup = JSON.parse(JSON.stringify(CONFIG.rules))
+  afterEach(() => {
+    Object.assign(CONFIG.rules, rulesBackup)
+  })
+
   it('soft 18 (A,7): stand vs 2, 7-8; double vs 3-6 (if allowed); hit vs 9,A', () => {
     // stand vs 2
     expect(suggestAction({ hand: [C('A','Spades'), C('7','Hearts')], dealerUp: C('2','Clubs'), available: avail(['hit','stand','double']), canSplit: false })).toBe('stand')
     // double vs 3-6
     expect(suggestAction({ hand: [C('A','Spades'), C('7','Hearts')], dealerUp: C('3','Clubs'), available: avail(['hit','stand','double']), canSplit: false })).toBe('double')
     expect(suggestAction({ hand: [C('A','Spades'), C('7','Hearts')], dealerUp: C('6','Clubs'), available: avail(['hit','stand','double']), canSplit: false })).toBe('double')
-    // no double available -> current implementation falls back to 'hit'
-    expect(suggestAction({ hand: [C('A','Spades'), C('7','Hearts')], dealerUp: C('3','Clubs'), available: avail(['hit','stand']), canSplit: false })).toBe('hit')
+    // no double available -> strategy falls back to 'stand' vs small upcards
+    expect(suggestAction({ hand: [C('A','Spades'), C('7','Hearts')], dealerUp: C('3','Clubs'), available: avail(['hit','stand']), canSplit: false })).toBe('stand')
     // stand vs 7-8
     expect(suggestAction({ hand: [C('A','Spades'), C('7','Hearts')], dealerUp: C('7','Clubs'), available: avail(['hit','stand']), canSplit: false })).toBe('stand')
     expect(suggestAction({ hand: [C('A','Spades'), C('7','Hearts')], dealerUp: C('8','Clubs'), available: avail(['hit','stand']), canSplit: false })).toBe('stand')
     // hit vs 9 or Ace
     expect(suggestAction({ hand: [C('A','Spades'), C('7','Hearts')], dealerUp: C('9','Clubs'), available: avail(['hit','stand']), canSplit: false })).toBe('hit')
     expect(suggestAction({ hand: [C('A','Spades'), C('7','Hearts')], dealerUp: C('A','Clubs'), available: avail(['hit','stand']), canSplit: false })).toBe('hit')
+  })
+
+  it('soft 18 (A,7) under H17: double vs 2 when allowed, otherwise stand', () => {
+    Object.assign(CONFIG.rules, { dealerHitsSoft17: true })
+    // double vs 2 when allowed
+    expect(suggestAction({ hand: [C('A','Spades'), C('7','Hearts')], dealerUp: C('2','Clubs'), available: avail(['hit','stand','double']), canSplit: false })).toBe('double')
+    // fallback to stand when double unavailable
+    expect(suggestAction({ hand: [C('A','Spades'), C('7','Hearts')], dealerUp: C('2','Clubs'), available: avail(['hit','stand']), canSplit: false })).toBe('stand')
+  })
+
+  it('soft 19 (A,8) under H17: double vs 6 when allowed; otherwise stand', () => {
+    Object.assign(CONFIG.rules, { dealerHitsSoft17: true })
+    expect(suggestAction({ hand: [C('A','Spades'), C('8','Hearts')], dealerUp: C('6','Clubs'), available: avail(['hit','stand','double']), canSplit: false })).toBe('double')
+    expect(suggestAction({ hand: [C('A','Spades'), C('8','Hearts')], dealerUp: C('6','Clubs'), available: avail(['hit','stand']), canSplit: false })).toBe('stand')
   })
 })
 
@@ -89,9 +109,21 @@ describe('strategy: hard totals', () => {
 })
 
 describe('strategy: availability fallbacks', () => {
+  const rulesBackup2 = JSON.parse(JSON.stringify(CONFIG.rules))
+  afterEach(() => { Object.assign(CONFIG.rules, rulesBackup2) })
   it('suggest split falls back to hit if split not available (canSplit=true but no split in availability)', () => {
     const action = suggestAction({ hand: [C('8','Spades'), C('8','Hearts')], dealerUp: C('6','Clubs'), available: avail(['hit','stand']), canSplit: true })
     expect(action).toBe('hit')
+  })
+
+  it('suggest split respects allowSplitRanks rule', () => {
+    Object.assign(CONFIG.rules, { allowSplitRanks: ['A'] })
+    const action = suggestAction({ hand: [C('8','Spades'), C('8','Hearts')], dealerUp: C('6','Clubs'), available: avail(['hit','stand','split']), canSplit: true })
+    expect(action).toBe('hit')
+    // Allow 8s now
+    Object.assign(CONFIG.rules, { allowSplitRanks: ['A','8'] })
+    const action2 = suggestAction({ hand: [C('8','Spades'), C('8','Hearts')], dealerUp: C('6','Clubs'), available: avail(['hit','stand','split']), canSplit: true })
+    expect(action2).toBe('split')
   })
 })
 

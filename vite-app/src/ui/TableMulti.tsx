@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { LayoutGroup, motion, AnimatePresence } from 'framer-motion'
 import { useTableGame } from './useTableGame'
 import { evaluateHand } from '../blackjack'
@@ -31,11 +31,14 @@ export function TableMulti() {
     setAutoPlay,
     suggested,
     histories,
+    updateRules,
   } = useTableGame()
 
   const [bet, setBet] = useState<number>(CONFIG.bets.defaultPerSeat)
   const [decks, setDecks] = useState(deckCount)
   const [handsPerRun, setHandsPerRun] = useState<number>(CONFIG.simulation.handsPerRun)
+  const [simProgress, setSimProgress] = useState<{done: number; total: number} | null>(null)
+  const workerRef = useRef<Worker | null>(null)
 
   const seats = table.seats
   const activeSeat = table.activeSeatIndex
@@ -47,7 +50,6 @@ export function TableMulti() {
         <div className="bankroll" id="player-bankroll">Bankroll: ${bankrolls[0] ?? 0}</div>
         <label htmlFor="bet-input">Bet: $ <input id="bet-input" type="number" value={bet} min={1} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBet(parseInt(e.target.value || '0'))} /></label>
         <label htmlFor="players-input">Players: <input id="players-input" type="number" value={numPlayers} min={1} max={5} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlayers(parseInt(e.target.value || '1'))} disabled={!(table.status === 'idle' || table.status === 'round_over')} /></label>
-        <button id="deal-button" onClick={() => deal(bet)} disabled={!(table.status === 'idle' || table.status === 'round_over')}>Deal</button>
         <span className="sep" />
         <label htmlFor="decks-input">Shoe decks: <input id="decks-input" type="number" value={decks} min={1} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDecks(parseInt(e.target.value || '1') as number)} /></label>
         <button id="new-shoe-button" onClick={() => newShoe(decks)}>New Shoe</button>
@@ -58,24 +60,53 @@ export function TableMulti() {
         <button id="log-history-button" onClick={() => console.log('Table histories', histories)}>Log History</button>
         <span className="sep" />
         <button id="simulate-button" onClick={() => {
-          import('../blackjack/simulate').then(({ simulateSession }) => {
-            const result = simulateSession({
+          if (workerRef.current) {
+            workerRef.current.terminate()
+            workerRef.current = null
+          }
+          setSimProgress({ done: 0, total: handsPerRun })
+          const worker = new Worker(new URL('../workers/simWorker.ts', import.meta.url), { type: 'module' })
+          workerRef.current = worker
+          worker.onmessage = (e: MessageEvent) => {
+            const data = e.data as any
+            if (data?.type === 'progress') {
+              setSimProgress({ done: data.completed, total: data.total })
+            } else if (data?.type === 'done') {
+              setSimProgress(null)
+              setBankrolls(data.result.finalBankrolls)
+              setCasinoBank(data.result.finalCasinoBank)
+              workerRef.current?.terminate()
+              workerRef.current = null
+            } else if (data?.type === 'error') {
+              console.error('Simulation error', data.error)
+              setSimProgress(null)
+              workerRef.current?.terminate()
+              workerRef.current = null
+            }
+          }
+          worker.postMessage({
+            type: 'run',
+            options: {
               numHands: handsPerRun,
               numPlayers,
-              deckCount: deckCount,
+              deckCount,
               reshuffleCutoffRatio: 0.2,
               initialBankrolls: bankrolls,
               casinoInitial: casinoBank,
               betsBySeat,
-            })
-            setBankrolls(result.finalBankrolls)
-            setCasinoBank(result.finalCasinoBank)
-            console.log('Simulation result', result)
+              rules: CONFIG.rules,
+            }
           })
         }}>Simulate</button>
+        {simProgress ? (
+          <span id="sim-progress" style={{ marginLeft: 8, opacity: 0.9 }}>
+            Running {simProgress.done}/{simProgress.total}
+          </span>
+        ) : null}
       </div>
 
       <div className="actions">
+        <button id="deal-button" onClick={() => deal(bet)} disabled={!(table.status === 'idle' || table.status === 'round_over')}>Deal</button>
         <button onClick={hit} disabled={!(table.status === 'seat_turn' && activeSeat === 0 && available.includes('hit'))}>Hit</button>
         <button onClick={stand} disabled={!(table.status === 'seat_turn' && activeSeat === 0 && available.includes('stand'))}>Stand</button>
         <button onClick={double} disabled={!(table.status === 'seat_turn' && activeSeat === 0 && available.includes('double'))}>Double</button>
@@ -84,6 +115,42 @@ export function TableMulti() {
           <input type="checkbox" checked={autoPlay} onChange={(e) => setAutoPlay(e.target.checked)} /> Auto play
         </label>
       </div>
+
+      <details style={{ margin: '8px 0 16px' }}>
+        <summary>Rules</summary>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+          <label title="Dealer hits soft 17">
+            <input type="checkbox" onChange={(e) => updateRules({ dealerHitsSoft17: e.target.checked })} /> H17 (dealer hits soft 17)
+          </label>
+          <label title="Blackjack payout multiplier">
+            BJ Payout:
+            <select defaultValue={String(CONFIG.rules.blackjackPayout)} onChange={(e) => updateRules({ blackjackPayout: Number(e.target.value) })}>
+              <option value="1.5">3:2</option>
+              <option value="1.2">6:5</option>
+              <option value="1.0">1:1</option>
+            </select>
+          </label>
+          <label title="Restrict double to totals; leave blank for any">
+            Double totals (csv):
+            <input style={{ width: 120 }} placeholder="10,11" onBlur={(e) => {
+              const vals = e.target.value.trim()
+              const totals = vals ? vals.split(',').map(s => Number(s.trim())).filter(n => Number.isFinite(n)) : []
+              updateRules({ doubleTotals: totals })
+            }} />
+          </label>
+          <label title="Double after split allowed">
+            <input type="checkbox" defaultChecked={CONFIG.rules.doubleAfterSplit} onChange={(e) => updateRules({ doubleAfterSplit: e.target.checked })} /> DAS
+          </label>
+          <label title="Restrict pair ranks (csv); blank = allow all">
+            Split ranks:
+            <input style={{ width: 140 }} placeholder="A,8" onBlur={(e) => {
+              const vals = e.target.value.trim()
+              const ranks = vals ? vals.split(',').map(s => s.trim().toUpperCase() as any).filter(Boolean) : null
+              updateRules({ allowSplitRanks: ranks })
+            }} />
+          </label>
+        </div>
+      </details>
 
       <LayoutGroup key={roundId}>
         <section className="hands" id="hands">

@@ -20,6 +20,7 @@ export function useTableGame() {
   const [roundId, setRoundId] = useState<number>(0)
   const [settledRoundId, setSettledRoundId] = useState<number>(-1)
   const timersRef = useRef<number[]>([])
+  const [rulesVersion, setRulesVersion] = useState<number>(0)
 
   // --- History for multi-seat table (debugging) ---
   type TableActionType = 'deal' | 'hit' | 'stand' | 'double' | 'split' | 'dealer_play' | 'finalize'
@@ -46,8 +47,13 @@ export function useTableGame() {
   useEffect(() => {
     const persistedPlayers = Number(localStorage.getItem('bj_numPlayers') || '3')
     const persistedBankrolls: number[] | null = (() => { try { return JSON.parse(localStorage.getItem('bj_bankrolls') || 'null') } catch { return null } })()
+    const persistedRules: Partial<typeof CONFIG.rules> | null = (() => { try { return JSON.parse(localStorage.getItem('bj_rules') || 'null') } catch { return null } })()
     if (Number.isFinite(persistedPlayers) && persistedPlayers >= 1 && persistedPlayers <= 5) setNumPlayers(persistedPlayers)
     if (Array.isArray(persistedBankrolls) && persistedBankrolls.length > 0) setBankrolls(persistedBankrolls.map((v) => (Number.isFinite(v) ? v : 100)))
+    if (persistedRules && typeof persistedRules === 'object') {
+      Object.assign(CONFIG.rules, persistedRules)
+      setRulesVersion((v) => v + 1)
+    }
     const initial = shuffleInPlace(createShoe(deckCount))
     setShoe(initial)
     const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
@@ -219,7 +225,7 @@ export function useTableGame() {
         const bet = seat.betsByHand[i] ?? lastBet
         switch (o) {
           case 'player_blackjack':
-            d += bet * 1.5
+            d += bet * CONFIG.rules.blackjackPayout
             break
           case 'player_win':
           case 'dealer_bust':
@@ -276,8 +282,11 @@ export function useTableGame() {
   useEffect(() => {
     try { localStorage.setItem('bj_bankrolls', JSON.stringify(bankrolls)) } catch {}
   }, [bankrolls])
+  useEffect(() => {
+    try { localStorage.setItem('bj_rules', JSON.stringify(CONFIG.rules)) } catch {}
+  }, [rulesVersion])
 
-  const available = useMemo(() => getSeatAvailableActions(table), [table])
+  const available = useMemo(() => getSeatAvailableActions(table), [table, rulesVersion])
   const dealerEval = useMemo(() => evaluateHand(table.dealerHand), [table.dealerHand])
   const suggested = useMemo(() => {
     if (table.status !== 'seat_turn' || table.activeSeatIndex !== 0) return null
@@ -287,7 +296,12 @@ export function useTableGame() {
     const available = new Set(getSeatAvailableActions(table)) as Set<SuggestedAction | 'surrender'>
     const canSplit = available.has('split') && seat.hands.length === 1 && hand.length === 2 && hand[0].rank === hand[1].rank
     return suggestAction({ hand, dealerUp: table.dealerHand[0], available, canSplit })
-  }, [table, lastBet])
+  }, [table, lastBet, rulesVersion])
+
+  const updateRules = (partial: Partial<typeof CONFIG.rules>) => {
+    Object.assign(CONFIG.rules, partial)
+    setRulesVersion((v) => v + 1)
+  }
 
   return {
     table,
@@ -313,6 +327,8 @@ export function useTableGame() {
     setAutoPlay,
     suggested,
     histories,
+    rulesVersion,
+    updateRules,
   }
 }
 

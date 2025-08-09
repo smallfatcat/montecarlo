@@ -97,6 +97,10 @@ h1 {
 
 .cards { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; min-height: 300px; }
 
+/* Flat view helpers */
+#table-flat .hand-row { position: relative; }
+#table-flat .hand-row > div { will-change: transform; }
+
 .hand-line {
   margin: 0.25rem 0;
 }
@@ -199,3 +203,13 @@ input, select {
   padding: 0.45rem 0.6rem;
 }
 input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Ensure dropdown menus are readable on dark theme */
+select option, select optgroup {
+  background-color: #155d47; /* match felt tone */
+  color: var(--text);
+}
+select option:checked, select option:hover {
+  background-color: #0f3d2e;
+  color: var(--text);
+}

@@ -138,11 +138,11 @@ function advanceSeatOrDealer(state: TableState): TableState {
 function dealerPlay(state: TableState): TableState {
   const deck = [...state.deck]
   const dealerHand = [...state.dealerHand]
-  // Dealer draws to 17+ standing on soft 17
+  // Dealer draws per rule (S17 default; H17 if configured)
   while (true) {
     const d = evaluateHand(dealerHand)
     const total = d.bestTotal
-    const shouldHit = total < 17
+    const shouldHit = total < 17 || (CONFIG.rules.dealerHitsSoft17 && total === 17 && d.isSoft)
     if (!shouldHit) break
     dealerHand.push(drawCard(deck))
   }
@@ -175,8 +175,16 @@ export function getSeatAvailableActions(state: TableState): ('hit'|'stand'|'doub
   const hand = seat.hands[idx]
   const actions: ('hit'|'stand'|'double'|'split')[] = ['hit','stand']
   if (hand.length === 2) {
-    actions.push('double')
-    if (hand[0].rank === hand[1].rank && seat.hands.length === 1) actions.push('split')
+    // Double restrictions
+    const hardTotal = evaluateHand(hand).hardTotal
+    const allowAnyDouble = CONFIG.rules.doubleTotals.length === 0
+    const canDoubleByTotal = allowAnyDouble || CONFIG.rules.doubleTotals.includes(hardTotal)
+    const canDoubleAfterSplit = CONFIG.rules.doubleAfterSplit || seat.hands.length === 1
+    if (canDoubleByTotal && canDoubleAfterSplit) actions.push('double')
+    // Split restrictions
+    const isTruePair = hand[0].rank === hand[1].rank
+    const allowSplitByRank = !CONFIG.rules.allowSplitRanks || CONFIG.rules.allowSplitRanks.includes(hand[0].rank as any)
+    if (isTruePair && seat.hands.length === 1 && allowSplitByRank) actions.push('split')
   }
   return actions
 }

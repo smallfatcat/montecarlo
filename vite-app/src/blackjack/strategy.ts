@@ -1,5 +1,6 @@
 import { evaluateHand } from './hand'
 import type { Card } from './types'
+import { CONFIG } from '../config'
 
 export type SuggestedAction = 'hit' | 'stand' | 'double' | 'surrender' | 'split'
 
@@ -18,10 +19,11 @@ export function suggestAction(params: SuggestParams): SuggestedAction | null {
   const up = upcardValue(dealerUp)
   const v = evaluateHand(hand)
 
-  // Pair strategy
+  // Pair strategy (respect rule-based split availability)
   if (hand.length === 2 && hand[0].rank === hand[1].rank && canSplit) {
     const r = hand[0].rank
     const pair = r === '10' || r === 'J' || r === 'Q' || r === 'K' ? 'T' : r
+    const rankAllowed = !CONFIG.rules.allowSplitRanks || CONFIG.rules.allowSplitRanks.includes(r as any)
     const decidePair = (rank: string): SuggestedAction => {
       switch (rank) {
         case 'A': return 'split'
@@ -39,7 +41,11 @@ export function suggestAction(params: SuggestParams): SuggestedAction | null {
       }
     }
     const choice = decidePair(pair)
-    if (choice === 'split') return available.has('split') ? 'split' : (available.has('hit') ? 'hit' : 'stand')
+    if (choice === 'split') {
+      if (available.has('split') && rankAllowed) return 'split'
+      // fallback if split disabled by rules/availability
+      return fallbackToAvailable('split', available)
+    }
     if (choice === 'double' && available.has('double')) return 'double'
     return fallbackToAvailable(choice, available)
   }
@@ -48,12 +54,35 @@ export function suggestAction(params: SuggestParams): SuggestedAction | null {
   if (v.isSoft) {
     const soft = v.bestTotal
     let choice: SuggestedAction = 'hit'
-    if (soft >= 19) choice = 'stand'
-    else if (soft === 18) choice = up <= 6 ? (up >= 3 ? 'double' : 'stand') : (up <= 8 ? 'stand' : 'hit')
+    if (soft >= 19) {
+      // H17 adjustment: double A,8 vs 6 if allowed
+      if (soft === 19 && CONFIG.rules.dealerHitsSoft17 && up === 6) {
+        choice = 'double'
+      } else {
+        choice = 'stand'
+      }
+    }
+    else if (soft === 18) {
+      // Adjust for H17: double vs dealer 2 if allowed (otherwise stand)
+      if (up <= 6) {
+        if (up === 2 && CONFIG.rules.dealerHitsSoft17) choice = 'double'
+        else if (up >= 3) choice = 'double'
+        else choice = 'stand'
+      } else {
+        choice = up <= 8 ? 'stand' : 'hit'
+      }
+    }
     else if (soft === 17) choice = up >= 3 && up <= 6 ? 'double' : 'hit'
     else if (soft === 16 || soft === 15) choice = up >= 4 && up <= 6 ? 'double' : 'hit'
     else if (soft === 14 || soft === 13) choice = up >= 5 && up <= 6 ? 'double' : 'hit'
-    if (choice === 'double' && available.has('double')) return 'double'
+    // Handle double-unavailable fallbacks for soft totals
+    if (choice === 'double') {
+      if (available.has('double')) return 'double'
+      // For soft 18 and soft 19 scenarios, fallback to stand when double is unavailable and up <= 6
+      if (soft === 18 && up <= 6) return fallbackToAvailable('stand', available)
+      if (soft === 19 && up === 6) return fallbackToAvailable('stand', available)
+      return fallbackToAvailable('hit', available)
+    }
     return fallbackToAvailable(choice, available)
   }
 
