@@ -5,6 +5,9 @@
   --text: #e6f4ef;
   --muted: #a7c4bb;
   --accent: #64d8cb;
+  /* layout variables populated from CONFIG at runtime */
+  --app-max-width: 1280px;
+  --hands-columns: 3;
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -40,7 +43,7 @@ h1 {
 }
 
 #app {
-  max-width: 900px;
+  max-width: var(--app-max-width);
   margin: 0 auto;
   padding: 2rem;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
@@ -74,12 +77,13 @@ h1 {
 
 .hands {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(var(--hands-columns), 1fr);
   gap: 1rem;
 }
 
 .hand { border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1rem; background: rgba(0,0,0,0.25); min-height: 340px; }
 .hand-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.5rem; }
+.seat-bankroll { margin-left: 0.5rem; }
 .hand-total { font-weight: 700; color: var(--text); opacity: 0.9; margin-left: auto; margin-right: 0.5rem; }
 .hand-total.is-soft { color: #58d0c5; }
 .hand-total.is-bj { color: #ffd54f; }

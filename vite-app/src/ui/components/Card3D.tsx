@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion'
+import { CONFIG } from '../../config'
 import type { Card } from '../../blackjack'
 import { SvgPips } from './SvgPips'
 
-export function Card3D({ card, faceDown = false, index = 0 }: { card: Card; faceDown?: boolean; index?: number }) {
+export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false }: { card: Card; faceDown?: boolean; index?: number; enterFromTop?: boolean }) {
   const suit = suitSymbol(card.suit)
   const isRed = card.suit === 'Hearts' || card.suit === 'Diamonds'
   const rank = card.rank
@@ -11,10 +12,10 @@ export function Card3D({ card, faceDown = false, index = 0 }: { card: Card; face
     <motion.div
       className="card3d"
       style={{ transformStyle: 'preserve-3d' }}
-      initial={{ opacity: 0, y: -20, rotate: -3 }}
+      initial={{ opacity: 0, y: enterFromTop ? CONFIG.animation.cardEnterOffsetTop : CONFIG.animation.cardEnterOffsetDefault, rotate: -3 }}
       animate={{ opacity: 1, y: 0, rotate: 0 }}
-      exit={{ opacity: 0, y: 10 }}
-      transition={{ delay: index * 0.08 }}
+      exit={{ opacity: 0, y: CONFIG.animation.cardExitOffsetY }}
+      transition={{ delay: index * (CONFIG.animation.cardStaggerStepMs / 1000) }}
     >
       <motion.div
         className={`card__face card__front ${isRed ? 'card--red' : 'card--black'}`}

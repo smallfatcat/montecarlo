@@ -1,15 +1,15 @@
 import type { Card } from './types'
 import { drawCard, shuffleInPlace, createShoe } from './deck'
+import { CONFIG } from '../config'
 import { evaluateHand } from './hand'
-import { resolveOutcome } from './game'
 
 export type TableStatus = 'idle' | 'seat_turn' | 'dealer_turn' | 'round_over'
-export type RoundOutcome = ReturnType<typeof resolveOutcome>
+export type RoundOutcome = 'player_blackjack' | 'player_win' | 'dealer_win' | 'push' | 'player_bust' | 'dealer_bust'
 
 export interface SeatState {
   hands: Card[][]
   activeHandIndex: number
-  outcomes?: ReturnType<typeof resolveOutcome>[]
+  outcomes?: RoundOutcome[]
   betsByHand: number[]
   isCPU: boolean
 }
@@ -31,7 +31,7 @@ export function createInitialTable(numSeats: number, cpuSeats: number[], shoe?: 
     isCPU: cpuSeats.includes(i),
   }))
   return {
-    deck: shoe ? [...shoe] : shuffleInPlace(createShoe(6)),
+    deck: shoe ? [...shoe] : shuffleInPlace(createShoe(CONFIG.shoe.defaultNumDecks)),
     dealerHand: [],
     seats,
     activeSeatIndex: 0,
@@ -39,9 +39,18 @@ export function createInitialTable(numSeats: number, cpuSeats: number[], shoe?: 
   }
 }
 
-export function startTableRound(state: TableState, betPerSeat: number): TableState {
+export function startTableRound(state: TableState, betPerSeat: number | number[]): TableState {
   const deck = [...state.deck]
-  const seats = state.seats.map((s) => ({ ...s, hands: [[]], activeHandIndex: 0, outcomes: undefined, betsByHand: [betPerSeat] }))
+  const betsArray: number[] = Array.isArray(betPerSeat)
+    ? betPerSeat
+    : state.seats.map(() => betPerSeat)
+  const seats = state.seats.map((s, i) => ({
+    ...s,
+    hands: [[ ] as Card[]],
+    activeHandIndex: 0,
+    outcomes: undefined,
+    betsByHand: [betsArray[i] ?? betsArray[0] ?? 0],
+  }))
   const dealerHand: Card[] = []
   // Deal alternately: two rounds
   for (let r = 0; r < 2; r += 1) {
@@ -110,7 +119,6 @@ function advanceSeatOrDealer(state: TableState): TableState {
   const seats = state.seats.map((s) => ({ ...s }))
   const seat = seats[state.activeSeatIndex]
   const idx = seat.activeHandIndex
-  const v = evaluateHand(seat.hands[idx])
   // If not bust and not stood explicitly, we consider this call from stand/double/bust
   // Move to next hand or seat
   if (idx + 1 < seat.hands.length) {
@@ -134,7 +142,6 @@ function dealerPlay(state: TableState): TableState {
   while (true) {
     const d = evaluateHand(dealerHand)
     const total = d.bestTotal
-    const isSoft17 = total === 17 && d.isSoft
     const shouldHit = total < 17
     if (!shouldHit) break
     dealerHand.push(drawCard(deck))
@@ -146,6 +153,19 @@ function settleOutcomes(state: TableState): TableState {
   const dealerHand = state.dealerHand
   const seats = state.seats.map((s) => ({ ...s, outcomes: s.hands.map((h) => resolveOutcome(h, dealerHand)) }))
   return { ...state, seats }
+}
+
+function resolveOutcome(playerHand: Card[], dealerHand: Card[]): RoundOutcome {
+  const p = evaluateHand(playerHand)
+  const d = evaluateHand(dealerHand)
+  if (p.isBlackjack && d.isBlackjack) return 'push'
+  if (p.isBlackjack) return 'player_blackjack'
+  if (d.isBlackjack) return 'dealer_win'
+  if (p.isBust) return 'player_bust'
+  if (d.isBust) return 'dealer_bust'
+  if (p.bestTotal > d.bestTotal) return 'player_win'
+  if (p.bestTotal < d.bestTotal) return 'dealer_win'
+  return 'push'
 }
 
 export function getSeatAvailableActions(state: TableState): ('hit'|'stand'|'double'|'split')[] {

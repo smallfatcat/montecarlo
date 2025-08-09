@@ -1,15 +1,21 @@
-import React, { useMemo, useState } from 'react'
+import React, { useState } from 'react'
 import { LayoutGroup, motion, AnimatePresence } from 'framer-motion'
 import { useTableGame } from './useTableGame'
 import { evaluateHand } from '../blackjack'
 import type { Card } from '../blackjack'
 import { Card3D } from './components/Card3D'
+import { CONFIG } from '../config'
 
 export function TableMulti() {
   const {
     table,
-    bankroll,
-    setBankroll,
+    bankrolls,
+    setBankrolls,
+    numPlayers,
+    setPlayers,
+    betsBySeat,
+    setBetsBySeat,
+    roundId,
     deal,
     newShoe,
     hit,
@@ -22,9 +28,10 @@ export function TableMulti() {
     autoPlay,
     setAutoPlay,
     suggested,
+    histories,
   } = useTableGame()
 
-  const [bet, setBet] = useState(10)
+  const [bet, setBet] = useState<number>(CONFIG.bets.defaultPerSeat)
   const [decks, setDecks] = useState(deckCount)
 
   const seats = table.seats
@@ -32,30 +39,43 @@ export function TableMulti() {
   const revealed = table.status !== 'seat_turn'
 
   return (
-    <div>
-      <div className="controls">
-        <div className="bankroll">Bankroll: ${bankroll}</div>
-        <label>Bet: $ <input type="number" value={bet} min={1} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBet(parseInt(e.target.value || '0'))} /></label>
-        <button onClick={() => deal(bet)} disabled={!(table.status === 'idle' || table.status === 'round_over')}>Deal</button>
+    <div id="table-root">
+      <div className="controls" id="controls">
+        <div className="bankroll" id="player-bankroll">Bankroll: ${bankrolls[0] ?? 0}</div>
+        <label htmlFor="bet-input">Bet: $ <input id="bet-input" type="number" value={bet} min={1} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBet(parseInt(e.target.value || '0'))} /></label>
+        <label htmlFor="players-input">Players: <input id="players-input" type="number" value={numPlayers} min={1} max={5} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlayers(parseInt(e.target.value || '1'))} disabled={!(table.status === 'idle' || table.status === 'round_over')} /></label>
+        <button id="deal-button" onClick={() => deal(bet)} disabled={!(table.status === 'idle' || table.status === 'round_over')}>Deal</button>
         <span className="sep" />
-        <label>Shoe decks: <input type="number" value={decks} min={1} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDecks(parseInt(e.target.value || '1'))} /></label>
-        <button onClick={() => newShoe(decks)}>New Shoe</button>
-        <button onClick={() => setBankroll(100)}>Reset Bankroll</button>
-        <span className="cards-left">Cards left: {table.deck?.length ?? 0}</span>
+        <label htmlFor="decks-input">Shoe decks: <input id="decks-input" type="number" value={decks} min={1} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDecks(parseInt(e.target.value || '1') as number)} /></label>
+        <button id="new-shoe-button" onClick={() => newShoe(decks)}>New Shoe</button>
+        <button id="reset-bankroll-button" onClick={() => setBankrolls(bankrolls.map(() => CONFIG.bankroll.initialPerSeat))}>Reset Bankrolls</button>
+        <span className="cards-left" id="cards-left">Cards left: {table.deck?.length ?? 0}</span>
+        <span className="sep" />
+        <button id="log-history-button" onClick={() => console.log('Table histories', histories)}>Log History</button>
       </div>
 
-      <LayoutGroup>
-        <section className="hands">
-          <div className="hand">
-            <div className="hand-header">
-              <h2>Dealer</h2>
-              <span className={`hand-total ${revealed && dealerEval.isBust ? 'is-bust' : revealed && dealerEval.isBlackjack ? 'is-bj' : ''}`}>{revealed ? handTotalLabel(dealerEval) : ''}</span>
+      <div className="actions">
+        <button onClick={hit} disabled={!(table.status === 'seat_turn' && activeSeat === 0 && available.includes('hit'))}>Hit</button>
+        <button onClick={stand} disabled={!(table.status === 'seat_turn' && activeSeat === 0 && available.includes('stand'))}>Stand</button>
+        <button onClick={double} disabled={!(table.status === 'seat_turn' && activeSeat === 0 && available.includes('double'))}>Double</button>
+        <button onClick={split} disabled={!(table.status === 'seat_turn' && activeSeat === 0 && available.includes('split'))}>Split</button>
+        <label className="auto-play">
+          <input type="checkbox" checked={autoPlay} onChange={(e) => setAutoPlay(e.target.checked)} /> Auto play
+        </label>
+      </div>
+
+      <LayoutGroup key={roundId}>
+        <section className="hands" id="hands">
+          <div className="hand" id="dealer-hand">
+            <div className="hand-header" id="dealer-hand-header">
+              <h2 id="dealer-title">Dealer</h2>
+              <span id="dealer-total" className={`hand-total ${revealed && dealerEval.isBust ? 'is-bust' : revealed && dealerEval.isBlackjack ? 'is-bj' : ''}`}>{revealed ? handTotalLabel(dealerEval) : ''}</span>
             </div>
-            <div className="cards">
-              <AnimatePresence initial={false}>
+            <div className="cards" id="dealer-cards">
+              <AnimatePresence initial={true} mode="popLayout">
                 {table.dealerHand.map((c: Card, i: number) => (
-                  <motion.div layoutId={`dealer-${c.rank}-${c.suit}-${i}`} key={`dealer-${c.rank}-${c.suit}-${i}`} className="card-slot">
-                    <Card3D card={c} faceDown={!revealed && i === 1} index={i} />
+                  <motion.div layoutId={`dealer-${roundId}-${c.rank}-${c.suit}-${i}`} key={`dealer-${roundId}-${c.rank}-${c.suit}-${i}`} className="card-slot">
+                    <Card3D card={c} faceDown={!revealed && i === 1} index={i} enterFromTop />
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -68,49 +88,52 @@ export function TableMulti() {
             const activeEval = evaluateHand(activeHandForSeat)
             const activeOutcome = seat.outcomes?.[activeIdxForSeat]
             return (
-            <div className={`hand ${table.status === 'seat_turn' && seatIdx === activeSeat ? 'hand--active' : ''}`} key={`seat-${seatIdx}`}>
-              <div className="hand-header">
-                <h2>{seatIdx === 0 ? 'Player' : `CPU ${seatIdx}`}</h2>
+            <div className={`hand ${table.status === 'seat_turn' && seatIdx === activeSeat ? 'hand--active' : ''}`} key={`seat-${seatIdx}`} id={`seat-${seatIdx}`}>
+              <div className="hand-header" id={`seat-${seatIdx}-header`}>
+                <h2 id={`seat-${seatIdx}-name`}>{seatIdx === 0 ? 'Player' : `CPU ${seatIdx}`}</h2>
+                <span className="seat-bankroll" id={`seat-${seatIdx}-bankroll`}>${bankrolls[seatIdx] ?? 0}</span>
+                {seatIdx > 0 ? (
+                  <label className="seat-bet" id={`seat-${seatIdx}-bet-label`}>
+                    Bet: <input
+                      id={`seat-${seatIdx}-bet-input`}
+                      type="number"
+                      min={1}
+                      style={{ width: 64 }}
+                      value={betsBySeat[seatIdx] ?? 10}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const v = Math.max(1, Math.floor(parseInt(e.target.value || '1')))
+                        setBetsBySeat((arr) => arr.map((x, i) => (i === seatIdx ? v : x)))
+                      }}
+                      disabled={!(table.status === 'idle' || table.status === 'round_over')}
+                    />
+                  </label>
+                ) : null}
                 {seat.hands.length > 1 ? (
-                  <span className="hand-index">Hand {activeIdxForSeat + 1}/{seat.hands.length}</span>
+                  <span className="hand-index" id={`seat-${seatIdx}-hand-index`}>Hand {activeIdxForSeat + 1}/{seat.hands.length}</span>
                 ) : null}
                 {seatIdx === 0 && table.status === 'seat_turn' && activeSeat === 0 && suggested ? (
-                  <span className="suggest-badge">Suggest: {String(suggested).toUpperCase()}</span>
+                  <span className="suggest-badge" id="suggest-badge">Suggest: {String(suggested).toUpperCase()}</span>
                 ) : null}
-                <span className={`hand-total ${activeEval.isBust ? 'is-bust' : activeEval.isBlackjack ? 'is-bj' : activeEval.isSoft ? 'is-soft' : ''}`}>{handTotalLabel(activeEval)}</span>
-                {activeOutcome ? <span className={`outcome-badge ${mapOutcome(activeOutcome).kind}`}>{mapOutcome(activeOutcome).text}</span> : null}
+                <span className={`hand-total ${activeEval.isBust ? 'is-bust' : activeEval.isBlackjack ? 'is-bj' : activeEval.isSoft ? 'is-soft' : ''}`} id={`seat-${seatIdx}-total`}>{handTotalLabel(activeEval)}</span>
+                {activeOutcome ? <span className={`outcome-badge ${mapOutcome(activeOutcome).kind}`} id={`seat-${seatIdx}-outcome`}>{mapOutcome(activeOutcome).text}</span> : null}
               </div>
-              {seat.hands.map((hand, hi) => {
-                const hv = evaluateHand(hand)
-                const outcome = seat.outcomes?.[hi]
-                return (
-                  <div key={`seat-${seatIdx}-hand-${hi}`}>
-                    <div className="cards">
-                    <AnimatePresence initial={false}>
-                      {hand.map((c, j) => (
-                        <motion.div layoutId={`seat-${seatIdx}-${hi}-${c.rank}-${c.suit}-${j}`} key={`seat-${seatIdx}-${hi}-${c.rank}-${c.suit}-${j}`} className="card-slot">
-                          <Card3D card={c} index={j} />
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                    </div>
+              {seat.hands.map((hand, hi) => (
+                <div key={`seat-${seatIdx}-hand-${hi}`} id={`seat-${seatIdx}-hand-${hi}`}>
+                  <div className="cards" id={`seat-${seatIdx}-cards-${hi}`}>
+                  <AnimatePresence initial={true} mode="popLayout">
+                    {hand.map((c, j) => (
+                      <motion.div layoutId={`seat-${roundId}-${seatIdx}-${hi}-${c.rank}-${c.suit}-${j}`} key={`seat-${roundId}-${seatIdx}-${hi}-${c.rank}-${c.suit}-${j}`} className="card-slot">
+                        <Card3D card={c} index={j} enterFromTop />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                   </div>
-                )
-              })}
+                </div>
+              ))}
             </div>
           )})}
         </section>
       </LayoutGroup>
-
-      <div className="actions">
-        <button onClick={hit} disabled={!(table.status === 'seat_turn' && activeSeat === 0 && available.includes('hit'))}>Hit</button>
-        <button onClick={stand} disabled={!(table.status === 'seat_turn' && activeSeat === 0 && available.includes('stand'))}>Stand</button>
-        <button onClick={double} disabled={!(table.status === 'seat_turn' && activeSeat === 0 && available.includes('double'))}>Double</button>
-        <button onClick={split} disabled={!(table.status === 'seat_turn' && activeSeat === 0 && available.includes('split'))}>Split</button>
-        <label className="auto-play">
-          <input type="checkbox" checked={autoPlay} onChange={(e) => setAutoPlay(e.target.checked)} /> Auto play
-        </label>
-      </div>
     </div>
   )
 }

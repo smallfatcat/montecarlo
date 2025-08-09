@@ -1,21 +1,20 @@
 import { evaluateHand } from './hand'
 import type { Card } from './types'
-import type { GameState, DealerRules } from './game'
-import { canSplit as canSplitFn, getAvailableActions } from './game'
 
 export type SuggestedAction = 'hit' | 'stand' | 'double' | 'surrender' | 'split'
 
-export function suggestAction(state: GameState, rules: DealerRules = {}): SuggestedAction | null {
-  if (state.status !== 'player_turn') return null
-  const hand = state.playerHands && state.activeHandIndex !== undefined
-    ? state.playerHands[state.activeHandIndex]
-    : state.playerHand
+export interface SuggestParams {
+  hand: Card[]
+  dealerUp: Card
+  available: Set<'hit' | 'stand' | 'double' | 'split' | 'surrender'>
+  canSplit: boolean
+}
+
+export function suggestAction(params: SuggestParams): SuggestedAction | null {
+  const { hand, dealerUp, available, canSplit } = params
   if (!hand || hand.length === 0) return null
-  const dealerUp = state.dealerHand[0]
   if (!dealerUp) return null
 
-  const available = new Set(getAvailableActions(state))
-  const canSplit = canSplitFn(state)
   const up = upcardValue(dealerUp)
   const v = evaluateHand(hand)
 
@@ -40,7 +39,7 @@ export function suggestAction(state: GameState, rules: DealerRules = {}): Sugges
       }
     }
     const choice = decidePair(pair)
-    if (choice === 'split') return 'split'
+    if (choice === 'split') return available.has('split') ? 'split' : (available.has('hit') ? 'hit' : 'stand')
     if (choice === 'double' && available.has('double')) return 'double'
     return fallbackToAvailable(choice, available)
   }
