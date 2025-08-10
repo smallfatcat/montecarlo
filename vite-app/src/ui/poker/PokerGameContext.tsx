@@ -1,5 +1,6 @@
 import { createContext, useContext, PropsWithChildren } from 'react'
 import { usePokerGame } from './usePokerGame'
+import type { PokerTableState } from '../../poker/types'
 
 type PokerGameContextValue = ReturnType<typeof usePokerGame>
 

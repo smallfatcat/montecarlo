@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePokerGameContext } from './PokerGameContext'
 import { Card3D } from '../components/Card3D'
+import { PokerSeat } from './PokerSeat'
 import { evaluateSeven, formatEvaluated, pickBestFive } from '../../poker/handEval'
 import { CONFIG } from '../../config'
 import { usePokerSimulationRunner } from './usePokerSimulationRunner'
 import { useEquity } from './useEquity'
 
 export function PokerTable() {
-  const { table, beginHand, autoPlay, setAutoPlay, available, fold, check, call, bet, raise } = usePokerGameContext()
+  const { table, revealed, beginHand, autoPlay, setAutoPlay, available, fold, check, call, bet, raise } = usePokerGameContext()
   const sim = usePokerSimulationRunner()
   const [simHands, setSimHands] = useState(1000)
   const [simProgress, setSimProgress] = useState<{done:number,total:number}|null>(null)
@@ -114,8 +115,6 @@ export function PokerTable() {
 
   // Recompute equities after each state change during in_hand (guarded to avoid re-render loops)
   const samples = 2000
-  const CARD_HEIGHT_PX = 140
-  const RESULT_LINE_HEIGHT_PX = 24
   const lastEqKeyRef = useRef<string | null>(null)
   useEffect(() => {
     if (table.status !== 'in_hand') return
@@ -141,7 +140,7 @@ export function PokerTable() {
       </div>
 
       <div id="board-row" className="board-row" style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-        {community.map((c, i) => (
+        {community.slice(0, Math.min(table.community.length, revealed.boardCount)).map((c, i) => (
           <Card3D key={i} card={c as any} highlight={highlightSet.has(`B${i}`)} />
         ))}
       </div>
@@ -186,21 +185,24 @@ export function PokerTable() {
       <div id="showdown-text" className="showdown-text" style={{ textAlign: 'center', opacity: 0.9 }}>{showdownText}</div>
 
       <div id="seats-grid" className="seats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-        {seats.map((s, i) => (
-          <div key={i} id={`seat-${i}`} style={{ border: '1px solid #444', padding: 8, borderRadius: 8, outline: i === table.currentToAct ? '2px solid #ffd54f' : undefined, outlineOffset: 2 }}>
-            <div id={`seat-cards-${i}`} style={{ display: 'flex', gap: 6, minHeight: CARD_HEIGHT_PX }}>
-              {!s.hasFolded && s.hole.map((c, k) => (
-                <Card3D key={k} card={c as any} highlight={highlightSet.has(`S${i}-${k}`)} />
-              ))}
-            </div>
-            <div id={`seat-label-${i}`}>Seat {i} {i === table.buttonIndex ? ' (BTN)' : ''} {s.hasFolded ? ' - Folded' : ''} {s.isAllIn ? ' - All-in' : ''}</div>
-            <div id={`seat-stack-${i}`}>Stack: {s.stack}</div>
-            <div id={`seat-bets-${i}`}>Bet: {s.committedThisStreet} · In pot: {s.totalCommitted}</div>
-            <div id={`seat-result-${i}`} style={{ minHeight: RESULT_LINE_HEIGHT_PX, fontWeight: 700, color: winnersSet.has(i) ? '#ffd54f' : undefined }}>
-              {table.status === 'hand_over' ? (winnersSet.has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')) : ''}
-            </div>
-          </div>
-        ))}
+        {[...seats].map((s, iLocal) => {
+          const i = (seats.length - 1) - iLocal
+          return (
+          <PokerSeat
+            key={i}
+            idPrefix="seat"
+            seat={s}
+            seatIndex={i}
+            buttonIndex={table.buttonIndex}
+            currentToAct={table.currentToAct}
+            highlightSet={highlightSet}
+            showPerSeatEquity={false}
+            resultText={table.status === 'hand_over' ? (winnersSet.has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')) : ''}
+            seatCardScale={1}
+            visibleHoleCount={revealed.holeCounts[i] ?? (s.hole.length)}
+          />
+          )
+        })}
       </div>
 
       {showControls && (

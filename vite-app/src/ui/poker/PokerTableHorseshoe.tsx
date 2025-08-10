@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePokerGameContext } from './PokerGameContext'
 import { Card3D } from '../components/Card3D'
+import { PokerSeat } from './PokerSeat'
 import { evaluateSeven, pickBestFive, formatEvaluated } from '../../poker/handEval'
 import { CONFIG } from '../../config'
 import { useEquity } from './useEquity'
@@ -21,7 +22,7 @@ function seatPosition(index: number, total: number, radiusX: number, radiusY: nu
 }
 
 export function PokerTableHorseshoe() {
-  const { table, beginHand, autoPlay, setAutoPlay, available, fold, check, call, bet, raise } = usePokerGameContext()
+  const { table, revealed, beginHand, autoPlay, setAutoPlay, available, fold, check, call, bet, raise } = usePokerGameContext()
   const [betSize, setBetSize] = useState<'33'|'50'|'75'|'pot'|'shove'>('50')
   const { equity, run: runEquity, running: equityRunning } = useEquity()
 
@@ -93,6 +94,39 @@ export function PokerTableHorseshoe() {
     return out
   }, [table.status, community, table.seats])
 
+  const winnersSet = useMemo(() => {
+    if (table.status !== 'hand_over' || community.length < 5) return new Set<number>()
+    const classOrder: Record<string, number> = { high_card:0,pair:1,two_pair:2,three_kind:3,straight:4,flush:5,full_house:6,four_kind:7,straight_flush:8 } as const as any
+    let best: { classIdx: number; ranks: number[] } | null = null
+    table.seats.forEach((s) => {
+      if (s.hasFolded || s.hole.length !== 2) return
+      const ev = evaluateSeven([...s.hole, ...community])
+      const score = { classIdx: classOrder[ev.class], ranks: ev.ranks }
+      if (!best) best = score
+      else {
+        const cd = score.classIdx - best.classIdx
+        if (cd > 0) best = score
+        else if (cd === 0) {
+          for (let i = 0; i < Math.max(score.ranks.length, best.ranks.length); i += 1) {
+            const a = score.ranks[i] ?? -1
+            const b = best.ranks[i] ?? -1
+            if (a !== b) { if (a > b) best = score; break }
+          }
+        }
+      }
+    })
+    const winners = new Set<number>()
+    if (!best) return winners
+    table.seats.forEach((s, i) => {
+      if (s.hasFolded || s.hole.length !== 2) return
+      const ev = evaluateSeven([...s.hole, ...community])
+      const score = { classIdx: classOrder[ev.class], ranks: ev.ranks }
+      const equal = score.classIdx === best!.classIdx && JSON.stringify(score.ranks) === JSON.stringify(best!.ranks)
+      if (equal) winners.add(i)
+    })
+    return winners
+  }, [table.status, community, table.seats])
+
   const width = CONFIG.poker.horseshoe.tableWidthPx
   const height = CONFIG.poker.horseshoe.tableHeightPx
   const centerX = width / 2
@@ -101,9 +135,7 @@ export function PokerTableHorseshoe() {
   // Ellipse radii: stretch horizontally, slightly tighter vertically
   const radiusX = base * CONFIG.poker.horseshoe.radiusXScale
   const radiusY = base * CONFIG.poker.horseshoe.radiusYScale
-  const CARD_HEIGHT_PX = 140
-  const EQUITY_LINE_HEIGHT_PX = 24
-  const SCALED_CARD_HEIGHT_PX = Math.ceil(CARD_HEIGHT_PX * CONFIG.poker.horseshoe.seatCardScale) + 2
+  // Intentionally left here if future sizing is needed; seat sizing comes from PokerSeat
 
   return (
     <div id="poker-root" style={{ display: 'grid', gap: 12 }}>
@@ -147,7 +179,7 @@ export function PokerTableHorseshoe() {
       <div id="horseshoe-table" className="horseshoe-table" style={{ position: 'relative', width, height, margin: '0 auto', borderRadius: 24, background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
         {/* Board in the center */}
         <div id="horseshoe-board" style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.boardOffsetY, transform: 'translate(-50%, -50%)', display: 'flex', gap: CONFIG.poker.horseshoe.boardGapPx }}>
-          {community.map((c, i) => (
+          {community.slice(0, Math.min(table.community.length, revealed.boardCount)).map((c, i) => (
             <div key={i} style={{ transform: `scale(${CONFIG.poker.horseshoe.seatCardScale})`, transformOrigin: 'center' }}>
               <Card3D card={c as any} highlight={highlightSet.has(`B${i}`)} />
             </div>
@@ -163,25 +195,26 @@ export function PokerTableHorseshoe() {
 
         {/* Seats around horseshoe arc */}
         {table.seats.map((s, i) => {
-          const pos = seatPosition(i, table.seats.length, radiusX, radiusY, centerX, centerY)
-          const outline = i === table.currentToAct ? '2px solid #ffd54f' : undefined
+          // Place seats clockwise by reversing the visual index around the arc
+          const posIndex = (table.seats.length - 1) - i
+          const pos = seatPosition(posIndex, table.seats.length, radiusX, radiusY, centerX, centerY)
           return (
-            <div key={i} id={`horseshoe-seat-${i}`} style={{ position: 'absolute', left: pos.left, top: pos.top, transform: 'translate(-50%, -50%)', width: CONFIG.poker.horseshoe.seatWidthPx, border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: 6, background: 'rgba(0,0,0,0.18)', outline, outlineOffset: 2 }}>
-              <div id={`horseshoe-seat-cards-${i}`} style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center', height: SCALED_CARD_HEIGHT_PX }}>
-                {!s.hasFolded && s.hole.map((c, k) => (
-                  <div key={k} style={{ transform: `scale(${CONFIG.poker.horseshoe.seatCardScale})`, transformOrigin: 'center' }}>
-                    <Card3D card={c as any} highlight={highlightSet.has(`S${i}-${k}`)} />
-                  </div>
-                ))}
-              </div>
-              <div id={`horseshoe-seat-label-${i}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Seat {i}{i === table.buttonIndex ? ' (BTN)' : ''}{s.hasFolded ? ' · Folded' : ''}{s.isAllIn ? ' · All-in' : ''}</div>
-              <div id={`horseshoe-seat-stack-${i}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Stack: {s.stack}</div>
-              <div id={`horseshoe-seat-bets-${i}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Bet: {s.committedThisStreet} • In pot: {s.totalCommitted}</div>
-              <div id={`horseshoe-seat-equity-${i}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.85, minHeight: EQUITY_LINE_HEIGHT_PX }}>
-                {equity && !s.hasFolded && s.hole.length === 2 ? (
-                  <span>{((equity.win[i] / samples) * 100).toFixed(1)}% win • {((equity.tie[i] / samples) * 100).toFixed(1)}% tie {equityRunning ? ' (…)' : ''}</span>
-                ) : ''}
-              </div>
+            <div key={i} style={{ position: 'absolute', left: pos.left, top: pos.top, transform: 'translate(-50%, -50%)', width: CONFIG.poker.horseshoe.seatWidthPx }}>
+              <PokerSeat
+                idPrefix="horseshoe-seat"
+                seat={s}
+                seatIndex={i}
+                buttonIndex={table.buttonIndex}
+                currentToAct={table.currentToAct}
+                highlightSet={highlightSet}
+                showPerSeatEquity
+                equityWinPct={equity ? (equity.win[i] / samples) * 100 : null}
+                equityTiePct={equity ? (equity.tie[i] / samples) * 100 : null}
+                equityRunning={!!equityRunning}
+                seatCardScale={CONFIG.poker.horseshoe.seatCardScale}
+                resultText={table.status === 'hand_over' ? (winnersSet.has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')) : ''}
+                visibleHoleCount={revealed.holeCounts[i] ?? (s.hole.length)}
+              />
             </div>
           )
         })}

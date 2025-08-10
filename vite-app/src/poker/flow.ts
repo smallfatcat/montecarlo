@@ -1,6 +1,6 @@
 import { createShoe, shuffleInPlace } from "../blackjack/deck";
 import type { Card } from "../blackjack/types";
-import { DEFAULT_RULES, cloneState, countActiveSeats, getStreetBetSize, nextSeatIndex } from "./types";
+import { DEFAULT_RULES, cloneState, countActiveSeats, getStreetBetSize, nextSeatIndex, nextSeatIndexWithChips } from "./types";
 import { CONFIG } from "../config";
 import type { PokerTableState, SeatState, BettingAction } from "./types";
 import { evaluateSeven } from "./handEval";
@@ -83,9 +83,9 @@ export function startHand(state: PokerTableState): PokerTableState {
     s.gameOver = true;
     return s;
   }
-  // Post blinds
-  const sbIndex = nextSeatIndex(s.seats, s.buttonIndex)!;
-  const bbIndex = nextSeatIndex(s.seats, sbIndex!)!;
+  // Post blinds (clockwise from button) — skip seats without chips
+  const sbIndex = nextSeatIndexWithChips(s.seats, s.buttonIndex)!;
+  const bbIndex = nextSeatIndexWithChips(s.seats, sbIndex!)!;
   postBlind(s, sbIndex, s.rules.smallBlind);
   postBlind(s, bbIndex, s.rules.bigBlind);
 
@@ -267,17 +267,7 @@ function advanceStreet(state: PokerTableState): PokerTableState {
   // If no eligible active seats remain (everyone is all-in or folded), fast-forward to showdown dealing remaining streets
   let first = nextSeatIndex(s.seats, s.buttonIndex);
   if (first == null) {
-    while (s.street !== "river") {
-      if (s.street === "flop") {
-        s.community.push(drawCard(s.deck));
-        s.street = "turn";
-      } else if (s.street === "turn") {
-        s.community.push(drawCard(s.deck));
-        s.street = "river";
-      }
-    }
-    // Reached river -> settle
-    s.street = "showdown";
+    // Let settleAndEnd decide whether to deal more cards or award immediately
     return settleAndEnd(s);
   }
   // Otherwise continue normal action
@@ -292,16 +282,17 @@ function advanceStreet(state: PokerTableState): PokerTableState {
 
 function settleAndEnd(state: PokerTableState): PokerTableState {
   const s = cloneState(state);
-  // Ensure full board for evaluation if needed
-  while (s.community.length < 5) {
-    s.community.push(drawCard(s.deck));
-  }
-  // If only one not folded and dealt in, that player wins
+  // Determine contenders (not folded and received hole cards)
   const contenders = s.seats.filter((seat) => !seat.hasFolded && seat.hole.length === 2);
   if (contenders.length === 1) {
-    const rake = computeRake(s.pot.main)
+    // Award immediately without dealing further board cards
+    const rake = computeRake(s.pot.main);
     contenders[0].stack += s.pot.main - rake;
   } else {
+    // Ensure full board for evaluation if needed
+    while (s.community.length < 5) {
+      s.community.push(drawCard(s.deck));
+    }
     // Build side pots from total contributions and award each to best eligible
     const pots = buildSidePots(s);
     for (const pot of pots) {
@@ -360,8 +351,8 @@ function settleAndEnd(state: PokerTableState): PokerTableState {
   s.status = "hand_over";
   s.currentToAct = null;
   s.street = "showdown";
-  // Move button
-  const nextBtn = nextSeatIndex(s.seats, s.buttonIndex);
+  // Move button to next seat with chips (clockwise). If none, keep current.
+  const nextBtn = nextSeatIndexWithChips(s.seats, s.buttonIndex);
   if (nextBtn != null) s.buttonIndex = nextBtn;
   // Eliminate players with zero stack from action (remain on table visually, but skipped). Mark game over if only one left with chips.
   const withChips = s.seats.filter((x) => x.stack > 0).length;

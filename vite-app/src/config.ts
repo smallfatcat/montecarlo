@@ -20,7 +20,7 @@ export const CONFIG = {
     horseshoe: {
       tableWidthPx: 1200,
       tableHeightPx: 720,
-      centerYOffsetPx: -20,          // relative to height/2
+      centerYOffsetPx: -30,          // relative to height/2
       basePaddingPx: 80,             // margin from table edge used for base radius
       radiusXScale: 1.6,             // horizontal ellipse radius scale
       radiusYScale: 1.0,             // vertical ellipse radius scale
@@ -28,7 +28,7 @@ export const CONFIG = {
       arcEndDeg: -25,                // horseshoe end angle
       edgeBoostEnd: 1.1,             // additional horizontal push for index 0 and last
       edgeBoostNearEnd: 1.08,        // for index 1 and last-2
-      topBoostEnd: 1.2,              // slight vertical adjust for index 0 and last
+      topBoostEnd: 1.4,              // slight vertical adjust for index 0 and last
       topBoostNearEnd: 1.0,
       boardOffsetY: -60,             // pixels from center for board row
       boardGapPx: 10,
@@ -36,6 +36,12 @@ export const CONFIG = {
       seatCardScale: 0.9,
       potOffsetY: 35,
       showdownOffsetY: 70,
+    }
+    ,
+    deal: {
+      perHoleCardMs: 300,
+      perBoardCardMs: 300,
+      streetPauseMs: 1000,
     }
   },
   shoe: {

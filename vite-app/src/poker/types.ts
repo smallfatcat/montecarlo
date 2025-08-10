@@ -85,6 +85,17 @@ export function nextSeatIndex(seats: SeatState[], startExclusive: number): numbe
   return null;
 }
 
+// Finds the next seat to the right (clockwise) with chips, regardless of current hand fold/all-in status.
+// Useful for moving the dealer button between hands.
+export function nextSeatIndexWithChips(seats: SeatState[], startExclusive: number): number | null {
+  const n = seats.length;
+  for (let i = 1; i <= n; i += 1) {
+    const idx = (startExclusive + i) % n;
+    if (seats[idx].stack > 0) return idx;
+  }
+  return null;
+}
+
 export function countActiveSeats(seats: SeatState[]): number {
   return seats.filter((s) => !s.hasFolded && s.stack > 0).length;
 }
