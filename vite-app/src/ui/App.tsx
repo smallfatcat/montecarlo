@@ -3,6 +3,7 @@ import { Table } from './Table'
 import { CONFIG } from '../config'
 import { DeckGallery } from './DeckGallery'
 import { PokerTable } from './poker/PokerTable'
+import { PokerTableHorseshoe } from './poker/PokerTableHorseshoe'
 import { PokerTestDashboard } from './poker/PokerTestDashboard'
 
 export function App() {
@@ -19,7 +20,9 @@ export function App() {
   const showDeck = hash === '#cards'
   const showPoker = hash === '#poker'
   const showPokerTest = hash === '#poker-test'
+  const showPokerHorseshoe = hash === '#poker-horseshoe'
   if (showDeck) return <DeckGallery />
+  if (showPokerHorseshoe) return <PokerTableHorseshoe />
   if (showPokerTest) return <PokerTestDashboard />
   if (showPoker) return <PokerTable />
   return <Table />

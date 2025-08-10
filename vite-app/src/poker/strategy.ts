@@ -123,24 +123,50 @@ export function suggestActionPoker(state: PokerTableState, profile: BotProfile =
   const board = state.community;
   const toCall = Math.max(0, state.betToCall - seat.committedThisStreet);
   const pos = actingPosition(state, seatIndex);
+  const lastRaise = state.lastRaiseAmount || state.rules.bigBlind;
+  const bb = Math.max(1, state.rules.bigBlind);
+  const heroBB = seat.stack / bb;
+  const otherStacks = state.seats
+    .map((s, i) => (i === seatIndex || s.hasFolded ? 0 : s.stack))
+    .filter((x) => x > 0);
+  const effectiveStack = Math.min(seat.stack, otherStacks.length ? Math.max(...otherStacks) : seat.stack);
+  const effBB = effectiveStack / bb;
+  const potAfterCall = state.pot.main + toCall;
+  const spr = potAfterCall > 0 ? effectiveStack / potAfterCall : Infinity;
 
   // Preflop
   if (state.street === "preflop") {
     const cat = preflopCategory(hole);
     const aggressive = profile === "loose" || cat === "premium" || (cat === "strong" && (pos === "late" || pos === "middle"));
     if (toCall > 0) {
+      // Short-stack logic: ≤20bb → bias to jam with premiums/strong; avoid light min-raises
+      if (effBB <= 20 && available.has("raise") && (aggressive || (cat === "speculative" && pos === "late"))) {
+        const shoveExtra = Math.max(0, seat.stack - toCall);
+        return { type: "raise", amount: shoveExtra };
+      }
       if (aggressive && available.has("raise")) {
-        const open3x = Math.max(state.rules.bigBlind * 3, state.rules.bigBlind);
-        const callers = 0; // simple; could count prior callers
-        const raiseExtra = Math.max(open3x - state.betToCall + toCall + callers * state.rules.bigBlind, state.rules.bigBlind);
+        // Avoid min-raise wars: after one min-raise, escalate to at least 1.5x last raise
+        const minExtra = Math.max(bb, lastRaise);
+        const escalated = Math.max(Math.floor(minExtra * 1.5), bb);
+        // Target around 3x open when no prior raise; otherwise escalate
+        const open3x = Math.max(bb * 3, bb);
+        const target = state.betToCall <= bb ? open3x : escalated;
+        const raiseExtra = Math.max(Math.min(target - toCall, seat.stack - toCall), bb);
+        // Avoid committing >50% stack with weak hands
+        const commitFrac = (toCall + raiseExtra) / Math.max(1, seat.stack);
+        if (commitFrac > 0.5 && cat === "speculative") return available.has("call") ? { type: "call" } : { type: "fold" };
         return { type: "raise", amount: raiseExtra };
       }
       if (cat !== "trash" && available.has("call")) return { type: "call" };
       return available.has("fold") ? { type: "fold" } : (available.has("check") ? { type: "check" } : { type: "call" });
     } else {
       if (aggressive && available.has("bet")) {
-        const open = Math.max(state.rules.bigBlind * 3, state.rules.bigBlind);
-        return { type: "bet", amount: open };
+        // Short stacks: open shove premiums; otherwise 3x
+        if (effBB <= 12 && (cat === "premium" || cat === "strong")) {
+          return { type: "bet", amount: seat.stack };
+        }
+        const open = Math.max(bb * 3, bb);
+        return { type: "bet", amount: Math.min(open, seat.stack) };
       }
       if (available.has("check")) return { type: "check" };
       return available.has("call") ? { type: "call" } : { type: "fold" };
@@ -158,20 +184,30 @@ export function suggestActionPoker(state: PokerTableState, profile: BotProfile =
   const pot = state.pot.main;
   if (toCall > 0) {
     if (strongMade && available.has("raise")) {
-      // Pot-sized raise extra approximation
-      const extra = Math.max(Math.floor((pot + toCall) * (profile === "tight" ? 0.8 : 1.0)), state.rules.bigBlind);
+      // Stack-aware raise: pot-like or jam if very short or spr low
+      if (effBB <= 20 || spr <= 2) {
+        const shoveExtra = Math.max(0, seat.stack - toCall);
+        return { type: "raise", amount: shoveExtra };
+      }
+      const minExtra = Math.max(bb, lastRaise);
+      const escalated = Math.max(Math.floor(minExtra * 1.5), bb);
+      const potLike = Math.max(Math.floor((pot + toCall) * (profile === "tight" ? 0.7 : 0.9)), escalated);
+      const extra = Math.min(potLike, Math.max(0, seat.stack - toCall));
       return { type: "raise", amount: extra };
     }
     if ((strongMade || mediumMade || hasDraw) && available.has("call")) return { type: "call" };
     return available.has("fold") ? { type: "fold" } : (available.has("call") ? { type: "call" } : { type: "check" });
   } else {
     if (strongMade && available.has("bet")) {
-      const amt = Math.max(Math.floor(pot * 0.66), state.rules.bigBlind);
-      return { type: "bet", amount: amt };
+      if (effBB <= 20 || spr <= 2) {
+        return { type: "bet", amount: seat.stack };
+      }
+      const amt = Math.max(Math.floor(pot * 0.66), bb);
+      return { type: "bet", amount: Math.min(amt, seat.stack) };
     }
     if ((mediumMade || hasDraw) && available.has("bet") && Math.random() < 0.4) {
-      const amt = Math.max(Math.floor(pot * 0.5), state.rules.bigBlind);
-      return { type: "bet", amount: amt };
+      const amt = Math.max(Math.floor(pot * 0.5), bb);
+      return { type: "bet", amount: Math.min(amt, seat.stack) };
     }
     if (available.has("check")) return { type: "check" };
     return available.has("call") ? { type: "call" } : { type: "fold" };

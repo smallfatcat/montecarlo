@@ -60,6 +60,38 @@ export function PokerTable() {
     })
     return pick
   })()
+  const winnersSet = (() => {
+    if (table.status !== 'hand_over' || community.length < 5) return new Set<number>()
+    const classOrder: Record<string, number> = { high_card:0,pair:1,two_pair:2,three_kind:3,straight:4,flush:5,full_house:6,four_kind:7,straight_flush:8 } as const as any
+    let best: { classIdx: number; ranks: number[] } | null = null
+    table.seats.forEach((s) => {
+      if (s.hasFolded || s.hole.length !== 2) return
+      const ev = evaluateSeven([...s.hole, ...community])
+      const score = { classIdx: classOrder[ev.class], ranks: ev.ranks }
+      if (!best) best = score
+      else {
+        const cd = score.classIdx - best.classIdx
+        if (cd > 0) best = score
+        else if (cd === 0) {
+          for (let i = 0; i < Math.max(score.ranks.length, best.ranks.length); i += 1) {
+            const a = score.ranks[i] ?? -1
+            const b = best.ranks[i] ?? -1
+            if (a !== b) { if (a > b) best = score; break }
+          }
+        }
+      }
+    })
+    const winners = new Set<number>()
+    if (!best) return winners
+    table.seats.forEach((s, i) => {
+      if (s.hasFolded || s.hole.length !== 2) return
+      const ev = evaluateSeven([...s.hole, ...community])
+      const score = { classIdx: classOrder[ev.class], ranks: ev.ranks }
+      const equal = score.classIdx === best!.classIdx && JSON.stringify(score.ranks) === JSON.stringify(best!.ranks)
+      if (equal) winners.add(i)
+    })
+    return winners
+  })()
   const showdownText = (() => {
     if (table.status !== 'hand_over') return ''
     if (community.length < 5) return ''
@@ -94,19 +126,26 @@ export function PokerTable() {
           <Card3D key={i} card={c as any} highlight={highlightSet.has(`B${i}`)} />
         ))}
       </div>
+      {/* Pot display */}
+      <div style={{ textAlign: 'center', fontWeight: 700, opacity: 0.9 }}>Pot: {table.pot.main}</div>
       <div className="showdown-text" style={{ textAlign: 'center', opacity: 0.9 }}>{showdownText}</div>
 
       <div className="seats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         {seats.map((s, i) => (
-          <div key={i} style={{ border: '1px solid #444', padding: 8, borderRadius: 8 }}>
+          <div key={i} style={{ border: '1px solid #444', padding: 8, borderRadius: 8, outline: i === table.currentToAct ? '2px solid #ffd54f' : undefined, outlineOffset: 2 }}>
             <div style={{ display: 'flex', gap: 6 }}>
-              {s.hole.map((c, k) => (
+              {!s.hasFolded && s.hole.map((c, k) => (
                 <Card3D key={k} card={c as any} highlight={highlightSet.has(`S${i}-${k}`)} />
               ))}
             </div>
             <div>Seat {i} {i === table.buttonIndex ? ' (BTN)' : ''} {s.hasFolded ? ' - Folded' : ''} {s.isAllIn ? ' - All-in' : ''}</div>
             <div>Stack: {s.stack}</div>
-            <div>Committed: {s.committedThisStreet}</div>
+            <div>Bet: {s.committedThisStreet} · In pot: {s.totalCommitted}</div>
+            {table.status === 'hand_over' && (
+              <div style={{ fontWeight: 700, color: winnersSet.has(i) ? '#ffd54f' : undefined }}>
+                {winnersSet.has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')}
+              </div>
+            )}
           </div>
         ))}
       </div>

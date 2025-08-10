@@ -20,7 +20,7 @@ export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false
     >
       <motion.div
         className={`card__face card__front ${isRed ? 'card--red' : 'card--black'}`}
-        style={highlight ? { boxShadow: '0 0 0 3px var(--accent)', borderRadius: 12 } : undefined}
+        style={highlight ? { boxShadow: '0 0 0 3px #ffd54f, 0 0 14px 2px rgba(255,213,79,0.6)', borderRadius: 12 } : undefined}
         animate={{ rotateY: faceDown ? 180 : 0 }}
         transition={{ duration: CONFIG.animation.cardFlipDurationSec }}
       >

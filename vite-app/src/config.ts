@@ -10,9 +10,13 @@ export const CONFIG = {
     autoDealDelayMs: 700,
   },
   poker: {
-    rakePercent: 0.05, // e.g., 0.05 for 5% rake
+    rakePercent: 0.00, // e.g., 0.05 for 5% rake
     rakeCap: 0,     // absolute cap in chips; set >0 to cap rake
     showRakeInUI: true,
+    blinds: {
+      increaseEveryHands: 50, // increase blinds every N hands (0 disables)
+      increaseFactor: 2,      // multiply blinds by this factor at each level
+    }
   },
   shoe: {
     defaultNumDecks: 6,

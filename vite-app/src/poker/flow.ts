@@ -49,6 +49,13 @@ export function createInitialPokerTable(numSeats: number, cpuSeats: number[], st
 export function startHand(state: PokerTableState): PokerTableState {
   const s = cloneState(state);
   if (s.gameOver) return s;
+  // Blind increase logic: increase every N hands
+  const incEvery = CONFIG.poker.blinds?.increaseEveryHands ?? 0;
+  const incFactor = CONFIG.poker.blinds?.increaseFactor ?? 1;
+  if (incEvery > 0 && incFactor > 1 && s.handId > 0 && s.handId % incEvery === 0) {
+    s.rules.smallBlind = Math.max(1, s.rules.smallBlind * incFactor);
+    s.rules.bigBlind = Math.max(1, s.rules.bigBlind * incFactor);
+  }
   // New shoe if too few cards (simple threshold)
   if (s.deck.length < 20) {
     s.deck = shuffleInPlace(createShoe(6));
