@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { usePokerGame } from './usePokerGame'
+import { usePokerGameContext } from './PokerGameContext'
 import { Card3D } from '../components/Card3D'
 import { evaluateSeven, pickBestFive, formatEvaluated } from '../../poker/handEval'
 import { CONFIG } from '../../config'
@@ -21,7 +21,7 @@ function seatPosition(index: number, total: number, radiusX: number, radiusY: nu
 }
 
 export function PokerTableHorseshoe() {
-  const { table, beginHand, autoPlay, setAutoPlay, available, fold, check, call, bet, raise } = usePokerGame()
+  const { table, beginHand, autoPlay, setAutoPlay, available, fold, check, call, bet, raise } = usePokerGameContext()
   const [betSize, setBetSize] = useState<'33'|'50'|'75'|'pot'|'shove'>('50')
   const { equity, run: runEquity, running: equityRunning } = useEquity()
 
@@ -101,16 +101,20 @@ export function PokerTableHorseshoe() {
   // Ellipse radii: stretch horizontally, slightly tighter vertically
   const radiusX = base * CONFIG.poker.horseshoe.radiusXScale
   const radiusY = base * CONFIG.poker.horseshoe.radiusYScale
+  const CARD_HEIGHT_PX = 140
+  const EQUITY_LINE_HEIGHT_PX = 24
+  const SCALED_CARD_HEIGHT_PX = Math.ceil(CARD_HEIGHT_PX * CONFIG.poker.horseshoe.seatCardScale) + 2
 
   return (
     <div id="poker-root" style={{ display: 'grid', gap: 12 }}>
-      <div className="poker-status">
+      <div id="poker-status" className="poker-status">
         Hand #{table.handId} • Button @ {table.buttonIndex} • Status: {table.gameOver ? 'game_over' : table.status} • Street: {table.street ?? '-'} • To act: {table.currentToAct ?? '-'} • BetToCall: {table.betToCall}
       </div>
 
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div id="poker-controlbar" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <button onClick={() => beginHand()} disabled={table.status === 'in_hand' || table.gameOver}>Deal</button>
         <label><input type="checkbox" checked={autoPlay} onChange={(e) => setAutoPlay(e.target.checked)} /> Autoplay</label>
+        <button onClick={() => { window.location.hash = '#poker' }}>Normal View</button>
         <select value={betSize} onChange={(e)=>setBetSize(e.target.value as any)}>
           <option value="33">33%</option>
           <option value="50">50%</option>
@@ -140,9 +144,9 @@ export function PokerTableHorseshoe() {
         <button onClick={call} disabled={!available.includes('call')}>Call</button>
       </div>
 
-      <div className="horseshoe-table" style={{ position: 'relative', width, height, margin: '0 auto', borderRadius: 24, background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+      <div id="horseshoe-table" className="horseshoe-table" style={{ position: 'relative', width, height, margin: '0 auto', borderRadius: 24, background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
         {/* Board in the center */}
-        <div style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.boardOffsetY, transform: 'translate(-50%, -50%)', display: 'flex', gap: CONFIG.poker.horseshoe.boardGapPx }}>
+        <div id="horseshoe-board" style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.boardOffsetY, transform: 'translate(-50%, -50%)', display: 'flex', gap: CONFIG.poker.horseshoe.boardGapPx }}>
           {community.map((c, i) => (
             <div key={i} style={{ transform: `scale(${CONFIG.poker.horseshoe.seatCardScale})`, transformOrigin: 'center' }}>
               <Card3D card={c as any} highlight={highlightSet.has(`B${i}`)} />
@@ -150,10 +154,10 @@ export function PokerTableHorseshoe() {
           ))}
         </div>
         {/* Pot */}
-        <div style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.potOffsetY, transform: 'translate(-50%, -50%)', fontWeight: 700, opacity: 0.9 }}>Pot: {totalPot}</div>
+        <div id="horseshoe-pot" style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.potOffsetY, transform: 'translate(-50%, -50%)', fontWeight: 700, opacity: 0.9 }}>Pot: {totalPot}</div>
         {/* (removed central equity; shown per seat instead) */}
         {/* Showdown hand descriptions */}
-        <div style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.showdownOffsetY, transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: width * 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div id="horseshoe-showdown" style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.showdownOffsetY, transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: width * 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {showdownText}
         </div>
 
@@ -162,22 +166,22 @@ export function PokerTableHorseshoe() {
           const pos = seatPosition(i, table.seats.length, radiusX, radiusY, centerX, centerY)
           const outline = i === table.currentToAct ? '2px solid #ffd54f' : undefined
           return (
-            <div key={i} style={{ position: 'absolute', left: pos.left, top: pos.top, transform: 'translate(-50%, -50%)', width: CONFIG.poker.horseshoe.seatWidthPx, border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: 6, background: 'rgba(0,0,0,0.18)', outline, outlineOffset: 2 }}>
-              <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+            <div key={i} id={`horseshoe-seat-${i}`} style={{ position: 'absolute', left: pos.left, top: pos.top, transform: 'translate(-50%, -50%)', width: CONFIG.poker.horseshoe.seatWidthPx, border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: 6, background: 'rgba(0,0,0,0.18)', outline, outlineOffset: 2 }}>
+              <div id={`horseshoe-seat-cards-${i}`} style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center', height: SCALED_CARD_HEIGHT_PX }}>
                 {!s.hasFolded && s.hole.map((c, k) => (
                   <div key={k} style={{ transform: `scale(${CONFIG.poker.horseshoe.seatCardScale})`, transformOrigin: 'center' }}>
                     <Card3D card={c as any} highlight={highlightSet.has(`S${i}-${k}`)} />
                   </div>
                 ))}
               </div>
-              <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Seat {i}{i === table.buttonIndex ? ' (BTN)' : ''}{s.hasFolded ? ' · Folded' : ''}{s.isAllIn ? ' · All-in' : ''}</div>
-              <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Stack: {s.stack}</div>
-              <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Bet: {s.committedThisStreet} • In pot: {s.totalCommitted}</div>
-              {equity && !s.hasFolded && s.hole.length === 2 && (
-                <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.85 }}>
-                  {((equity.win[i] / samples) * 100).toFixed(1)}% win • {((equity.tie[i] / samples) * 100).toFixed(1)}% tie {equityRunning ? ' (…)' : ''}
-                </div>
-              )}
+              <div id={`horseshoe-seat-label-${i}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Seat {i}{i === table.buttonIndex ? ' (BTN)' : ''}{s.hasFolded ? ' · Folded' : ''}{s.isAllIn ? ' · All-in' : ''}</div>
+              <div id={`horseshoe-seat-stack-${i}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Stack: {s.stack}</div>
+              <div id={`horseshoe-seat-bets-${i}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Bet: {s.committedThisStreet} • In pot: {s.totalCommitted}</div>
+              <div id={`horseshoe-seat-equity-${i}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.85, minHeight: EQUITY_LINE_HEIGHT_PX }}>
+                {equity && !s.hasFolded && s.hole.length === 2 ? (
+                  <span>{((equity.win[i] / samples) * 100).toFixed(1)}% win • {((equity.tie[i] / samples) * 100).toFixed(1)}% tie {equityRunning ? ' (…)' : ''}</span>
+                ) : ''}
+              </div>
             </div>
           )
         })}

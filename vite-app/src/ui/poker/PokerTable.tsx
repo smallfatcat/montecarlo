@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { usePokerGame } from './usePokerGame'
+import { usePokerGameContext } from './PokerGameContext'
 import { Card3D } from '../components/Card3D'
 import { evaluateSeven, formatEvaluated, pickBestFive } from '../../poker/handEval'
 import { CONFIG } from '../../config'
@@ -7,7 +7,7 @@ import { usePokerSimulationRunner } from './usePokerSimulationRunner'
 import { useEquity } from './useEquity'
 
 export function PokerTable() {
-  const { table, beginHand, autoPlay, setAutoPlay, available, fold, check, call, bet, raise } = usePokerGame()
+  const { table, beginHand, autoPlay, setAutoPlay, available, fold, check, call, bet, raise } = usePokerGameContext()
   const sim = usePokerSimulationRunner()
   const [simHands, setSimHands] = useState(1000)
   const [simProgress, setSimProgress] = useState<{done:number,total:number}|null>(null)
@@ -114,6 +114,8 @@ export function PokerTable() {
 
   // Recompute equities after each state change during in_hand (guarded to avoid re-render loops)
   const samples = 2000
+  const CARD_HEIGHT_PX = 140
+  const RESULT_LINE_HEIGHT_PX = 24
   const lastEqKeyRef = useRef<string | null>(null)
   useEffect(() => {
     if (table.status !== 'in_hand') return
@@ -128,57 +130,81 @@ export function PokerTable() {
 
   return (
     <div id="poker-root" style={{ display: 'grid', gap: 12 }}>
-      <div className="poker-status" title={`Hand #${table.handId} • Btn ${table.buttonIndex} • ${table.status} • ${table.street ?? '-'} • To act ${table.currentToAct ?? '-'} • BetToCall ${table.betToCall}`}>
+      <div id="poker-status" className="poker-status" title={`Hand #${table.handId} • Btn ${table.buttonIndex} • ${table.status} • ${table.street ?? '-'} • To act ${table.currentToAct ?? '-'} • BetToCall ${table.betToCall}`}>
         Hand #{table.handId} • Button @ {table.buttonIndex} • Status: {table.gameOver ? 'game_over' : table.status} • Street: {table.street ?? '-'} • To act: {table.currentToAct ?? '-'} • BetToCall: {table.betToCall}
       </div>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div id="poker-controlbar" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <button onClick={() => beginHand()} disabled={table.status === 'in_hand' || table.gameOver}>Deal</button>
         <label><input type="checkbox" checked={autoPlay} onChange={(e) => setAutoPlay(e.target.checked)} /> Autoplay</label>
         <button onClick={() => setShowControls((v) => !v)}>{showControls ? 'Hide' : 'Show'} Controls</button>
+        <button onClick={() => { window.location.hash = '#poker-horseshoe' }}>Horseshoe View</button>
       </div>
 
-      <div className="board-row" style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+      <div id="board-row" className="board-row" style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
         {community.map((c, i) => (
           <Card3D key={i} card={c as any} highlight={highlightSet.has(`B${i}`)} />
         ))}
       </div>
       {/* Pot display */}
-      <div style={{ textAlign: 'center', fontWeight: 700, opacity: 0.9 }}>Pot: {table.pot.main}</div>
-      {/* Equity bar */}
-      {equity && (
-        <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.85 }}>
-          {table.seats.map((_, i) => (
-            <span key={i} style={{ marginRight: 10 }}>
-              Seat {i}: {((equity.win[i] / samples) * 100).toFixed(1)}% win • {((equity.tie[i] / samples) * 100).toFixed(1)}% tie
-            </span>
-          ))}
-          {equityRunning && <span> (calculating…)</span>}
+      <div id="pot-display" style={{ textAlign: 'center', fontWeight: 700, opacity: 0.9 }}>Pot: {table.pot.main}</div>
+      {/* Equity bar in its own isolated row to prevent layout jitter */}
+      <div id="poker-equity-row"
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: 18,
+          contain: 'size',
+          overflow: 'hidden',
+        }}
+      >
+        <div id="poker-equity-inner"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            textAlign: 'center',
+            fontSize: 12,
+            opacity: 0.85,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {equity && (
+            <>
+              {table.seats.map((_, i) => (
+                <span key={i} style={{ marginRight: 10 }}>
+                  Seat {i}: {((equity.win[i] / samples) * 100).toFixed(1)}% win • {((equity.tie[i] / samples) * 100).toFixed(1)}% tie
+                </span>
+              ))}
+              {equityRunning && <span> (calculating…)</span>}
+            </>
+          )}
         </div>
-      )}
-      <div className="showdown-text" style={{ textAlign: 'center', opacity: 0.9 }}>{showdownText}</div>
+      </div>
+      <div id="showdown-text" className="showdown-text" style={{ textAlign: 'center', opacity: 0.9 }}>{showdownText}</div>
 
-      <div className="seats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+      <div id="seats-grid" className="seats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         {seats.map((s, i) => (
-          <div key={i} style={{ border: '1px solid #444', padding: 8, borderRadius: 8, outline: i === table.currentToAct ? '2px solid #ffd54f' : undefined, outlineOffset: 2 }}>
-            <div style={{ display: 'flex', gap: 6 }}>
+          <div key={i} id={`seat-${i}`} style={{ border: '1px solid #444', padding: 8, borderRadius: 8, outline: i === table.currentToAct ? '2px solid #ffd54f' : undefined, outlineOffset: 2 }}>
+            <div id={`seat-cards-${i}`} style={{ display: 'flex', gap: 6, minHeight: CARD_HEIGHT_PX }}>
               {!s.hasFolded && s.hole.map((c, k) => (
                 <Card3D key={k} card={c as any} highlight={highlightSet.has(`S${i}-${k}`)} />
               ))}
             </div>
-            <div>Seat {i} {i === table.buttonIndex ? ' (BTN)' : ''} {s.hasFolded ? ' - Folded' : ''} {s.isAllIn ? ' - All-in' : ''}</div>
-            <div>Stack: {s.stack}</div>
-            <div>Bet: {s.committedThisStreet} · In pot: {s.totalCommitted}</div>
-            {table.status === 'hand_over' && (
-              <div style={{ fontWeight: 700, color: winnersSet.has(i) ? '#ffd54f' : undefined }}>
-                {winnersSet.has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')}
-              </div>
-            )}
+            <div id={`seat-label-${i}`}>Seat {i} {i === table.buttonIndex ? ' (BTN)' : ''} {s.hasFolded ? ' - Folded' : ''} {s.isAllIn ? ' - All-in' : ''}</div>
+            <div id={`seat-stack-${i}`}>Stack: {s.stack}</div>
+            <div id={`seat-bets-${i}`}>Bet: {s.committedThisStreet} · In pot: {s.totalCommitted}</div>
+            <div id={`seat-result-${i}`} style={{ minHeight: RESULT_LINE_HEIGHT_PX, fontWeight: 700, color: winnersSet.has(i) ? '#ffd54f' : undefined }}>
+              {table.status === 'hand_over' ? (winnersSet.has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')) : ''}
+            </div>
           </div>
         ))}
       </div>
 
       {showControls && (
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div id="action-controls" style={{ display: 'flex', gap: 8, minHeight: 44 }}>
           <button onClick={fold} disabled={!available.includes('fold')}>Fold</button>
           <button onClick={check} disabled={!available.includes('check')}>Check</button>
           <button onClick={call} disabled={!available.includes('call')}>Call</button>
@@ -209,10 +235,12 @@ export function PokerTable() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <div id="sim-controls" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <label>Sim hands: <input type="number" value={simHands} onChange={(e) => setSimHands(parseInt(e.target.value||'0'))} /></label>
         <button onClick={() => sim.run({ hands: simHands, seats: table.seats.length, startingStack: 200 }, (d,t)=>setSimProgress({done:d,total:t}), ()=>setSimProgress(null))}>Run Sim</button>
-        {simProgress && <span>Progress: {simProgress.done}/{simProgress.total}</span>}
+        <span id="sim-progress" style={{ minHeight: 18 }}>
+          {simProgress ? `Progress: ${simProgress.done}/${simProgress.total}` : ''}
+        </span>
       </div>
     </div>
   )

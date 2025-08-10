@@ -4,6 +4,7 @@ import { CONFIG } from '../config'
 import { DeckGallery } from './DeckGallery'
 import { PokerTable } from './poker/PokerTable'
 import { PokerTableHorseshoe } from './poker/PokerTableHorseshoe'
+import { PokerGameProvider } from './poker/PokerGameContext'
 import { PokerTestDashboard } from './poker/PokerTestDashboard'
 
 export function App() {
@@ -22,9 +23,17 @@ export function App() {
   const showPokerTest = hash === '#poker-test'
   const showPokerHorseshoe = hash === '#poker-horseshoe'
   if (showDeck) return <DeckGallery />
-  if (showPokerHorseshoe) return <PokerTableHorseshoe />
+  if (showPokerHorseshoe) return (
+    <PokerGameProvider>
+      <PokerTableHorseshoe />
+    </PokerGameProvider>
+  )
   if (showPokerTest) return <PokerTestDashboard />
-  if (showPoker) return <PokerTable />
+  if (showPoker) return (
+    <PokerGameProvider>
+      <PokerTable />
+    </PokerGameProvider>
+  )
   return <Table />
 }
 
