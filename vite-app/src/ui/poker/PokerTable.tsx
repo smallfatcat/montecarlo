@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePokerGame } from './usePokerGame'
 import { Card3D } from '../components/Card3D'
 import { evaluateSeven, formatEvaluated, pickBestFive } from '../../poker/handEval'
 import { CONFIG } from '../../config'
 import { usePokerSimulationRunner } from './usePokerSimulationRunner'
+import { useEquity } from './useEquity'
 
 export function PokerTable() {
   const { table, beginHand, autoPlay, setAutoPlay, available, fold, check, call, bet, raise } = usePokerGame()
@@ -12,6 +13,7 @@ export function PokerTable() {
   const [simProgress, setSimProgress] = useState<{done:number,total:number}|null>(null)
   const [betSize, setBetSize] = useState<'33'|'50'|'75'|'pot'|'shove'>('50')
   const [showControls, setShowControls] = useState(true)
+  const { equity, run: runEquity, running: equityRunning } = useEquity()
 
   const seats = table.seats
   const community = table.community
@@ -110,6 +112,20 @@ export function PokerTable() {
     return `${potText} • ` + ranked.map((r) => `Seat ${r.seat}: ${r.text}`).join(' • ')
   })()
 
+  // Recompute equities after each state change during in_hand (guarded to avoid re-render loops)
+  const samples = 2000
+  const lastEqKeyRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (table.status !== 'in_hand') return
+    const keyPartSeats = table.seats.map((s) => s.hasFolded ? 'X' : (s.hole.map((c) => `${c.rank}${c.suit[0]}`).join(''))).join('|')
+    const keyPartBoard = community.map((c) => `${c.rank}${c.suit[0]}`).join('')
+    const k = `${keyPartSeats}#${keyPartBoard}`
+    if (k === lastEqKeyRef.current) return
+    lastEqKeyRef.current = k
+    const seatsForEquity = table.seats.map((s) => ({ hole: s.hole, folded: s.hasFolded }))
+    runEquity(seatsForEquity as any, community as any, samples)
+  }, [table.status, table.seats, community])
+
   return (
     <div id="poker-root" style={{ display: 'grid', gap: 12 }}>
       <div className="poker-status" title={`Hand #${table.handId} • Btn ${table.buttonIndex} • ${table.status} • ${table.street ?? '-'} • To act ${table.currentToAct ?? '-'} • BetToCall ${table.betToCall}`}>
@@ -128,6 +144,17 @@ export function PokerTable() {
       </div>
       {/* Pot display */}
       <div style={{ textAlign: 'center', fontWeight: 700, opacity: 0.9 }}>Pot: {table.pot.main}</div>
+      {/* Equity bar */}
+      {equity && (
+        <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.85 }}>
+          {table.seats.map((_, i) => (
+            <span key={i} style={{ marginRight: 10 }}>
+              Seat {i}: {((equity.win[i] / samples) * 100).toFixed(1)}% win • {((equity.tie[i] / samples) * 100).toFixed(1)}% tie
+            </span>
+          ))}
+          {equityRunning && <span> (calculating…)</span>}
+        </div>
+      )}
       <div className="showdown-text" style={{ textAlign: 'center', opacity: 0.9 }}>{showdownText}</div>
 
       <div className="seats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>

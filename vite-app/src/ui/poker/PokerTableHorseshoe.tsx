@@ -1,27 +1,30 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePokerGame } from './usePokerGame'
 import { Card3D } from '../components/Card3D'
 import { evaluateSeven, pickBestFive, formatEvaluated } from '../../poker/handEval'
 import { CONFIG } from '../../config'
+import { useEquity } from './useEquity'
 
 function seatPosition(index: number, total: number, radiusX: number, radiusY: number, centerX: number, centerY: number) {
   // Horseshoe arc (semi-ellipse) across the lower half of the table
   // Angles from 205° to -25° (clockwise), evenly spaced for a wider arc
-  const startDeg = 220
-  const endDeg = -40
+  const startDeg = 205
+  const endDeg = -25
   const t = total <= 1 ? 0 : index / (total - 1)
   const deg = startDeg + (endDeg - startDeg) * t
   const rad = (deg * Math.PI) / 180
   // Push end seats (0 and last) a bit further toward the horizontal edges
-  const edgeBoost = index === 0 || index === total - 1 ? 1.3 : (index === 1 || index === total - 2 ? 1.08 : 1.0)
+  const edgeBoost = index === 0 || index === total - 1 ? 1.1 : (index === 1 || index === total - 2 ? 1.08 : 1.0)
+  const topBoost = index === 0 || index === total - 1 ? 1.2 : (index === 1 || index === total - 2 ? 1.0 : 1.0)
   const x = centerX + (radiusX * edgeBoost) * Math.cos(rad)
-  const y = centerY + radiusY * Math.sin(rad)
+  const y = centerY + (radiusY * topBoost) * Math.sin(rad)
   return { left: x, top: y }
 }
 
 export function PokerTableHorseshoe() {
   const { table, beginHand, autoPlay, setAutoPlay, available, fold, check, call, bet, raise } = usePokerGame()
   const [betSize, setBetSize] = useState<'33'|'50'|'75'|'pot'|'shove'>('50')
+  const { equity, run: runEquity, running: equityRunning } = useEquity()
 
   const community = table.community
   const totalPot = useMemo(() => table.pot.main, [table.pot.main])
@@ -41,6 +44,20 @@ export function PokerTableHorseshoe() {
     const potText = `Pot: ${totalPot}${rake ? ` (rake ${rake})` : ''}`
     return `${potText} • ` + ranked.map((r) => `Seat ${r.seat}: ${r.text}`).join(' • ')
   }, [table.status, community, table.seats, totalPot])
+
+  // Trigger equity computation during active hands (avoid re-render loops)
+  const samples = 2000
+  const lastEqKeyRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (table.status !== 'in_hand') return
+    const keyPartSeats = table.seats.map((s) => s.hasFolded ? 'X' : (s.hole.map((c) => `${c.rank}${c.suit[0]}`).join(''))).join('|')
+    const keyPartBoard = community.map((c) => `${c.rank}${c.suit[0]}`).join('')
+    const k = `${keyPartSeats}#${keyPartBoard}`
+    if (k === lastEqKeyRef.current) return
+    lastEqKeyRef.current = k
+    const seatsForEquity = table.seats.map((s) => ({ hole: s.hole, folded: s.hasFolded }))
+    runEquity(seatsForEquity as any, community as any, samples)
+  }, [table.status, table.seats, community])
   const highlightSet = useMemo(() => {
     if (table.status !== 'hand_over' || community.length < 5) return new Set<string>()
     const classOrder: Record<string, number> = { high_card:0,pair:1,two_pair:2,three_kind:3,straight:4,flush:5,full_house:6,four_kind:7,straight_flush:8 } as const as any
@@ -80,11 +97,11 @@ export function PokerTableHorseshoe() {
   const width = 1200
   const height = 720
   const centerX = width / 2
-  const centerY = height / 2 -20
+  const centerY = height / 2 - 20
   const base = Math.min(width, height) / 2 - 80
   // Ellipse radii: stretch horizontally, slightly tighter vertically
   const radiusX = base * 1.6
-  const radiusY = base * 0.9
+  const radiusY = base * 1.0
 
   return (
     <div id="poker-root" style={{ display: 'grid', gap: 12 }}>
@@ -135,6 +152,7 @@ export function PokerTableHorseshoe() {
         </div>
         {/* Pot */}
         <div style={{ position: 'absolute', left: centerX, top: centerY + 35, transform: 'translate(-50%, -50%)', fontWeight: 700, opacity: 0.9 }}>Pot: {totalPot}</div>
+        {/* (removed central equity; shown per seat instead) */}
         {/* Showdown hand descriptions */}
         <div style={{ position: 'absolute', left: centerX, top: centerY + 70, transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: width * 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {showdownText}
@@ -156,6 +174,11 @@ export function PokerTableHorseshoe() {
               <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Seat {i}{i === table.buttonIndex ? ' (BTN)' : ''}{s.hasFolded ? ' · Folded' : ''}{s.isAllIn ? ' · All-in' : ''}</div>
               <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Stack: {s.stack}</div>
               <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Bet: {s.committedThisStreet} • In pot: {s.totalCommitted}</div>
+              {equity && !s.hasFolded && s.hole.length === 2 && (
+                <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.85 }}>
+                  {((equity.win[i] / samples) * 100).toFixed(1)}% win • {((equity.tie[i] / samples) * 100).toFixed(1)}% tie {equityRunning ? ' (…)' : ''}
+                </div>
+              )}
             </div>
           )
         })}
