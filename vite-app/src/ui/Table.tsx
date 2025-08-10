@@ -105,6 +105,9 @@ export function Table() {
           sim={{ run: runSim, progress: sim.progress }}
           rightExtras={controlsRightExtras}
         />
+        <div className="controls" style={{ justifyContent: 'flex-end', marginTop: 8 }}>
+          <button onClick={() => { window.location.hash = '#cards' }}>Open Card Gallery</button>
+        </div>
       </div>
 
       <ActionBar

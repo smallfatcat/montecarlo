@@ -7,7 +7,6 @@ export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false
   const suit = suitSymbol(card.suit)
   const isRed = card.suit === 'Hearts' || card.suit === 'Diamonds'
   const rank = card.rank
-  const pipCoords = getPipCoords(rank)
   return (
     <motion.div
       className="card3d"
@@ -56,7 +55,4 @@ function isFaceCard(rank: Card['rank']): boolean {
   return rank === 'A' || rank === 'J' || rank === 'Q' || rank === 'K'
 }
 
-// Grid is 7 rows x 3 cols (rows 1..7, cols 1..3)
-function getPipCoords(_: Card['rank']): Array<[number, number]> { return [] }
-
-
+// Pip layout for number cards is handled by SvgPips

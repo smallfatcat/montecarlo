@@ -36,6 +36,9 @@ type Pip = { x: number; y: number }
 function layoutForRank(rank: Card['rank']): Pip[] {
   const rows = { r1: 12, r2: 25, r3: 38, r4: 50, r5: 62, r6: 75, r7: 88 }
   const cols = { L: 28, C: 50, R: 72 }
+  // Evenly distribute edge pips for 9/10 by nudging the second from the top down a bit
+  // and the third (first from bottom) up a bit.
+  const edgeRows = { top1: rows.r1, top2: rows.r1 + (rows.r7 - rows.r1) * 0.33, bottom1: rows.r1 + (rows.r7 - rows.r1) * 0.66, bottom2: rows.r7 }
   switch (rank) {
     case '2':
       return [ { x: cols.C, y: rows.r2 }, { x: cols.C, y: rows.r6 } ]
@@ -48,13 +51,30 @@ function layoutForRank(rank: Card['rank']): Pip[] {
     case '6':
       return [ { x: cols.L, y: rows.r2 }, { x: cols.R, y: rows.r2 }, { x: cols.L, y: rows.r4 }, { x: cols.R, y: rows.r4 }, { x: cols.L, y: rows.r6 }, { x: cols.R, y: rows.r6 } ]
     case '7':
-      return [ ...layoutForRank('6'), { x: cols.C, y: rows.r1 } ]
+      // Many decks place the extra center pip slightly below the top row
+      return [ ...layoutForRank('6'), { x: cols.C, y: rows.r3 } ]
     case '8':
-      return [ ...layoutForRank('6'), { x: cols.C, y: rows.r1 }, { x: cols.C, y: rows.r7 } ]
-    case '9':
-      return [ ...layoutForRank('8'), { x: cols.C, y: rows.r4 } ]
-    case '10':
-      return [ ...layoutForRank('9'), { x: cols.C, y: rows.r3 } ]
+      return [ ...layoutForRank('6'), { x: cols.C, y: rows.r3 }, { x: cols.C, y: rows.r5 } ]
+    case '9': {
+      // 9: Four on each edge (top two rows and bottom two rows), one in the middle
+      const edges = [
+        { x: cols.L, y: edgeRows.top1 }, { x: cols.R, y: edgeRows.top1 },
+        { x: cols.L, y: edgeRows.top2 }, { x: cols.R, y: edgeRows.top2 },
+        { x: cols.L, y: edgeRows.bottom1 }, { x: cols.R, y: edgeRows.bottom1 },
+        { x: cols.L, y: edgeRows.bottom2 }, { x: cols.R, y: edgeRows.bottom2 },
+      ]
+      return [ ...edges, { x: cols.C, y: rows.r4 } ]
+    }
+    case '10': {
+      // 10: Four on each edge, two centered flanking the middle
+      const edges = [
+        { x: cols.L, y: edgeRows.top1 }, { x: cols.R, y: edgeRows.top1 },
+        { x: cols.L, y: edgeRows.top2 }, { x: cols.R, y: edgeRows.top2 },
+        { x: cols.L, y: edgeRows.bottom1 }, { x: cols.R, y: edgeRows.bottom1 },
+        { x: cols.L, y: edgeRows.bottom2 }, { x: cols.R, y: edgeRows.bottom2 },
+      ]
+      return [ ...edges, { x: cols.C, y: rows.r2 }, { x: cols.C, y: rows.r6 } ]
+    }
     default:
       return []
   }
@@ -66,11 +86,15 @@ export function SvgPips({ suit, rank }: { suit: Card['suit']; rank: Card['rank']
   const size = 22 // percentage of 100x100 viewBox
   return (
     <svg viewBox="0 0 100 100" className="pips-svg" aria-hidden>
-      {pips.map((p, i) => (
-        <g key={i} transform={`translate(${p.x}, ${p.y}) scale(${size/100}) translate(-50, -50)`}>
-          <SuitShape suit={suit} fill={fill} />
-        </g>
-      ))}
+      {pips.map((p, i) => {
+        const rotate = p.y > 50
+        const rotateCmd = rotate ? ' rotate(180 50 50)' : ''
+        return (
+          <g key={i} transform={`translate(${p.x}, ${p.y}) scale(${size/100}) translate(-50, -50)${rotateCmd}`}>
+            <SuitShape suit={suit} fill={fill} />
+          </g>
+        )
+      })}
     </svg>
   )
 }

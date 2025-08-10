@@ -1,4 +1,4 @@
-import React from 'react'
+// React import not needed with react-jsx runtime
 import { LayoutGroup, motion, AnimatePresence } from 'framer-motion'
 import { evaluateHand } from '../../blackjack'
 import type { Card } from '../../blackjack'
