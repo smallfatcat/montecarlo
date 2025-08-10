@@ -7,15 +7,14 @@ import { useEquity } from './useEquity'
 
 function seatPosition(index: number, total: number, radiusX: number, radiusY: number, centerX: number, centerY: number) {
   // Horseshoe arc (semi-ellipse) across the lower half of the table
-  // Angles from 205° to -25° (clockwise), evenly spaced for a wider arc
-  const startDeg = 205
-  const endDeg = -25
+  const startDeg = CONFIG.poker.horseshoe.arcStartDeg
+  const endDeg = CONFIG.poker.horseshoe.arcEndDeg
   const t = total <= 1 ? 0 : index / (total - 1)
   const deg = startDeg + (endDeg - startDeg) * t
   const rad = (deg * Math.PI) / 180
   // Push end seats (0 and last) a bit further toward the horizontal edges
-  const edgeBoost = index === 0 || index === total - 1 ? 1.1 : (index === 1 || index === total - 2 ? 1.08 : 1.0)
-  const topBoost = index === 0 || index === total - 1 ? 1.2 : (index === 1 || index === total - 2 ? 1.0 : 1.0)
+  const edgeBoost = index === 0 || index === total - 1 ? CONFIG.poker.horseshoe.edgeBoostEnd : (index === 1 || index === total - 2 ? CONFIG.poker.horseshoe.edgeBoostNearEnd : 1.0)
+  const topBoost = index === 0 || index === total - 1 ? CONFIG.poker.horseshoe.topBoostEnd : (index === 1 || index === total - 2 ? CONFIG.poker.horseshoe.topBoostNearEnd : 1.0)
   const x = centerX + (radiusX * edgeBoost) * Math.cos(rad)
   const y = centerY + (radiusY * topBoost) * Math.sin(rad)
   return { left: x, top: y }
@@ -94,14 +93,14 @@ export function PokerTableHorseshoe() {
     return out
   }, [table.status, community, table.seats])
 
-  const width = 1200
-  const height = 720
+  const width = CONFIG.poker.horseshoe.tableWidthPx
+  const height = CONFIG.poker.horseshoe.tableHeightPx
   const centerX = width / 2
-  const centerY = height / 2 - 20
-  const base = Math.min(width, height) / 2 - 80
+  const centerY = height / 2 + CONFIG.poker.horseshoe.centerYOffsetPx
+  const base = Math.min(width, height) / 2 - CONFIG.poker.horseshoe.basePaddingPx
   // Ellipse radii: stretch horizontally, slightly tighter vertically
-  const radiusX = base * 1.6
-  const radiusY = base * 1.0
+  const radiusX = base * CONFIG.poker.horseshoe.radiusXScale
+  const radiusY = base * CONFIG.poker.horseshoe.radiusYScale
 
   return (
     <div id="poker-root" style={{ display: 'grid', gap: 12 }}>
@@ -143,18 +142,18 @@ export function PokerTableHorseshoe() {
 
       <div className="horseshoe-table" style={{ position: 'relative', width, height, margin: '0 auto', borderRadius: 24, background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
         {/* Board in the center */}
-        <div style={{ position: 'absolute', left: centerX, top: centerY - 60, transform: 'translate(-50%, -50%)', display: 'flex', gap: 10 }}>
+        <div style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.boardOffsetY, transform: 'translate(-50%, -50%)', display: 'flex', gap: CONFIG.poker.horseshoe.boardGapPx }}>
           {community.map((c, i) => (
-            <div key={i} style={{ transform: 'scale(0.9)', transformOrigin: 'center' }}>
+            <div key={i} style={{ transform: `scale(${CONFIG.poker.horseshoe.seatCardScale})`, transformOrigin: 'center' }}>
               <Card3D card={c as any} highlight={highlightSet.has(`B${i}`)} />
             </div>
           ))}
         </div>
         {/* Pot */}
-        <div style={{ position: 'absolute', left: centerX, top: centerY + 35, transform: 'translate(-50%, -50%)', fontWeight: 700, opacity: 0.9 }}>Pot: {totalPot}</div>
+        <div style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.potOffsetY, transform: 'translate(-50%, -50%)', fontWeight: 700, opacity: 0.9 }}>Pot: {totalPot}</div>
         {/* (removed central equity; shown per seat instead) */}
         {/* Showdown hand descriptions */}
-        <div style={{ position: 'absolute', left: centerX, top: centerY + 70, transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: width * 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.showdownOffsetY, transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: width * 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {showdownText}
         </div>
 
@@ -163,10 +162,10 @@ export function PokerTableHorseshoe() {
           const pos = seatPosition(i, table.seats.length, radiusX, radiusY, centerX, centerY)
           const outline = i === table.currentToAct ? '2px solid #ffd54f' : undefined
           return (
-            <div key={i} style={{ position: 'absolute', left: pos.left, top: pos.top, transform: 'translate(-50%, -50%)', width: 200, border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: 6, background: 'rgba(0,0,0,0.18)', outline, outlineOffset: 2 }}>
+            <div key={i} style={{ position: 'absolute', left: pos.left, top: pos.top, transform: 'translate(-50%, -50%)', width: CONFIG.poker.horseshoe.seatWidthPx, border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: 6, background: 'rgba(0,0,0,0.18)', outline, outlineOffset: 2 }}>
               <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                 {!s.hasFolded && s.hole.map((c, k) => (
-                  <div key={k} style={{ transform: 'scale(0.9)', transformOrigin: 'center' }}>
+                  <div key={k} style={{ transform: `scale(${CONFIG.poker.horseshoe.seatCardScale})`, transformOrigin: 'center' }}>
                     <Card3D card={c as any} highlight={highlightSet.has(`S${i}-${k}`)} />
                   </div>
                 ))}
