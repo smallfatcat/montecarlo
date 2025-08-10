@@ -4,6 +4,16 @@ export const CONFIG = {
     playerActionDelayMs: 450,
     autoDealDelayMs: 900,
   },
+  pokerAutoplay: {
+    cpuActionDelayMs: 250,
+    playerActionDelayMs: 300,
+    autoDealDelayMs: 700,
+  },
+  poker: {
+    rakePercent: 0.05, // e.g., 0.05 for 5% rake
+    rakeCap: 0,     // absolute cap in chips; set >0 to cap rake
+    showRakeInUI: true,
+  },
   shoe: {
     defaultNumDecks: 6,
     reshuffleCutoffRatio: 0.2,

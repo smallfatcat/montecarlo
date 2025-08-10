@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Table } from './Table'
 import { CONFIG } from '../config'
 import { DeckGallery } from './DeckGallery'
+import { PokerTable } from './poker/PokerTable'
+import { PokerTestDashboard } from './poker/PokerTestDashboard'
 
 export function App() {
   const [hash, setHash] = useState<string>(typeof window !== 'undefined' ? window.location.hash : '')
@@ -15,7 +17,12 @@ export function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
   const showDeck = hash === '#cards'
-  return showDeck ? <DeckGallery /> : <Table />
+  const showPoker = hash === '#poker'
+  const showPokerTest = hash === '#poker-test'
+  if (showDeck) return <DeckGallery />
+  if (showPokerTest) return <PokerTestDashboard />
+  if (showPoker) return <PokerTable />
+  return <Table />
 }
 
 

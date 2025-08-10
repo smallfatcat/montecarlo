@@ -112,6 +112,9 @@ h1 {
 
 .cards { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; min-height: 300px; }
 
+/* Reserve vertical space for the community board to avoid layout reflow */
+.board-row { min-height: 160px; }
+
 /* Flat view helpers */
 #table-flat .hand-row { position: relative; }
 #table-flat .hand-row > div { will-change: transform; }
@@ -133,9 +136,27 @@ h1 {
   font-weight: 600;
 }
 
-.status {
-  margin-top: 1rem;
-  font-weight: 600;
+.status { margin-top: 1rem; font-weight: 600; }
+
+/* Reserve space for variable showdown/status text to prevent layout shift */
+.showdown-text { min-height: 24px; }
+.status-bar {
+  min-height: 24px;
+  /* Prevent horizontal reflow: occupy flexible space and truncate */
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.poker-status {
+  width: 100%;
+  min-height: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Card visuals */

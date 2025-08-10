@@ -5,7 +5,7 @@ import { SvgPips } from './SvgPips'
 import { FaceArt } from './FaceArt'
 import { useMemo } from 'react'
 
-export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false, flat = false }: { card: Card; faceDown?: boolean; index?: number; enterFromTop?: boolean; flat?: boolean }) {
+export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false, flat = false, highlight = false }: { card: Card; faceDown?: boolean; index?: number; enterFromTop?: boolean; flat?: boolean; highlight?: boolean }) {
   const suit = suitSymbol(card.suit)
   const isRed = card.suit === 'Hearts' || card.suit === 'Diamonds'
   const rank = card.rank
@@ -20,6 +20,7 @@ export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false
     >
       <motion.div
         className={`card__face card__front ${isRed ? 'card--red' : 'card--black'}`}
+        style={highlight ? { boxShadow: '0 0 0 3px var(--accent)', borderRadius: 12 } : undefined}
         animate={{ rotateY: faceDown ? 180 : 0 }}
         transition={{ duration: CONFIG.animation.cardFlipDurationSec }}
       >
