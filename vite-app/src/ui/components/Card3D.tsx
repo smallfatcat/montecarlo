@@ -2,6 +2,8 @@ import { motion } from 'framer-motion'
 import { CONFIG } from '../../config'
 import type { Card } from '../../blackjack'
 import { SvgPips } from './SvgPips'
+import { FaceArt } from './FaceArt'
+import { useMemo } from 'react'
 
 export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false, flat = false }: { card: Card; faceDown?: boolean; index?: number; enterFromTop?: boolean; flat?: boolean }) {
   const suit = suitSymbol(card.suit)
@@ -27,7 +29,7 @@ export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false
         </div>
         <div className="card__center">
           {isFaceCard(rank) ? (
-            <span className="card__faceletter">{rank === 'A' ? suit : rank}</span>
+            <FaceCenter suit={card.suit} rank={rank as any} />
           ) : (
             <SvgPips suit={card.suit} rank={rank} />
           )}
@@ -56,3 +58,24 @@ function isFaceCard(rank: Card['rank']): boolean {
 }
 
 // Pip layout for number cards is handled by SvgPips
+
+function FaceCenter({ suit, rank }: { suit: Card['suit']; rank: 'A' | 'J' | 'Q' | 'K' }) {
+  const url = useMemo(() => {
+    const s = suit.toLowerCase()
+    const r = rank.toLowerCase()
+    return `/face/${s}_${r}.png`
+  }, [suit, rank])
+
+  // Use an <img> that hides on error, falling back to SVG FaceArt
+  return (
+    <div style={{ width: '84%', height: '84%', display: 'grid', placeItems: 'center' }}>
+      <img
+        src={url}
+        alt={`${rank} of ${suit}`}
+        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+      />
+      <FaceArt suit={suit} rank={rank} />
+    </div>
+  )
+}
