@@ -5,7 +5,7 @@ import type { Card } from '../../blackjack'
 import { Card3D } from '../components/Card3D'
 import { CONFIG } from '../../config'
 
-export function HandsFlat({ table, roundId }: { table: any; roundId: number }) {
+export function HandsFlat({ table, roundId, bankrolls, casinoBank }: { table: any; roundId: number; bankrolls: number[]; casinoBank: number }) {
   const seats = table.seats
   const revealed = table.status !== 'seat_turn'
   const activeSeat = table.activeSeatIndex
@@ -37,6 +37,10 @@ export function HandsFlat({ table, roundId }: { table: any; roundId: number }) {
   }, [seats.length])
   return (
     <LayoutGroup key={roundId}>
+      {/* Dealer header */}
+      <div id="dealer-header" style={{ textAlign: 'center', fontWeight: 700, opacity: 0.9 }}>
+        Dealer ${casinoBank}
+      </div>
       <div id="dealer-lane" style={{ display: 'flex', gap: CONFIG.layout.flat.dealerLaneGapPx, justifyContent: 'center', marginTop: CONFIG.layout.flat.dealerLaneMarginTopPx }}>
         <AnimatePresence initial mode="popLayout">
           {table.dealerHand.map((c: Card, i: number) => (
@@ -55,7 +59,9 @@ export function HandsFlat({ table, roundId }: { table: any; roundId: number }) {
       <div id="players-lane" ref={laneRef} style={{ position: 'absolute', bottom: CONFIG.layout.flat.playersLaneBottomPx, left: CONFIG.layout.flat.edgePaddingPx, right: CONFIG.layout.flat.edgePaddingPx, display: 'flex', gap: CONFIG.layout.flat.playersLaneGapPx, justifyContent: 'center', alignItems: 'flex-end', overflowX: 'hidden', paddingBottom: CONFIG.layout.flat.playersLanePaddingBottomPx, flexWrap: 'nowrap' }}>
         {seats.map((seat: any, si: number) => (
           <div key={`seat-${si}`} id={`seat-${si}`} className={`seat ${table.status === 'seat_turn' && activeSeat === si ? 'active' : ''}`} style={{ padding: CONFIG.layout.flat.seatPaddingPx, textAlign: 'center', minWidth: 'var(--flat-seat-min-width, 240px)' }}>
-            <div style={{ fontWeight: 700, opacity: 0.85, marginBottom: CONFIG.layout.flat.seatNameMarginBottomPx }}>{si === 0 ? 'Player' : `CPU ${si}`}</div>
+            <div style={{ fontWeight: 700, opacity: 0.85, marginBottom: CONFIG.layout.flat.seatNameMarginBottomPx }}>
+              {si === 0 ? 'Player' : `CPU ${si}`} ${bankrolls[si] ?? 0}
+            </div>
             {seat.hands.map((hand: Card[], hi: number) => {
               const evalResult = evaluateHand(hand)
               const outcome = seat.outcomes?.[hi]

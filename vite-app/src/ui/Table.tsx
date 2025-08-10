@@ -125,7 +125,7 @@ export function Table() {
         <HandsMulti table={table} roundId={roundId} bankrolls={bankrolls} suggested={suggested as any} />
       ) : (
         <div style={{ position: 'relative', minHeight: `${CONFIG.layout.flat.containerMinHeightVh}vh`, paddingTop: CONFIG.layout.flat.containerPaddingTopPx, paddingBottom: CONFIG.layout.flat.containerPaddingBottomPx }}>
-          <HandsFlat table={table} roundId={roundId} />
+          <HandsFlat table={table} roundId={roundId} bankrolls={bankrolls} casinoBank={casinoBank} />
         </div>
       )}
     </div>
