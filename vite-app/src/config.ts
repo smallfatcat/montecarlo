@@ -7,6 +7,7 @@ export const CONFIG = {
   shoe: {
     defaultNumDecks: 6,
     reshuffleCutoffRatio: 0.2,
+    cardsPerDeck: 52,
   },
   bankroll: {
     initialPerSeat: 100,
@@ -22,15 +23,63 @@ export const CONFIG = {
     cardStaggerStepMs: 80,
     // Smaller enter offset for flat view to avoid overflowing container and causing reflow
     flatEnterOffsetTop: -80,
+    cardFlipDurationSec: 0.35,
   },
   layout: {
     appMaxWidthPx: 1280,
     handsColumns: 3,
+    appControlsMarginBottomPx: 12,
     // Overlap between adjacent cards in flat view (positive number, px)
     flatCardOverlapPx: 72,
+    flatAppMaxWidthPx: 1600,
+    flat: {
+      containerMinHeightVh: 75,
+      containerPaddingTopPx: 5,
+      containerPaddingBottomPx: 10,
+      controlsGapPx: 8,
+      dealerLaneGapPx: 8,
+      dealerLaneMarginTopPx: 8,
+      dealerTotalMarginTopPx: 4,
+      playersLaneBottomPx: 150,
+      edgePaddingPx: 16,
+      playersLaneGapPx: 16,
+      playersLanePaddingBottomPx: 4,
+      seatPaddingPx: 8,
+      seatMinWidthPx: 240,
+      seatLowerBoundWidthPx: 180,
+      handRowGapPx: 4,
+      handRowMarginBottomPx: 6,
+      cardRowGapPx: 8,
+      infoRowGapPx: 8,
+      seatNameMarginBottomPx: 4,
+      actionsBottomPx: 12,
+      actionsGapPx: 8,
+      actionsPaddingPx: 8,
+      actionsBorderRadiusPx: 10,
+      actionsBetMarginLeftPx: 8,
+    },
+    multi: {
+      rulesGapPx: 12,
+      rulesMarginTopPx: 8,
+      detailsMarginTopPx: 8,
+      detailsMarginBottomPx: 16,
+      progressMarginLeftPx: 8,
+      seatBetInputWidthPx: 64,
+      doubleTotalsInputWidthPx: 120,
+      splitRanksInputWidthPx: 140,
+    },
   },
   simulation: {
     handsPerRun: 10000,
+    progressUpdateSteps: 100,
+  },
+  table: {
+    minPlayers: 1,
+    maxPlayers: 5,
+    defaultNumPlayers: 3,
+  },
+  ui: {
+    defaultView: 'flat' as 'multi' | 'flat',
   },
   rules: {
     dealerHitsSoft17: false as boolean, // S17 by default; set true for H17

@@ -88,9 +88,9 @@ function runWithProgress(options: RunMessage['options'], onProgress: (completed:
   let table: TableState = createInitialTable(numPlayers, cpuSeats, shoe)
   let bankrolls = Array.from({ length: numPlayers }, (_, i) => initialBankrolls[i] ?? 0)
   let casinoBank = casinoInitial
-  const cutoff = Math.floor(deckCount * 52 * reshuffleCutoffRatio)
+  const cutoff = Math.floor(deckCount * CONFIG.shoe.cardsPerDeck * reshuffleCutoffRatio)
 
-  const chunk = Math.max(1, Math.floor(numHands / 100))
+  const chunk = Math.max(1, Math.floor(numHands / CONFIG.simulation.progressUpdateSteps))
 
   for (let handIdx = 0; handIdx < numHands; handIdx += 1) {
     const needNewShoe = !shoe || shoe.length <= cutoff

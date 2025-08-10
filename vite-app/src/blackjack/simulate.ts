@@ -41,7 +41,7 @@ export function simulateSession(opts: SimulationOptions): SimulationResult {
   let bankrolls = Array.from({ length: numPlayers }, (_, i) => initialBankrolls[i] ?? 0)
   let casinoBank = casinoInitial
 
-  const cutoff = Math.floor(deckCount * 52 * reshuffleCutoffRatio)
+  const cutoff = Math.floor(deckCount * CONFIG.shoe.cardsPerDeck * reshuffleCutoffRatio)
 
   for (let handIdx = 0; handIdx < numHands; handIdx += 1) {
     const needNewShoe = !shoe || shoe.length <= cutoff

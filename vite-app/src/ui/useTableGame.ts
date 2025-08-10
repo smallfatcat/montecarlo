@@ -10,10 +10,14 @@ import { suggestAction, type SuggestedAction } from '../blackjack/strategy'
 export function useTableGame() {
   const [deckCount, setDeckCount] = useState<number>(CONFIG.shoe.defaultNumDecks)
   const [shoe, setShoe] = useState<Card[] | undefined>(undefined)
-  const [table, setTable] = useState<TableState>(() => createInitialTable(3, [1, 2]))
+  const [table, setTable] = useState<TableState>(() => {
+    const defaultSeats = CONFIG.table.defaultNumPlayers
+    const cpuSeats = Array.from({ length: Math.max(0, defaultSeats - 1) }, (_, i) => i + 1)
+    return createInitialTable(defaultSeats, cpuSeats)
+  })
   const [bankrolls, setBankrolls] = useState<number[]>([CONFIG.bankroll.initialPerSeat, CONFIG.bankroll.initialPerSeat, CONFIG.bankroll.initialPerSeat])
   const [casinoBank, setCasinoBank] = useState<number>(CONFIG.bankroll.casinoInitial)
-  const [numPlayers, setNumPlayers] = useState<number>(3)
+  const [numPlayers, setNumPlayers] = useState<number>(CONFIG.table.defaultNumPlayers)
   const [autoPlay, setAutoPlay] = useState<boolean>(false)
   const [lastBet, setLastBet] = useState<number>(CONFIG.bets.defaultPerSeat)
   const [betsBySeat, setBetsBySeat] = useState<number[]>([CONFIG.bets.defaultPerSeat, CONFIG.bets.defaultPerSeat, CONFIG.bets.defaultPerSeat])
@@ -45,11 +49,11 @@ export function useTableGame() {
 
   // initialize shoe and table (with persisted numPlayers/bankrolls if available)
   useEffect(() => {
-    const persistedPlayers = Number(localStorage.getItem('bj_numPlayers') || '3')
+    const persistedPlayers = Number(localStorage.getItem('bj_numPlayers') || String(CONFIG.table.defaultNumPlayers))
     const persistedBankrolls: number[] | null = (() => { try { return JSON.parse(localStorage.getItem('bj_bankrolls') || 'null') } catch { return null } })()
     const persistedRules: Partial<typeof CONFIG.rules> | null = (() => { try { return JSON.parse(localStorage.getItem('bj_rules') || 'null') } catch { return null } })()
-    if (Number.isFinite(persistedPlayers) && persistedPlayers >= 1 && persistedPlayers <= 5) setNumPlayers(persistedPlayers)
-    if (Array.isArray(persistedBankrolls) && persistedBankrolls.length > 0) setBankrolls(persistedBankrolls.map((v) => (Number.isFinite(v) ? v : 100)))
+    if (Number.isFinite(persistedPlayers) && persistedPlayers >= CONFIG.table.minPlayers && persistedPlayers <= CONFIG.table.maxPlayers) setNumPlayers(persistedPlayers)
+    if (Array.isArray(persistedBankrolls) && persistedBankrolls.length > 0) setBankrolls(persistedBankrolls.map((v) => (Number.isFinite(v) ? v : CONFIG.bankroll.initialPerSeat)))
     if (persistedRules && typeof persistedRules === 'object') {
       Object.assign(CONFIG.rules, persistedRules)
       setRulesVersion((v) => v + 1)
@@ -101,14 +105,14 @@ export function useTableGame() {
 
   // Change number of players (1..5). Seats > 1 are CPU.
   const setPlayers = (n: number) => {
-    const clamped = Math.max(1, Math.min(5, Math.floor(n || 1)))
+    const clamped = Math.max(CONFIG.table.minPlayers, Math.min(CONFIG.table.maxPlayers, Math.floor(n || CONFIG.table.minPlayers)))
     const cpuSeats = Array.from({ length: Math.max(0, clamped - 1) }, (_, i) => i + 1)
     const deckToUse = shoe ?? shuffleInPlace(createShoe(deckCount))
     const next = createInitialTable(clamped, cpuSeats, deckToUse)
     setTable(next)
     setNumPlayers(clamped)
-    setBankrolls((prev) => Array.from({ length: clamped }, (_, i) => prev[i] ?? 100))
-    setBetsBySeat((prev) => Array.from({ length: clamped }, (_, i) => prev[i] ?? 10))
+    setBankrolls((prev) => Array.from({ length: clamped }, (_, i) => prev[i] ?? CONFIG.bankroll.initialPerSeat))
+    setBetsBySeat((prev) => Array.from({ length: clamped }, (_, i) => prev[i] ?? CONFIG.bets.defaultPerSeat))
   }
 
   // Human actions map to active seat only when seat 0 (player) is active
@@ -334,7 +338,7 @@ export function useTableGame() {
 
 // Small pure helper to decide when to reshuffle based on remaining cards
 export function shouldReshuffle(deckCount: number, shoe: Card[] | undefined): boolean {
-  const totalCards = deckCount * 52
+  const totalCards = deckCount * CONFIG.shoe.cardsPerDeck
   const cutoff = Math.floor(totalCards * CONFIG.shoe.reshuffleCutoffRatio)
   if (!shoe) return true
   return shoe.length <= cutoff

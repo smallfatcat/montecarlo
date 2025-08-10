@@ -7,6 +7,7 @@
   --accent: #64d8cb;
   /* layout variables populated from CONFIG at runtime */
   --app-max-width: 1280px;
+  --controls-max-width: 1280px;
   --hands-columns: 3;
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -19,6 +20,11 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+.controls-container {
+  max-width: var(--controls-max-width);
+  margin: 0 auto;
+}
+
 
 a {
   font-weight: 500;

@@ -49,7 +49,7 @@ export function TableMulti() {
       <div className="controls" id="controls">
         <div className="bankroll" id="player-bankroll">Bankroll: ${bankrolls[0] ?? 0}</div>
         <label htmlFor="bet-input">Bet: $ <input id="bet-input" type="number" value={bet} min={1} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBet(parseInt(e.target.value || '0'))} /></label>
-        <label htmlFor="players-input">Players: <input id="players-input" type="number" value={numPlayers} min={1} max={5} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlayers(parseInt(e.target.value || '1'))} disabled={!(table.status === 'idle' || table.status === 'round_over')} /></label>
+        <label htmlFor="players-input">Players: <input id="players-input" type="number" value={numPlayers} min={CONFIG.table.minPlayers} max={CONFIG.table.maxPlayers} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlayers(parseInt(e.target.value || '1'))} disabled={!(table.status === 'idle' || table.status === 'round_over')} /></label>
         <span className="sep" />
         <label htmlFor="decks-input">Shoe decks: <input id="decks-input" type="number" value={decks} min={1} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDecks(parseInt(e.target.value || '1') as number)} /></label>
         <button id="new-shoe-button" onClick={() => newShoe(decks)}>New Shoe</button>
@@ -90,7 +90,7 @@ export function TableMulti() {
               numHands: handsPerRun,
               numPlayers,
               deckCount,
-              reshuffleCutoffRatio: 0.2,
+              reshuffleCutoffRatio: CONFIG.shoe.reshuffleCutoffRatio,
               initialBankrolls: bankrolls,
               casinoInitial: casinoBank,
               betsBySeat,
@@ -99,7 +99,7 @@ export function TableMulti() {
           })
         }}>Simulate</button>
         {simProgress ? (
-          <span id="sim-progress" style={{ marginLeft: 8, opacity: 0.9 }}>
+          <span id="sim-progress" style={{ marginLeft: CONFIG.layout.multi.progressMarginLeftPx, opacity: 0.9 }}>
             Running {simProgress.done}/{simProgress.total}
           </span>
         ) : null}
@@ -116,9 +116,9 @@ export function TableMulti() {
         </label>
       </div>
 
-      <details style={{ margin: '8px 0 16px' }}>
+      <details style={{ margin: `${CONFIG.layout.multi.detailsMarginTopPx}px 0 ${CONFIG.layout.multi.detailsMarginBottomPx}px` }}>
         <summary>Rules</summary>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+        <div style={{ display: 'flex', gap: CONFIG.layout.multi.rulesGapPx, alignItems: 'center', flexWrap: 'wrap', marginTop: CONFIG.layout.multi.rulesMarginTopPx }}>
           <label title="Dealer hits soft 17">
             <input type="checkbox" onChange={(e) => updateRules({ dealerHitsSoft17: e.target.checked })} /> H17 (dealer hits soft 17)
           </label>
@@ -132,7 +132,7 @@ export function TableMulti() {
           </label>
           <label title="Restrict double to totals; leave blank for any">
             Double totals (csv):
-            <input style={{ width: 120 }} placeholder="10,11" onBlur={(e) => {
+            <input style={{ width: CONFIG.layout.multi.doubleTotalsInputWidthPx }} placeholder="10,11" onBlur={(e) => {
               const vals = e.target.value.trim()
               const totals = vals ? vals.split(',').map(s => Number(s.trim())).filter(n => Number.isFinite(n)) : []
               updateRules({ doubleTotals: totals })
@@ -143,7 +143,7 @@ export function TableMulti() {
           </label>
           <label title="Restrict pair ranks (csv); blank = allow all">
             Split ranks:
-            <input style={{ width: 140 }} placeholder="A,8" onBlur={(e) => {
+            <input style={{ width: CONFIG.layout.multi.splitRanksInputWidthPx }} placeholder="A,8" onBlur={(e) => {
               const vals = e.target.value.trim()
               const ranks = vals ? vals.split(',').map(s => s.trim().toUpperCase() as any).filter(Boolean) : null
               updateRules({ allowSplitRanks: ranks })
@@ -188,7 +188,7 @@ export function TableMulti() {
                       type="number"
                       min={1}
                       style={{ width: 64 }}
-                      value={betsBySeat[seatIdx] ?? 10}
+                      value={betsBySeat[seatIdx] ?? CONFIG.bets.defaultPerSeat}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const v = Math.max(1, Math.floor(parseInt(e.target.value || '1')))
                         setBetsBySeat((arr) => arr.map((x, i) => (i === seatIdx ? v : x)))

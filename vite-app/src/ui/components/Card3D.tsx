@@ -20,7 +20,7 @@ export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false
       <motion.div
         className={`card__face card__front ${isRed ? 'card--red' : 'card--black'}`}
         animate={{ rotateY: faceDown ? 180 : 0 }}
-        transition={{ duration: 0.35 }}
+        transition={{ duration: CONFIG.animation.cardFlipDurationSec }}
       >
         <div className="card__corner card__corner--tl">
           <span className="card__rank">{card.rank}</span>
@@ -42,7 +42,7 @@ export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false
         className="card__face card__back"
         style={{ rotateY: 180 }}
         animate={{ rotateY: faceDown ? 0 : 180 }}
-        transition={{ duration: 0.35 }}
+        transition={{ duration: CONFIG.animation.cardFlipDurationSec }}
       />
     </motion.div>
   )
