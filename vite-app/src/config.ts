@@ -1,5 +1,5 @@
 export const CONFIG = {
-  version: '0.1.0',
+  version: (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0'),
   autoplay: {
     cpuActionDelayMs: 350,
     playerActionDelayMs: 450,
