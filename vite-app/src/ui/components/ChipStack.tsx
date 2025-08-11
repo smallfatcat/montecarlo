@@ -1,4 +1,5 @@
 import React from 'react'
+import { CONFIG } from '../../config'
 import { ChipIcon, DEFAULT_DENOMS, type ChipDenomination } from './ChipIcon'
 
 function splitIntoDenoms(amount: number, denoms: ChipDenomination[] = DEFAULT_DENOMS): Array<{ denom: ChipDenomination; count: number }> {
@@ -12,7 +13,7 @@ function splitIntoDenoms(amount: number, denoms: ChipDenomination[] = DEFAULT_DE
   return out
 }
 
-export function ChipStack({ amount, size = 18, overlap = 0.6, maxChipsPerRow = 8, style }: { amount: number; size?: number; overlap?: number; maxChipsPerRow?: number; style?: React.CSSProperties }) {
+export function ChipStack({ amount, size = CONFIG.poker.chipSizePx, overlap = CONFIG.poker.chipOverlap, maxChipsPerRow = CONFIG.poker.maxChipsPerRow, style }: { amount: number; size?: number; overlap?: number; maxChipsPerRow?: number; style?: React.CSSProperties }) {
   const groups = splitIntoDenoms(amount)
   const chips: Array<{ key: string; denom: ChipDenomination }> = []
   groups.forEach(g => {

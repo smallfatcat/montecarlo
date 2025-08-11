@@ -1,0 +1,90 @@
+{
+  "seats": {
+    "0": {
+      "left": 1082,
+      "top": 182,
+      "width": 200,
+      "height": 214
+    },
+    "1": {
+      "left": 1082,
+      "top": 532,
+      "width": 200,
+      "height": 214
+    },
+    "2": {
+      "left": 802,
+      "top": 562,
+      "width": 200,
+      "height": 214
+    },
+    "3": {
+      "left": 402,
+      "top": 562,
+      "width": 200,
+      "height": 214
+    },
+    "4": {
+      "left": 122,
+      "top": 532,
+      "width": 200,
+      "height": 214
+    },
+    "5": {
+      "left": 122,
+      "top": 182,
+      "width": 200,
+      "height": 214
+    }
+  },
+  "bets": {
+    "0": {
+      "left": 932,
+      "top": 162,
+      "width": 22.015625,
+      "height": 14
+    },
+    "1": {
+      "left": 932,
+      "top": 382,
+      "width": 22.015625,
+      "height": 14
+    },
+    "2": {
+      "left": 802,
+      "top": 422,
+      "width": 22.015625,
+      "height": 14
+    },
+    "3": {
+      "left": 402,
+      "top": 422,
+      "width": 22.015625,
+      "height": 14
+    },
+    "4": {
+      "left": 272,
+      "top": 382,
+      "width": 22.015625,
+      "height": 14
+    },
+    "5": {
+      "left": 272,
+      "top": 162,
+      "width": 22.015625,
+      "height": 14
+    }
+  },
+  "board": {
+    "left": 321,
+    "top": 151,
+    "width": 0,
+    "height": 0
+  },
+  "pot": {
+    "left": 551,
+    "top": 331,
+    "width": 62.71875,
+    "height": 24
+  }
+}

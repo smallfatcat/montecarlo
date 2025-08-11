@@ -19,6 +19,21 @@ export function PokerTable() {
 
   const seats = table.seats
   const community = table.community
+  const seatBetPositions = (() => {
+    // Simple grid layout: map seat index to a relative position in front of the seat cell
+    // Our seats grid is reversed visually (we invert index), so mirror positions accordingly
+    const cols = 3
+    const rows = Math.ceil(seats.length / cols)
+    const mapping: Record<number, { justify: 'flex-start'|'center'|'flex-end'; marginTop: number }> = {}
+    for (let r = 0; r < rows; r += 1) {
+      for (let c = 0; c < cols; c += 1) {
+        const visual = r * cols + c
+        const i = (seats.length - 1) - visual
+        mapping[i] = { justify: 'center', marginTop: -6 }
+      }
+    }
+    return mapping
+  })()
   const highlightSet = (() => {
     if (table.status !== 'hand_over' || community.length < 5) return new Set<string>()
     // Find best hand(s); highlight their 5 cards
@@ -161,7 +176,7 @@ export function PokerTable() {
       {/* Pot display with chips */}
       <div id="pot-display" style={{ textAlign: 'center', fontWeight: 700, opacity: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
         <span>Pot:</span>
-        <ChipStack amount={table.pot.main} size={16} overlap={0.55} />
+        <ChipStack amount={table.pot.main} />
         <span style={{ opacity: 0.9 }}>({table.pot.main})</span>
       </div>
       {/* Equity bar in its own isolated row to prevent layout jitter */}
@@ -218,21 +233,27 @@ export function PokerTable() {
           const visible = isShowdown ? (s.hole.length) : (revealed.holeCounts[i] ?? 0)
           const forceFaceDown = (table.status === 'in_hand') && (i !== 0) && (revealed.holeCounts[i] === 0)
           return (
-          <PokerSeat
-            key={i}
-            idPrefix="seat"
-            seat={s}
-            seatIndex={i}
-            handId={table.handId}
-            buttonIndex={table.buttonIndex}
-            currentToAct={table.currentToAct}
-            highlightSet={highlightSet}
-            showPerSeatEquity={false}
-            resultText={table.status === 'hand_over' ? (winnersSet.has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')) : ''}
-            seatCardScale={1}
-            visibleHoleCount={visible}
-            forceFaceDown={forceFaceDown}
-          />
+            <div key={i} style={{ display: 'grid' }}>
+              <PokerSeat
+                idPrefix="seat"
+                seat={s}
+                seatIndex={i}
+                handId={table.handId}
+                buttonIndex={table.buttonIndex}
+                currentToAct={table.currentToAct}
+                highlightSet={highlightSet}
+                showPerSeatEquity={false}
+                resultText={table.status === 'hand_over' ? (winnersSet.has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')) : ''}
+                seatCardScale={1}
+                visibleHoleCount={visible}
+                forceFaceDown={forceFaceDown}
+              />
+              {/* Bet stack positioned below the seat */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: seatBetPositions[i]?.justify ?? 'center', marginTop: seatBetPositions[i]?.marginTop ?? -6 }}>
+                <ChipStack amount={s.committedThisStreet} />
+                <span style={{ marginLeft: 6, fontSize: 12, lineHeight: 1, opacity: 0.9 }}>({s.committedThisStreet})</span>
+              </div>
+            </div>
           )
         })}
       </div>

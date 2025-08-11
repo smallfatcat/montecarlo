@@ -1,4 +1,5 @@
 import React from 'react'
+import { CONFIG } from '../../config'
 
 export type ChipDenomination = 1 | 5 | 10 | 25 | 100 | 500 | 1000
 
@@ -12,7 +13,7 @@ const CHIP_COLORS: Record<ChipDenomination, { base: string; ring: string; text: 
   1000:{ base: '#ff9800', ring: '#e65100', text: '#1a1a1a' }, // orange
 }
 
-export function ChipIcon({ denom, size = 24, style }: { denom: ChipDenomination; size?: number; style?: React.CSSProperties }) {
+export function ChipIcon({ denom, size = CONFIG.poker.chipIconSizePx, style }: { denom: ChipDenomination; size?: number; style?: React.CSSProperties }) {
   const c = CHIP_COLORS[denom]
   const s = size
   const r = s / 2

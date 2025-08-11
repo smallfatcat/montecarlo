@@ -11,6 +11,10 @@ export const CONFIG = {
     autoDealDelayMs: 700,
   },
   poker: {
+    chipIconSizePx: 30,
+    chipSizePx: 30,
+    chipOverlap: 0.8,
+    maxChipsPerRow: 20,
     rakePercent: 0.00, // e.g., 0.05 for 5% rake
     rakeCap: 0,     // absolute cap in chips; set >0 to cap rake
     showRakeInUI: true,
@@ -30,7 +34,7 @@ export const CONFIG = {
       edgeBoostEnd: 1.1,             // additional horizontal push for index 0 and last
       edgeBoostNearEnd: 1.08,        // for index 1 and last-2
       topBoostEnd: 1.4,              // slight vertical adjust for index 0 and last
-      topBoostNearEnd: 1.0,
+      topBoostNearEnd: 1.5,
       boardOffsetY: -60,             // pixels from center for board row
       boardGapPx: 10,
       seatWidthPx: 200,

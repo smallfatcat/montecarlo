@@ -7,25 +7,54 @@ import { CONFIG } from '../../config'
 import { useEquity } from './useEquity'
 import { ChipStack } from '../components/ChipStack'
 
-function seatPosition(index: number, total: number, radiusX: number, radiusY: number, centerX: number, centerY: number) {
-  // Horseshoe arc (semi-ellipse) across the lower half of the table
-  const startDeg = CONFIG.poker.horseshoe.arcStartDeg
-  const endDeg = CONFIG.poker.horseshoe.arcEndDeg
-  const t = total <= 1 ? 0 : index / (total - 1)
-  const deg = startDeg + (endDeg - startDeg) * t
-  const rad = (deg * Math.PI) / 180
-  // Push end seats (0 and last) a bit further toward the horizontal edges
-  const edgeBoost = index === 0 || index === total - 1 ? CONFIG.poker.horseshoe.edgeBoostEnd : (index === 1 || index === total - 2 ? CONFIG.poker.horseshoe.edgeBoostNearEnd : 1.0)
-  const topBoost = index === 0 || index === total - 1 ? CONFIG.poker.horseshoe.topBoostEnd : (index === 1 || index === total - 2 ? CONFIG.poker.horseshoe.topBoostNearEnd : 1.0)
-  const x = centerX + (radiusX * edgeBoost) * Math.cos(rad)
-  const y = centerY + (radiusY * topBoost) * Math.sin(rad)
-  return { left: x, top: y }
-}
-
 export function PokerTableHorseshoe() {
   const { table, revealed, dealNext, autoPlay, setAutoPlay, available, fold, check, call, bet, raise, hideCpuHoleUntilShowdown, setHideCpuHoleUntilShowdown, historyLines } = usePokerGameContext()
   const [betSize, setBetSize] = useState<'33'|'50'|'75'|'pot'|'shove'>('50')
   const { equity, run: runEquity, running: equityRunning } = useEquity()
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  type Rect = { left?: number; top?: number; width?: number; height?: number }
+  type LayoutOverrides = {
+    seats: Record<number, Rect>
+    board?: Rect
+    pot?: Rect
+    showdown?: Rect
+    bets?: Record<number, Rect>
+  }
+  const [editLayoutMode, setEditLayoutMode] = useState<boolean>(false)
+  const GRID_SIZE = 10
+  const MAJOR_GRID_SIZE = 50
+  const [layoutOverrides, setLayoutOverrides] = useState<LayoutOverrides>({ seats: {} })
+  // No localStorage persistence; layout comes from horseshoe-layout.json
+
+  const defaultFromFileRef = useRef<LayoutOverrides | null>(null)
+  useEffect(() => {
+    let applied = false
+    fetch('./horseshoe-layout.json')
+      .then(r => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data && typeof data === 'object') {
+          const seats = (data as any).seats ?? {}
+          const next: LayoutOverrides = {
+            seats: typeof seats === 'object' && seats ? seats : {},
+            board: (data as any).board,
+            pot: (data as any).pot,
+            showdown: (data as any).showdown,
+            bets: (data as any).bets ?? {}
+          }
+          defaultFromFileRef.current = next
+          setLayoutOverrides(next)
+          applied = true
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!applied) {
+          // If file missing, keep empty layout (user can place in edit mode)
+          setLayoutOverrides({ seats: {} })
+        }
+      })
+  }, [])
 
   const community = table.community
   const totalPot = useMemo(() => table.pot.main, [table.pot.main])
@@ -139,12 +168,210 @@ export function PokerTableHorseshoe() {
   const width = CONFIG.poker.horseshoe.tableWidthPx
   const height = CONFIG.poker.horseshoe.tableHeightPx
   const centerX = width / 2
-  const centerY = height / 2 + CONFIG.poker.horseshoe.centerYOffsetPx
-  const base = Math.min(width, height) / 2 - CONFIG.poker.horseshoe.basePaddingPx
-  // Ellipse radii: stretch horizontally, slightly tighter vertically
-  const radiusX = base * CONFIG.poker.horseshoe.radiusXScale
-  const radiusY = base * CONFIG.poker.horseshoe.radiusYScale
-  // Intentionally left here if future sizing is needed; seat sizing comes from PokerSeat
+  const centerY = height / 2
+
+  // Positions come only from horseshoe-layout.json
+  function getSeatPos(seatIndex: number): Rect | null {
+    return layoutOverrides.seats?.[seatIndex] ?? null
+  }
+
+  function getBoardPos(): Rect | null { return layoutOverrides.board ?? null }
+  function getPotPos(): Rect | null { return layoutOverrides.pot ?? null }
+  function getShowdownPos(): Rect | null { return layoutOverrides.showdown ?? null }
+  function getBetPos(seatIndex: number): Rect | null { return layoutOverrides.bets?.[seatIndex] ?? null }
+
+  function makeDragMouseHandlers(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet', index?: number) {
+    if (!editLayoutMode) return {}
+    return {
+      onMouseDown: (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        const startClientX = e.clientX
+        const startClientY = e.clientY
+        const current: Rect = (() => {
+          if (kind === 'seat') {
+            const i = index as number
+            const s = layoutOverrides.seats[i]
+            if (s) return s
+          } else if (kind === 'bet') {
+            const i = index as number
+            const b = layoutOverrides.bets?.[i]
+            if (b) return b
+          } else {
+            const v = (layoutOverrides as any)[kind]
+            if (v) return v
+          }
+          // If no position exists yet, start from the mouse-down point
+          const rect = containerRef.current?.getBoundingClientRect()
+          const left = rect ? e.clientX - rect.left : 0
+          const top = rect ? e.clientY - rect.top : 0
+          return { left, top }
+        })()
+
+        const onMove = (ev: MouseEvent) => {
+          const dx = ev.clientX - startClientX
+          const dy = ev.clientY - startClientY
+          const rawLeft = (current.left ?? 0) + dx
+          const rawTop = (current.top ?? 0) + dy
+          const snap = (v: number, g: number) => Math.round(v / g) * g
+          const next: Rect = {
+            left: snap(rawLeft, GRID_SIZE),
+            top: snap(rawTop, GRID_SIZE)
+          }
+          setLayoutOverrides((prev): LayoutOverrides => {
+            if (kind === 'seat') {
+              const i = index as number
+              return { ...prev, seats: { ...prev.seats, [i]: { ...prev.seats[i], ...next } } }
+            }
+            if (kind === 'bet') {
+              const i = index as number
+              return { ...prev, bets: { ...(prev.bets ?? {}), [i]: { ...(prev.bets?.[i] ?? {}), ...next } } }
+            }
+            const prevRect: Rect = (prev as any)[kind] ?? {}
+            return { ...prev, [kind]: { ...prevRect, ...next } } as LayoutOverrides
+          })
+        }
+        const onUp = () => {
+          window.removeEventListener('mousemove', onMove)
+          window.removeEventListener('mouseup', onUp)
+        }
+        window.addEventListener('mousemove', onMove)
+        window.addEventListener('mouseup', onUp)
+      }
+    }
+  }
+
+  function elementDomId(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet', index?: number) {
+    if (kind === 'seat') return `horseshoe-seat-wrapper-${index}`
+    if (kind === 'bet') return `horseshoe-bet-${index}`
+    if (kind === 'board') return `horseshoe-board`
+    if (kind === 'pot') return `horseshoe-pot`
+    if (kind === 'showdown') return `horseshoe-showdown`
+    return ''
+  }
+
+  function makeResizeMouseHandlers(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet', index?: number) {
+    if (!editLayoutMode) return {}
+    return {
+      onMouseDown: (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        const startClientX = e.clientX
+        const startClientY = e.clientY
+        const keyIndex = index as number | undefined
+        const getCurrentRect = (): Rect => {
+          if (kind === 'seat' && keyIndex !== undefined) return layoutOverrides.seats[keyIndex] ?? {}
+          if (kind === 'bet' && keyIndex !== undefined) return layoutOverrides.bets?.[keyIndex] ?? {}
+          return (layoutOverrides as any)[kind] ?? {}
+        }
+        // Measure DOM as fallback if sizes undefined
+        let initialWidth = getCurrentRect().width
+        let initialHeight = getCurrentRect().height
+        let initialCenterLeft = getCurrentRect().left
+        let initialCenterTop = getCurrentRect().top
+        if (initialWidth === undefined || initialHeight === undefined) {
+          const el = document.getElementById(elementDomId(kind, keyIndex)) as HTMLElement | null
+          if (el) {
+            const rect = el.getBoundingClientRect()
+            const cont = containerRef.current?.getBoundingClientRect()
+            initialWidth = initialWidth ?? rect.width
+            initialHeight = initialHeight ?? rect.height
+            if (initialCenterLeft === undefined && cont) initialCenterLeft = (rect.left - cont.left) + (rect.width / 2)
+            if (initialCenterTop === undefined && cont) initialCenterTop = (rect.top - cont.top) + (rect.height / 2)
+          } else {
+            initialWidth = initialWidth ?? 200
+            initialHeight = initialHeight ?? 100
+          }
+        }
+        const startW = initialWidth as number
+        const startH = initialHeight as number
+        const startCenterLeft = (initialCenterLeft ?? centerX) as number
+        const startCenterTop = (initialCenterTop ?? centerY) as number
+        const startTopLeftX = startCenterLeft - startW / 2
+        const startTopLeftY = startCenterTop - startH / 2
+
+        const onMove = (ev: MouseEvent) => {
+          const dx = ev.clientX - startClientX
+          const dy = ev.clientY - startClientY
+          const snap = (v: number, g: number) => Math.round(v / g) * g
+          const minW = 60
+          const minH = 40
+          const nextW = Math.max(minW, snap(startW + dx, GRID_SIZE))
+          const nextH = Math.max(minH, snap(startH + dy, GRID_SIZE))
+          const nextCenterLeft = startTopLeftX + nextW / 2
+          const nextCenterTop = startTopLeftY + nextH / 2
+          setLayoutOverrides((prev): LayoutOverrides => {
+            if (kind === 'seat' && keyIndex !== undefined) {
+              const prevRect = prev.seats[keyIndex] ?? {}
+              return { ...prev, seats: { ...prev.seats, [keyIndex]: { ...prevRect, width: nextW, height: nextH, left: nextCenterLeft, top: nextCenterTop } } }
+            }
+            if (kind === 'bet' && keyIndex !== undefined) {
+              const prevRect = prev.bets?.[keyIndex] ?? {}
+              return { ...prev, bets: { ...(prev.bets ?? {}), [keyIndex]: { ...prevRect, width: nextW, height: nextH, left: nextCenterLeft, top: nextCenterTop } } }
+            }
+            const prevRect: Rect = (prev as any)[kind] ?? {}
+            return { ...prev, [kind]: { ...prevRect, width: nextW, height: nextH, left: nextCenterLeft, top: nextCenterTop } } as LayoutOverrides
+          })
+        }
+        const onUp = () => {
+          window.removeEventListener('mousemove', onMove)
+          window.removeEventListener('mouseup', onUp)
+        }
+        window.addEventListener('mousemove', onMove)
+        window.addEventListener('mouseup', onUp)
+      }
+    }
+  }
+
+  function exportLayoutToJson() {
+    const container = containerRef.current
+    const contRect = container?.getBoundingClientRect()
+    const toCenterRect = (el: HTMLElement | null): Rect | null => {
+      if (!el || !contRect) return null
+      const r = el.getBoundingClientRect()
+      return {
+        left: (r.left - contRect.left) + r.width / 2,
+        top: (r.top - contRect.top) + r.height / 2,
+        width: r.width,
+        height: r.height,
+      }
+    }
+    const seats: Record<number, Rect> = {}
+    const bets: Record<number, Rect> = {}
+    for (let i = 0; i < table.seats.length; i += 1) {
+      const seatEl = document.getElementById(`horseshoe-seat-wrapper-${i}`) as HTMLElement | null
+      const betEl = document.getElementById(`horseshoe-bet-${i}`) as HTMLElement | null
+      const seatR = toCenterRect(seatEl)
+      const betR = toCenterRect(betEl)
+      if (seatR) seats[i] = seatR
+      if (betR) bets[i] = betR
+    }
+    const board = toCenterRect(document.getElementById('horseshoe-board'))
+    const pot = toCenterRect(document.getElementById('horseshoe-pot'))
+    const showdown = toCenterRect(document.getElementById('horseshoe-showdown'))
+    const out: LayoutOverrides = {
+      seats,
+      bets,
+      board: board ?? undefined,
+      pot: pot ?? undefined,
+      showdown: showdown ?? undefined,
+    }
+    const data = JSON.stringify(out, null, 2)
+    const blob = new Blob([data], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'horseshoe-layout.json'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  function resetLayout() {
+    if (defaultFromFileRef.current) setLayoutOverrides(defaultFromFileRef.current)
+    else setLayoutOverrides({ seats: {} })
+  }
 
   return (
     <div id="poker-root" style={{ display: 'grid', gap: 12 }}>
@@ -187,55 +414,154 @@ export function PokerTableHorseshoe() {
         <button onClick={fold} disabled={!available.includes('fold')}>Fold</button>
         <button onClick={check} disabled={!available.includes('check')}>Check</button>
         <button onClick={call} disabled={!available.includes('call')}>Call</button>
+
+        <span className="sep" />
+        <label title="Edit and drag layout elements">
+          <input type="checkbox" checked={editLayoutMode} onChange={(e) => setEditLayoutMode(e.target.checked)} /> Edit Layout
+        </label>
+        <button onClick={exportLayoutToJson}>Export Layout JSON</button>
+        <button onClick={resetLayout} disabled={Object.keys(layoutOverrides.seats).length === 0 && !layoutOverrides.board && !layoutOverrides.pot && !layoutOverrides.showdown}>Reset Layout</button>
       </div>
 
-      <div id="horseshoe-table" className="horseshoe-table" style={{ position: 'relative', width, height, margin: '0 auto', borderRadius: 24, background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+      <div
+        id="horseshoe-table"
+        ref={containerRef}
+        className="horseshoe-table"
+        style={{ position: 'relative', width, height, margin: '0 auto', borderRadius: 24, background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}
+      >
+        {editLayoutMode && (
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute', inset: 0, pointerEvents: 'none',
+              backgroundImage: `
+                linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px),
+                linear-gradient(to right, rgba(255,255,255,0.12) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.12) 1px, transparent 1px)
+              `,
+              backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px, ${GRID_SIZE}px ${GRID_SIZE}px, ${MAJOR_GRID_SIZE}px ${MAJOR_GRID_SIZE}px, ${MAJOR_GRID_SIZE}px ${MAJOR_GRID_SIZE}px`,
+              opacity: 0.6
+            }}
+          />
+        )}
         {/* Board in the center */}
-        <div id="horseshoe-board" style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.boardOffsetY, transform: 'translate(-50%, -50%)', display: 'flex', gap: CONFIG.poker.horseshoe.boardGapPx }}>
+        {(() => { const p = getBoardPos(); if (!p) return null; return (
+          <div
+            id="horseshoe-board"
+            style={{ position: 'absolute', left: p.left, top: p.top, transform: 'translate(-50%, -50%)', display: 'flex', gap: CONFIG.poker.horseshoe.boardGapPx, cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined, width: p.width, height: p.height }}
+            {...makeDragMouseHandlers('board')}
+          >
+            {editLayoutMode && (
+              <div
+                aria-hidden
+                style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }}
+                {...makeResizeMouseHandlers('board')}
+              />
+            )}
           {community.slice(0, Math.min(table.community.length, revealed.boardCount)).map((c, i) => (
             <div key={i} style={{ transform: `scale(${CONFIG.poker.horseshoe.seatCardScale})`, transformOrigin: 'center' }}>
               <Card3D card={c as any} highlight={highlightSet.has(`B${i}`)} />
             </div>
           ))}
-        </div>
+          </div>
+        )})()}
         {/* Pot */}
-        <div id="horseshoe-pot" style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.potOffsetY, transform: 'translate(-50%, -50%)', fontWeight: 700, opacity: 0.9, display: 'flex', alignItems: 'center', gap: 6 }}>
+        {(() => { const p = getPotPos(); if (!p) return null; return (
+          <div
+            id="horseshoe-pot"
+            style={{ position: 'absolute', left: p.left, top: p.top, transform: 'translate(-50%, -50%)', fontWeight: 700, opacity: 0.9, display: 'flex', alignItems: 'center', gap: 6, cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined, width: p.width, height: p.height }}
+            {...makeDragMouseHandlers('pot')}
+          >
+            {editLayoutMode && (
+              <div
+                aria-hidden
+                style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }}
+                {...makeResizeMouseHandlers('pot')}
+              />
+            )}
           <span>Pot:</span>
-          <ChipStack amount={totalPot} size={14} overlap={0.55} />
+          <ChipStack amount={totalPot} />
           <span style={{ opacity: 0.9 }}>({totalPot})</span>
-        </div>
+          </div>
+        )})()}
          {/* (removed central equity; shown per seat instead). When hiding CPU hole cards, only show player's equity. */}
          {/* Showdown hand descriptions */}
-        <div id="horseshoe-showdown" style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.showdownOffsetY, transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: width * 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {showdownText}
-        </div>
+        {(() => { const p = getShowdownPos(); if (!p) return null; return (
+          <div
+            id="horseshoe-showdown"
+            style={{ position: 'absolute', left: p.left, top: p.top, transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: width * 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined, width: p.width, height: p.height }}
+            {...makeDragMouseHandlers('showdown')}
+          >
+            {showdownText}
+            {editLayoutMode && (
+              <div
+                aria-hidden
+                style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }}
+                {...makeResizeMouseHandlers('showdown')}
+              />
+            )}
+          </div>
+        )})()}
 
         {/* Seats around horseshoe arc */}
         {table.seats.map((s, i) => {
           // Place seats clockwise by reversing the visual index around the arc
-          const posIndex = (table.seats.length - 1) - i
-          const pos = seatPosition(posIndex, table.seats.length, radiusX, radiusY, centerX, centerY)
-          return (
-            <div key={i} style={{ position: 'absolute', left: pos.left, top: pos.top, transform: 'translate(-50%, -50%)', width: CONFIG.poker.horseshoe.seatWidthPx }}>
-              <PokerSeat
-                idPrefix="horseshoe-seat"
-                seat={s}
-                seatIndex={i}
-                handId={table.handId}
-                buttonIndex={table.buttonIndex}
-                currentToAct={table.currentToAct}
-                highlightSet={highlightSet}
-                 showPerSeatEquity={(!hideCpuHoleUntilShowdown) || (table.status === 'hand_over' && community.length >= 5) ? (!s.hasFolded && s.hole.length === 2) : (i === 0)}
-                equityWinPct={equity ? (equity.win[i] / samples) * 100 : null}
-                equityTiePct={equity ? (equity.tie[i] / samples) * 100 : null}
-                equityRunning={!!equityRunning}
-                seatCardScale={CONFIG.poker.horseshoe.seatCardScale}
-                resultText={table.status === 'hand_over' ? (winnersSet.has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')) : ''}
-                visibleHoleCount={(table.status === 'hand_over' && community.length >= 5 && table.seats.filter((x) => !x.hasFolded && x.hole.length === 2).length > 1) ? (s.hole.length) : (revealed.holeCounts[i] ?? 0)}
-                forceFaceDown={(table.status === 'in_hand') && (i !== 0) && (revealed.holeCounts[i] === 0)}
-              />
-            </div>
-          )
+          const pos = getSeatPos(i)
+          const betPos = getBetPos(i)
+          return [
+            (
+              <div
+                id={`horseshoe-seat-wrapper-${i}`}
+                key={`seat-${i}`}
+                style={{ position: 'absolute', left: pos?.left ?? centerX, top: pos?.top ?? centerY, transform: 'translate(-50%, -50%)', width: (pos?.width ?? CONFIG.poker.horseshoe.seatWidthPx), height: pos?.height, cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined }}
+                {...makeDragMouseHandlers('seat', i)}
+              >
+                <PokerSeat
+                  idPrefix="horseshoe-seat"
+                  seat={s}
+                  seatIndex={i}
+                  handId={table.handId}
+                  buttonIndex={table.buttonIndex}
+                  currentToAct={table.currentToAct}
+                  highlightSet={highlightSet}
+                   showPerSeatEquity={(!hideCpuHoleUntilShowdown) || (table.status === 'hand_over' && community.length >= 5) ? (!s.hasFolded && s.hole.length === 2) : (i === 0)}
+                  equityWinPct={equity ? (equity.win[i] / samples) * 100 : null}
+                  equityTiePct={equity ? (equity.tie[i] / samples) * 100 : null}
+                  equityRunning={!!equityRunning}
+                  seatCardScale={CONFIG.poker.horseshoe.seatCardScale}
+                  resultText={table.status === 'hand_over' ? (winnersSet.has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')) : ''}
+                  visibleHoleCount={(table.status === 'hand_over' && community.length >= 5 && table.seats.filter((x) => !x.hasFolded && x.hole.length === 2).length > 1) ? (s.hole.length) : (revealed.holeCounts[i] ?? 0)}
+                  forceFaceDown={(table.status === 'in_hand') && (i !== 0) && (revealed.holeCounts[i] === 0)}
+                />
+                {editLayoutMode && (
+                  <div
+                    aria-hidden
+                    style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }}
+                    {...makeResizeMouseHandlers('seat', i)}
+                  />
+                )}
+              </div>
+            ),
+            (
+              <div
+                id={`horseshoe-bet-${i}`}
+                key={`bet-${i}`}
+                style={{ position: 'absolute', left: betPos?.left ?? centerX, top: betPos?.top ?? centerY, transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined, width: betPos?.width, height: betPos?.height }}
+                {...makeDragMouseHandlers('bet', i)}
+              >
+                <ChipStack amount={s.committedThisStreet} />
+                <span style={{ marginLeft: 6, fontSize: 14, lineHeight: 1, opacity: 0.9 }}>({s.committedThisStreet})</span>
+                {editLayoutMode && (
+                  <div
+                    aria-hidden
+                    style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }}
+                    {...makeResizeMouseHandlers('bet', i)}
+                  />
+                )}
+              </div>
+            )
+          ]
         })}
       </div>
       {/* Hand history panel */}
