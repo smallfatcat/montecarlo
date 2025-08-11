@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import type { CSSProperties } from 'react'
 import { Card3D } from '../components/Card3D'
+import { ChipStack } from '../components/ChipStack'
 // import { CONFIG } from '../../config'
 import type { SeatState } from '../../poker/types'
 
@@ -106,8 +107,19 @@ export function PokerSeat(props: PokerSeatProps) {
       <div id={`${idPrefix}-label-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>
         Seat {seatIndex}{seatIndex === buttonIndex ? ' (BTN)' : ''}{seat.hasFolded ? ' · Folded' : ''}{seat.isAllIn ? ' · All-in' : ''}
       </div>
-      <div id={`${idPrefix}-stack-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Stack: {seat.stack}</div>
-      <div id={`${idPrefix}-bets-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>Bet: {seat.committedThisStreet} • In pot: {seat.totalCommitted}</div>
+      <div id={`${idPrefix}-stack-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        <span>Stack:</span>
+        <ChipStack amount={seat.stack} size={14} overlap={0.5} />
+        <span style={{ opacity: 0.9 }}>({seat.stack})</span>
+      </div>
+      <div id={`${idPrefix}-bets-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>
+        <span style={{ marginRight: 6 }}>Bet:</span>
+        <ChipStack amount={seat.committedThisStreet} size={14} overlap={0.5} />
+        <span style={{ marginLeft: 6, opacity: 0.9 }}>({seat.committedThisStreet})</span>
+        <span style={{ marginLeft: 10, marginRight: 6 }}>In pot:</span>
+        <ChipStack amount={seat.totalCommitted} size={14} overlap={0.5} />
+        <span style={{ marginLeft: 6, opacity: 0.9 }}>({seat.totalCommitted})</span>
+      </div>
       {showPerSeatEquity && (
         <div id={`${idPrefix}-equity-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.85, minHeight: EQUITY_LINE_HEIGHT_PX }}>
           {(equityWinPct != null && equityTiePct != null && !seat.hasFolded && seat.hole.length === 2) ? (

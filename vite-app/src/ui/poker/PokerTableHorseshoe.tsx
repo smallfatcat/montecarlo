@@ -5,6 +5,7 @@ import { PokerSeat } from './PokerSeat'
 import { evaluateSeven, pickBestFive, formatEvaluated } from '../../poker/handEval'
 import { CONFIG } from '../../config'
 import { useEquity } from './useEquity'
+import { ChipStack } from '../components/ChipStack'
 
 function seatPosition(index: number, total: number, radiusX: number, radiusY: number, centerX: number, centerY: number) {
   // Horseshoe arc (semi-ellipse) across the lower half of the table
@@ -198,7 +199,11 @@ export function PokerTableHorseshoe() {
           ))}
         </div>
         {/* Pot */}
-        <div id="horseshoe-pot" style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.potOffsetY, transform: 'translate(-50%, -50%)', fontWeight: 700, opacity: 0.9 }}>Pot: {totalPot}</div>
+        <div id="horseshoe-pot" style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.potOffsetY, transform: 'translate(-50%, -50%)', fontWeight: 700, opacity: 0.9, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>Pot:</span>
+          <ChipStack amount={totalPot} size={14} overlap={0.55} />
+          <span style={{ opacity: 0.9 }}>({totalPot})</span>
+        </div>
          {/* (removed central equity; shown per seat instead). When hiding CPU hole cards, only show player's equity. */}
          {/* Showdown hand descriptions */}
         <div id="horseshoe-showdown" style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.showdownOffsetY, transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: width * 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

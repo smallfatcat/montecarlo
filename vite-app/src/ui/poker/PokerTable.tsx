@@ -6,6 +6,7 @@ import { evaluateSeven, formatEvaluated, pickBestFive } from '../../poker/handEv
 import { CONFIG } from '../../config'
 import { usePokerSimulationRunner } from './usePokerSimulationRunner'
 import { useEquity } from './useEquity'
+import { ChipStack } from '../components/ChipStack'
 
 export function PokerTable() {
   const { table, revealed, dealNext, autoPlay, setAutoPlay, available, fold, check, call, bet, raise, hideCpuHoleUntilShowdown, setHideCpuHoleUntilShowdown, historyLines } = usePokerGameContext()
@@ -157,8 +158,12 @@ export function PokerTable() {
           <Card3D key={i} card={c as any} highlight={highlightSet.has(`B${i}`)} />
         ))}
       </div>
-      {/* Pot display */}
-      <div id="pot-display" style={{ textAlign: 'center', fontWeight: 700, opacity: 0.9 }}>Pot: {table.pot.main}</div>
+      {/* Pot display with chips */}
+      <div id="pot-display" style={{ textAlign: 'center', fontWeight: 700, opacity: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <span>Pot:</span>
+        <ChipStack amount={table.pot.main} size={16} overlap={0.55} />
+        <span style={{ opacity: 0.9 }}>({table.pot.main})</span>
+      </div>
       {/* Equity bar in its own isolated row to prevent layout jitter */}
       <div id="poker-equity-row"
         style={{
