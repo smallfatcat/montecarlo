@@ -17,10 +17,15 @@ export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false
       animate={{ opacity: 1, y: 0, rotate: 0 }}
       exit={{ opacity: 0, y: CONFIG.animation.cardExitOffsetY }}
       transition={{ delay: index * (CONFIG.animation.cardStaggerStepMs / 1000) }}
+      onAnimationStart={() => {
+        // force a reflow-safe initial rotation to avoid flash of front
+        // Note: minimal work to keep performance fine
+      }}
     >
       <motion.div
         className={`card__face card__front ${isRed ? 'card--red' : 'card--black'}`}
         style={highlight ? { boxShadow: '0 0 0 3px #ffd54f, 0 0 14px 2px rgba(255,213,79,0.6)', borderRadius: 12 } : undefined}
+        initial={{ rotateY: faceDown ? 180 : 0 }}
         animate={{ rotateY: faceDown ? 180 : 0 }}
         transition={{ duration: CONFIG.animation.cardFlipDurationSec }}
       >
@@ -42,7 +47,7 @@ export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false
       </motion.div>
       <motion.div
         className="card__face card__back"
-        style={{ rotateY: 180 }}
+        initial={{ rotateY: faceDown ? 0 : 180 }}
         animate={{ rotateY: faceDown ? 0 : 180 }}
         transition={{ duration: CONFIG.animation.cardFlipDurationSec }}
       />

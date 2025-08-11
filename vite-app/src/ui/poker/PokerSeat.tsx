@@ -8,6 +8,7 @@ export interface PokerSeatProps {
   idPrefix: string
   seat: SeatState
   seatIndex: number
+  handId?: number
   buttonIndex: number
   currentToAct: number | null
   highlightSet: Set<string>
@@ -23,6 +24,8 @@ export interface PokerSeatProps {
   containerStyle?: CSSProperties
   // reveal control
   visibleHoleCount?: number // 0..2
+  // force face-down regardless of visible count
+  forceFaceDown?: boolean
 }
 
 const CARD_HEIGHT_PX = 140
@@ -34,6 +37,7 @@ export function PokerSeat(props: PokerSeatProps) {
     idPrefix,
     seat,
     seatIndex,
+    handId,
     buttonIndex,
     currentToAct,
     highlightSet,
@@ -45,6 +49,7 @@ export function PokerSeat(props: PokerSeatProps) {
     seatCardScale = 1,
     containerStyle,
     visibleHoleCount = 2,
+    forceFaceDown = false,
   } = props
 
   const outline = seatIndex === currentToAct ? '2px solid #ffd54f' : undefined
@@ -92,9 +97,9 @@ export function PokerSeat(props: PokerSeatProps) {
         id={`${idPrefix}-cards-${seatIndex}`}
         style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center', height: scaledCardHeight }}
       >
-        {!seat.hasFolded && seat.hole.slice(0, Math.min(visibleHoleCount ?? 2, 2)).map((c, k) => (
-          <div key={k} style={{ transform: `scale(${seatCardScale})`, transformOrigin: 'center' }}>
-            <Card3D card={c as any} highlight={highlightSet.has(`S${seatIndex}-${k}`)} />
+        {!seat.hasFolded && seat.hole.slice(0, 2).map((c, k) => (
+          <div key={`${handId ?? 'H'}-${seatIndex}-${k}-${c.rank}-${c.suit}`} style={{ transform: `scale(${seatCardScale})`, transformOrigin: 'center' }}>
+            <Card3D card={c as any} highlight={highlightSet.has(`S${seatIndex}-${k}`)} faceDown={forceFaceDown || k >= (visibleHoleCount ?? 2)} />
           </div>
         ))}
       </div>

@@ -2,6 +2,7 @@ import type { BettingAction } from "./types";
 import type { PokerTableState } from "./types";
 import { getAvailableActions } from "./flow";
 import type { Card, Rank } from "../blackjack/types";
+import { evaluateSeven, evaluateFive, compareEvaluated } from "./handEval";
 
 export type BotProfile = "tight" | "loose";
 
@@ -47,17 +48,21 @@ function hasOpenEndedStraightDraw(hole: Card[], community: Card[]): boolean {
   return false;
 }
 
-function analyzeMadeHand(hole: Card[], community: Card[]): { pair: boolean; topPair: boolean; overPair: boolean; twoPair: boolean; trips: boolean } {
+function analyzeMadeHand(hole: Card[], community: Card[]): { pair: boolean; topPair: boolean; overPair: boolean; twoPair: boolean; trips: boolean; quads: boolean; fullHouse: boolean; flush: boolean; straight: boolean; straightFlush: boolean } {
   const ranks = countByRank([...hole, ...community]);
   const top = boardTopRank(community);
-  let pair = false, twoPair = false, trips = false;
+  let pair = false, twoPair = false, trips = false, quads = false, fullHouse = false;
   let pairsCount = 0;
+  let tripsCount = 0;
   for (const [, n] of ranks) {
-    if (n === 3) trips = true;
+    if (n === 4) quads = true;
+    if (n === 3) tripsCount += 1;
     if (n === 2) pairsCount += 1;
   }
   if (pairsCount >= 1) pair = true;
   if (pairsCount >= 2) twoPair = true;
+  if (tripsCount >= 1) trips = true;
+  if (tripsCount >= 1 && (pairsCount >= 1 || tripsCount >= 2)) fullHouse = true;
 
   // Determine if the pair is top pair or overpair
   let topPair = false;
@@ -77,7 +82,40 @@ function analyzeMadeHand(hole: Card[], community: Card[]): { pair: boolean; topP
       if (hole.length === 2 && hole[0].rank === hole[1].rank) overPair = true;
     }
   }
-  return { pair, topPair, overPair, twoPair, trips };
+  // Use evaluator to classify straights/flushes precisely when ≥5 cards are available
+  let straightFlush = false;
+  let straight = false;
+  let flush = false;
+  const total = hole.length + community.length;
+  if (total >= 5) {
+    const cards = [...hole, ...community];
+    if (total === 7) {
+      const ev = evaluateSeven(cards);
+      const cls = ev.class;
+      straightFlush = cls === "straight_flush";
+      straight = straightFlush || cls === "straight";
+      flush = straightFlush || cls === "flush";
+    } else if (total === 6) {
+      // Best 5-of-6 via evaluateFive
+      let best = evaluateFive(cards.filter((_, i) => i !== 0));
+      for (let drop = 1; drop < 6; drop += 1) {
+        const ev = evaluateFive(cards.filter((_, i) => i !== drop));
+        if (compareEvaluated(ev as any, best as any) > 0) best = ev;
+      }
+      const cls = best.class;
+      straightFlush = cls === "straight_flush";
+      straight = straightFlush || cls === "straight";
+      flush = straightFlush || cls === "flush";
+    } else if (total === 5) {
+      const ev = evaluateFive(cards);
+      const cls = ev.class;
+      straightFlush = cls === "straight_flush";
+      straight = straightFlush || cls === "straight";
+      flush = straightFlush || cls === "flush";
+    }
+  }
+
+  return { pair, topPair, overPair, twoPair, trips, quads, fullHouse, flush, straight, straightFlush };
 }
 
 function preflopCategory(hole: Card[]): "premium" | "strong" | "speculative" | "trash" {
@@ -176,7 +214,7 @@ export function suggestActionPoker(state: PokerTableState, profile: BotProfile =
   const made = analyzeMadeHand(hole, board);
   const flushDraw = hasFlushDraw(hole, board);
   const straightDraw = hasOpenEndedStraightDraw(hole, board);
-  const strongMade = made.trips || made.twoPair || made.overPair;
+  const strongMade = made.straightFlush || made.quads || made.fullHouse || made.flush || made.straight || made.trips || made.twoPair || made.overPair;
   const mediumMade = made.topPair || made.pair;
   const hasDraw = flushDraw || straightDraw;
 
@@ -195,6 +233,8 @@ export function suggestActionPoker(state: PokerTableState, profile: BotProfile =
       return { type: "raise", amount: extra };
     }
     if ((strongMade || mediumMade || hasDraw) && available.has("call")) return { type: "call" };
+    // Avoid folding extremely strong hands under any circumstance
+    if ((made.straightFlush || made.quads || made.fullHouse || made.flush || made.straight) && available.has("call")) return { type: "call" };
     return available.has("fold") ? { type: "fold" } : (available.has("call") ? { type: "call" } : { type: "check" });
   } else {
     if (strongMade && available.has("bet")) {

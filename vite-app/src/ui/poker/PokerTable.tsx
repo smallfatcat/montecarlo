@@ -8,7 +8,7 @@ import { usePokerSimulationRunner } from './usePokerSimulationRunner'
 import { useEquity } from './useEquity'
 
 export function PokerTable() {
-  const { table, revealed, beginHand, autoPlay, setAutoPlay, available, fold, check, call, bet, raise } = usePokerGameContext()
+  const { table, revealed, dealNext, autoPlay, setAutoPlay, available, fold, check, call, bet, raise, hideCpuHoleUntilShowdown, setHideCpuHoleUntilShowdown, historyLines } = usePokerGameContext()
   const sim = usePokerSimulationRunner()
   const [simHands, setSimHands] = useState(1000)
   const [simProgress, setSimProgress] = useState<{done:number,total:number}|null>(null)
@@ -97,7 +97,8 @@ export function PokerTable() {
   })()
   const showdownText = (() => {
     if (table.status !== 'hand_over') return ''
-    if (community.length < 5) return ''
+    const contenders = table.seats.filter((s) => !s.hasFolded && s.hole.length === 2).length
+    if (community.length < 5 || contenders <= 1) return ''
     const ranked: { seat: number; text: string }[] = []
     table.seats.forEach((s, i) => {
       if (s.hasFolded || s.hole.length !== 2) return
@@ -117,15 +118,23 @@ export function PokerTable() {
   const samples = 2000
   const lastEqKeyRef = useRef<string | null>(null)
   useEffect(() => {
-    if (table.status !== 'in_hand') return
-    const keyPartSeats = table.seats.map((s) => s.hasFolded ? 'X' : (s.hole.map((c) => `${c.rank}${c.suit[0]}`).join(''))).join('|')
+    const shouldRun = table.status === 'in_hand' || (table.status === 'hand_over' && community.length >= 5)
+    if (!shouldRun) return
+    const keyPartSeats = table.seats.map((s, i) => {
+      if (s.hasFolded) return 'X'
+      const hidden = hideCpuHoleUntilShowdown && table.status !== 'hand_over' && i !== 0
+      return hidden ? '??' : (s.hole.map((c) => `${c.rank}${c.suit[0]}`).join(''))
+    }).join('|')
     const keyPartBoard = community.map((c) => `${c.rank}${c.suit[0]}`).join('')
     const k = `${keyPartSeats}#${keyPartBoard}`
     if (k === lastEqKeyRef.current) return
     lastEqKeyRef.current = k
-    const seatsForEquity = table.seats.map((s) => ({ hole: s.hole, folded: s.hasFolded }))
+    const seatsForEquity = table.seats.map((s, i) => ({
+      hole: (hideCpuHoleUntilShowdown && table.status !== 'hand_over' && i !== 0) ? [] : s.hole,
+      folded: s.hasFolded,
+    }))
     runEquity(seatsForEquity as any, community as any, samples)
-  }, [table.status, table.seats, community])
+  }, [table.status, table.seats, community, hideCpuHoleUntilShowdown])
 
   return (
     <div id="poker-root" style={{ display: 'grid', gap: 12 }}>
@@ -133,9 +142,13 @@ export function PokerTable() {
         Hand #{table.handId} • Button @ {table.buttonIndex} • Status: {table.gameOver ? 'game_over' : table.status} • Street: {table.street ?? '-'} • To act: {table.currentToAct ?? '-'} • BetToCall: {table.betToCall}
       </div>
       <div id="poker-controlbar" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <button onClick={() => beginHand()} disabled={table.status === 'in_hand' || table.gameOver}>Deal</button>
+        <button onClick={() => dealNext()} disabled={table.status === 'in_hand' || table.gameOver}>Deal</button>
         <label><input type="checkbox" checked={autoPlay} onChange={(e) => setAutoPlay(e.target.checked)} /> Autoplay</label>
         <button onClick={() => setShowControls((v) => !v)}>{showControls ? 'Hide' : 'Show'} Controls</button>
+        <label title="Hide CPU hole cards until showdown">
+          <input type="checkbox" checked={hideCpuHoleUntilShowdown} onChange={(e) => setHideCpuHoleUntilShowdown(e.target.checked)} />
+          Hide CPU hole
+        </label>
         <button onClick={() => { window.location.hash = '#poker-horseshoe' }}>Horseshoe View</button>
       </div>
 
@@ -172,11 +185,19 @@ export function PokerTable() {
         >
           {equity && (
             <>
-              {table.seats.map((_, i) => (
-                <span key={i} style={{ marginRight: 10 }}>
-                  Seat {i}: {((equity.win[i] / samples) * 100).toFixed(1)}% win • {((equity.tie[i] / samples) * 100).toFixed(1)}% tie
+              {(!hideCpuHoleUntilShowdown) || (table.status === 'hand_over' && community.length >= 5) ? (
+                table.seats.map((s, i) => (
+                  !s.hasFolded && s.hole.length === 2 ? (
+                    <span key={i} style={{ marginRight: 10 }}>
+                      Seat {i}: {((equity.win[i] / samples) * 100).toFixed(1)}% win • {((equity.tie[i] / samples) * 100).toFixed(1)}% tie
+                    </span>
+                  ) : null
+                ))
+              ) : (
+                <span style={{ marginRight: 10 }}>
+                  Your equity: {((equity.win[0] / samples) * 100).toFixed(1)}% win • {((equity.tie[0] / samples) * 100).toFixed(1)}% tie
                 </span>
-              ))}
+              )}
               {equityRunning && <span> (calculating…)</span>}
             </>
           )}
@@ -187,19 +208,25 @@ export function PokerTable() {
       <div id="seats-grid" className="seats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         {[...seats].map((s, iLocal) => {
           const i = (seats.length - 1) - iLocal
+          const contenders = table.seats.filter((x) => !x.hasFolded && x.hole.length === 2).length
+          const isShowdown = table.status === 'hand_over' && community.length >= 5 && contenders > 1
+          const visible = isShowdown ? (s.hole.length) : (revealed.holeCounts[i] ?? 0)
+          const forceFaceDown = (table.status === 'in_hand') && (i !== 0) && (revealed.holeCounts[i] === 0)
           return (
           <PokerSeat
             key={i}
             idPrefix="seat"
             seat={s}
             seatIndex={i}
+            handId={table.handId}
             buttonIndex={table.buttonIndex}
             currentToAct={table.currentToAct}
             highlightSet={highlightSet}
             showPerSeatEquity={false}
             resultText={table.status === 'hand_over' ? (winnersSet.has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')) : ''}
             seatCardScale={1}
-            visibleHoleCount={revealed.holeCounts[i] ?? (s.hole.length)}
+            visibleHoleCount={visible}
+            forceFaceDown={forceFaceDown}
           />
           )
         })}
@@ -243,6 +270,17 @@ export function PokerTable() {
         <span id="sim-progress" style={{ minHeight: 18 }}>
           {simProgress ? `Progress: ${simProgress.done}/${simProgress.total}` : ''}
         </span>
+      </div>
+      <div id="hand-history" style={{ marginTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div style={{ fontWeight: 700 }}>Hand History</div>
+          <button onClick={() => { window.location.hash = '#poker-history' }}>Open History</button>
+        </div>
+        <div style={{ maxHeight: 160, overflowY: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 12, padding: 8, border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8, background: 'rgba(0,0,0,0.12)' }}>
+          {historyLines.map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
+        </div>
       </div>
     </div>
   )

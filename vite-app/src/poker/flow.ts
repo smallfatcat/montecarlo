@@ -216,15 +216,36 @@ export function applyAction(state: PokerTableState, action: BettingAction): Poke
     return settleAndEnd(s);
   }
 
-  // Determine if betting round is closed: all active have matched and the actor was the last aggressor (or last-to-act when no aggression)
+  // Determine if betting round should close.
   const nextIdx = nextSeatIndex(s.seats, actorIndex);
   const active = s.seats.filter((p) => !p.hasFolded && !p.isAllIn && p.hole.length === 2);
   const noActive = active.length === 0;
   const allMatched = noActive || active.every((p) => p.committedThisStreet === s.betToCall);
-  const shouldClose = noActive || allMatched;
-  if (shouldClose) {
+
+  if (noActive) {
     return advanceStreet(s);
   }
+
+  if (allMatched) {
+    // Close the round only after action has returned to the closing sentinel:
+    // - With aggression present, the sentinel is lastAggressorIndex
+    // - With no aggression, sentinel was set to last-to-act at street start (in advanceStreet)
+    const sentinel = s.lastAggressorIndex;
+    if (sentinel != null) {
+      if (actorIndex === sentinel) {
+        // The sentinel just acted and everyone is matched → close now
+        return advanceStreet(s);
+      }
+      if (nextIdx === sentinel) {
+        // Give the sentinel their option (e.g., BB option preflop)
+        s.currentToAct = nextIdx;
+        return s;
+      }
+    }
+    // Fallback: if for some reason sentinel is null, close when all matched
+    return advanceStreet(s);
+  }
+
   // Otherwise continue to next actor
   s.currentToAct = nextIdx;
   return s;

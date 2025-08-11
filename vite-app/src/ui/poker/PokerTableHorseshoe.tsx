@@ -22,7 +22,7 @@ function seatPosition(index: number, total: number, radiusX: number, radiusY: nu
 }
 
 export function PokerTableHorseshoe() {
-  const { table, revealed, beginHand, autoPlay, setAutoPlay, available, fold, check, call, bet, raise } = usePokerGameContext()
+  const { table, revealed, dealNext, autoPlay, setAutoPlay, available, fold, check, call, bet, raise, hideCpuHoleUntilShowdown, setHideCpuHoleUntilShowdown, historyLines } = usePokerGameContext()
   const [betSize, setBetSize] = useState<'33'|'50'|'75'|'pot'|'shove'>('50')
   const { equity, run: runEquity, running: equityRunning } = useEquity()
 
@@ -49,15 +49,23 @@ export function PokerTableHorseshoe() {
   const samples = 2000
   const lastEqKeyRef = useRef<string | null>(null)
   useEffect(() => {
-    if (table.status !== 'in_hand') return
-    const keyPartSeats = table.seats.map((s) => s.hasFolded ? 'X' : (s.hole.map((c) => `${c.rank}${c.suit[0]}`).join(''))).join('|')
+    const shouldRun = table.status === 'in_hand' || (table.status === 'hand_over' && community.length >= 5)
+    if (!shouldRun) return
+    const keyPartSeats = table.seats.map((s, i) => {
+      if (s.hasFolded) return 'X'
+      const hidden = hideCpuHoleUntilShowdown && table.status !== 'hand_over' && i !== 0
+      return hidden ? '??' : (s.hole.map((c) => `${c.rank}${c.suit[0]}`).join(''))
+    }).join('|')
     const keyPartBoard = community.map((c) => `${c.rank}${c.suit[0]}`).join('')
     const k = `${keyPartSeats}#${keyPartBoard}`
     if (k === lastEqKeyRef.current) return
     lastEqKeyRef.current = k
-    const seatsForEquity = table.seats.map((s) => ({ hole: s.hole, folded: s.hasFolded }))
+    const seatsForEquity = table.seats.map((s, i) => ({
+      hole: (hideCpuHoleUntilShowdown && table.status !== 'hand_over' && i !== 0) ? [] : s.hole,
+      folded: s.hasFolded,
+    }))
     runEquity(seatsForEquity as any, community as any, samples)
-  }, [table.status, table.seats, community])
+  }, [table.status, table.seats, community, hideCpuHoleUntilShowdown])
   const highlightSet = useMemo(() => {
     if (table.status !== 'hand_over' || community.length < 5) return new Set<string>()
     const classOrder: Record<string, number> = { high_card:0,pair:1,two_pair:2,three_kind:3,straight:4,flush:5,full_house:6,four_kind:7,straight_flush:8 } as const as any
@@ -144,9 +152,13 @@ export function PokerTableHorseshoe() {
       </div>
 
       <div id="poker-controlbar" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <button onClick={() => beginHand()} disabled={table.status === 'in_hand' || table.gameOver}>Deal</button>
+        <button onClick={() => dealNext()} disabled={table.status === 'in_hand' || table.gameOver}>Deal</button>
         <label><input type="checkbox" checked={autoPlay} onChange={(e) => setAutoPlay(e.target.checked)} /> Autoplay</label>
         <button onClick={() => { window.location.hash = '#poker' }}>Normal View</button>
+        <label title="Hide CPU hole cards until showdown">
+          <input type="checkbox" checked={hideCpuHoleUntilShowdown} onChange={(e) => setHideCpuHoleUntilShowdown(e.target.checked)} />
+          Hide CPU hole
+        </label>
         <select value={betSize} onChange={(e)=>setBetSize(e.target.value as any)}>
           <option value="33">33%</option>
           <option value="50">50%</option>
@@ -187,8 +199,8 @@ export function PokerTableHorseshoe() {
         </div>
         {/* Pot */}
         <div id="horseshoe-pot" style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.potOffsetY, transform: 'translate(-50%, -50%)', fontWeight: 700, opacity: 0.9 }}>Pot: {totalPot}</div>
-        {/* (removed central equity; shown per seat instead) */}
-        {/* Showdown hand descriptions */}
+         {/* (removed central equity; shown per seat instead). When hiding CPU hole cards, only show player's equity. */}
+         {/* Showdown hand descriptions */}
         <div id="horseshoe-showdown" style={{ position: 'absolute', left: centerX, top: centerY + CONFIG.poker.horseshoe.showdownOffsetY, transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: width * 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {showdownText}
         </div>
@@ -204,20 +216,34 @@ export function PokerTableHorseshoe() {
                 idPrefix="horseshoe-seat"
                 seat={s}
                 seatIndex={i}
+                handId={table.handId}
                 buttonIndex={table.buttonIndex}
                 currentToAct={table.currentToAct}
                 highlightSet={highlightSet}
-                showPerSeatEquity
+                 showPerSeatEquity={(!hideCpuHoleUntilShowdown) || (table.status === 'hand_over' && community.length >= 5) ? (!s.hasFolded && s.hole.length === 2) : (i === 0)}
                 equityWinPct={equity ? (equity.win[i] / samples) * 100 : null}
                 equityTiePct={equity ? (equity.tie[i] / samples) * 100 : null}
                 equityRunning={!!equityRunning}
                 seatCardScale={CONFIG.poker.horseshoe.seatCardScale}
                 resultText={table.status === 'hand_over' ? (winnersSet.has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')) : ''}
-                visibleHoleCount={revealed.holeCounts[i] ?? (s.hole.length)}
+                visibleHoleCount={(table.status === 'hand_over' && community.length >= 5 && table.seats.filter((x) => !x.hasFolded && x.hole.length === 2).length > 1) ? (s.hole.length) : (revealed.holeCounts[i] ?? 0)}
+                forceFaceDown={(table.status === 'in_hand') && (i !== 0) && (revealed.holeCounts[i] === 0)}
               />
             </div>
           )
         })}
+      </div>
+      {/* Hand history panel */}
+      <div id="hand-history" style={{ marginTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div style={{ fontWeight: 700 }}>Hand History</div>
+          <button onClick={() => { window.location.hash = '#poker-history' }}>Open History</button>
+        </div>
+        <div style={{ maxHeight: 160, overflowY: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace', fontSize: 12, padding: 8, border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8, background: 'rgba(0,0,0,0.12)' }}>
+          {historyLines.map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
+        </div>
       </div>
     </div>
   )

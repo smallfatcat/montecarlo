@@ -37,43 +37,58 @@ ctx.onmessage = (ev: MessageEvent<RunMsg>) => {
 function runEquity(seats: SeatIn[], community: Card[], samples: number): { win: number[]; tie: number[] } {
   const activeIdx: number[] = []
   seats.forEach((s, i) => { if (!s.folded && s.hole.length === 2) activeIdx.push(i) })
-  const numActive = activeIdx.length
+  const unknownIdx: number[] = []
+  seats.forEach((s, i) => { if (!s.folded && s.hole.length !== 2) unknownIdx.push(i) })
+  const numActive = activeIdx.length + unknownIdx.length
   const wins = new Array(seats.length).fill(0)
   const ties = new Array(seats.length).fill(0)
   if (numActive <= 1) return { win: wins, tie: ties }
 
-  // Build remaining deck
+  // Build base remaining deck (exclude only known public cards and known holes)
   const full = createStandardDeck()
-  const usedKey = new Set<string>()
   const key = (c: Card) => `${c.rank}-${c.suit}`
-  community.forEach((c) => usedKey.add(key(c)))
-  seats.forEach((s) => s.hole.forEach((c) => usedKey.add(key(c))))
-  const remaining: Card[] = full.filter((c) => !usedKey.has(key(c)))
+  const knownKey = new Set<string>()
+  community.forEach((c) => knownKey.add(key(c)))
+  seats.forEach((s) => { if (s.hole.length === 2) s.hole.forEach((c) => knownKey.add(key(c))) })
+  const baseRemaining: Card[] = full.filter((c) => !knownKey.has(key(c)))
 
-  const need = Math.max(0, 5 - community.length)
+  const needBoard = Math.max(0, 5 - community.length)
   const rng = Math.random
 
   for (let t = 0; t < samples; t += 1) {
-    // Draw remaining board without replacement
-    shuffleInPlace(remaining, rng)
-    const draw = remaining.slice(0, need)
+    // Copy and shuffle remaining deck for this trial
+    const pool = baseRemaining.slice()
+    shuffleInPlace(pool, rng)
+
+    // Assign unknown holes from the pool without replacement
+    const trialHoles: Record<number, [Card, Card]> = {}
+    for (const si of unknownIdx) {
+      const a = pool.pop()!
+      const b = pool.pop()!
+      trialHoles[si] = [a, b]
+    }
+
+    // Draw remaining board from pool
+    const draw = pool.slice(0, needBoard)
     const board = [...community, ...draw]
-    // Evaluate
+
+    // Evaluate all active players (known and unknown)
     let bestClass = -1
     let bestRanks: number[] = []
     let bestIdxs: number[] = []
-    activeIdx.forEach((si) => {
-      const s = seats[si]
-      const ev = evaluateSeven([...s.hole, ...board])
+    const consider = (si: number, cards: Card[]) => {
+      const ev = evaluateSeven([...cards, ...board])
       const cls = classOrder(ev.class)
-      if (bestIdxs.length === 0) {
-        bestClass = cls; bestRanks = ev.ranks; bestIdxs = [si]
-      } else {
+      if (bestIdxs.length === 0) { bestClass = cls; bestRanks = ev.ranks; bestIdxs = [si] }
+      else {
         const cmp = compareRanks(cls, ev.ranks, bestClass, bestRanks)
         if (cmp > 0) { bestClass = cls; bestRanks = ev.ranks; bestIdxs = [si] }
         else if (cmp === 0) { bestIdxs.push(si) }
       }
-    })
+    }
+    activeIdx.forEach((si) => consider(si, seats[si].hole))
+    unknownIdx.forEach((si) => consider(si, trialHoles[si]))
+
     if (bestIdxs.length === 1) wins[bestIdxs[0]] += 1
     else bestIdxs.forEach((i) => { ties[i] += 1 })
   }
