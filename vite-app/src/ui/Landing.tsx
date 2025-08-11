@@ -10,8 +10,6 @@ export function Landing() {
       <div style={{ marginTop: 16, display: 'flex', gap: 8, opacity: 0.8, fontSize: 14 }}>
         <a href="#cards">Card Gallery</a>
         <span>·</span>
-        <a href="#poker-horseshoe">Poker Horseshoe</a>
-        <span>·</span>
         <a href="#poker-test">Poker Test</a>
       </div>
     </div>

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PokerTableState, BettingAction } from '../../poker/types'
+import type { Card } from '../../blackjack/types'
+import { nextSeatIndex } from '../../poker/types'
 import { evaluateSeven, formatEvaluated } from '../../poker/handEval'
 import { createInitialPokerTable, startHand, applyAction, getAvailableActions } from '../../poker/flow'
 import { suggestActionPoker } from '../../poker/strategy'
@@ -16,6 +18,7 @@ export function usePokerGame() {
   // Separate timers to avoid cross-clearing between gameplay and reveal animations
   const actionTimersRef = useRef<number[]>([])
   const revealTimersRef = useRef<number[]>([])
+  const replayTimersRef = useRef<number[]>([])
   const [revealed, setRevealed] = useState<{ holeCounts: number[]; boardCount: number }>({ holeCounts: Array.from({ length: 9 }, () => 0), boardCount: 0 })
   const [hideCpuHoleUntilShowdown, setHideCpuHoleUntilShowdown] = useState<boolean>(false)
   const [revealBusyUntilMs, setRevealBusyUntilMs] = useState<number>(0)
@@ -23,6 +26,7 @@ export function usePokerGame() {
   // Hand history (structured) and flattened log lines
   type HistoryEvent =
     | { ts: number; type: 'hand_start'; handId: number; buttonIndex: number; smallBlind: number; bigBlind: number }
+    | { ts: number; type: 'hand_setup'; handId: number; buttonIndex: number; rules: { smallBlind: number; bigBlind: number }; deck: string[]; deckRemaining: number; deckTotal: number; seats: Array<{ stack: number; committedThisStreet: number; totalCommitted: number; hasFolded: boolean; isAllIn: boolean; hole: string[] }> }
     | { ts: number; type: 'post_blind'; seat: number; amount: number }
     | { ts: number; type: 'deal_flop' | 'deal_turn' | 'deal_river'; cards: string[] }
     | { ts: number; type: 'action'; seat: number; action: BettingAction['type']; amount?: number | null; toCall: number; street: PokerTableState['street'] }
@@ -47,6 +51,7 @@ export function usePokerGame() {
       switch (e.type) {
         case 'hand_start': return `Hand #${e.handId} start (BTN ${e.buttonIndex}) blinds ${e.smallBlind}/${e.bigBlind}`
         case 'post_blind': return `Seat ${e.seat} posts blind ${e.amount}`
+        case 'hand_setup': return `Setup: BTN ${e.buttonIndex} stacks [${e.seats.map((s)=>s.stack).join(', ')}] deck ${e.deckRemaining}/${e.deckTotal}`
         case 'deal_flop': return `Flop: ${e.cards.join(' ')}`
         case 'deal_turn': return `Turn: ${e.cards.join(' ')}`
         case 'deal_river': return `River: ${e.cards.join(' ')}`
@@ -83,8 +88,15 @@ export function usePokerGame() {
     }, CLEAR_MS)
   }
 
+  // Review mode (declared once)
+  type ActionEvent = Extract<HistoryEvent, { type: 'action' }>
+  type SetupEvent = Extract<HistoryEvent, { type: 'hand_setup' }>
+  type ReviewState = { handId: number; setup: SetupEvent; actions: ActionEvent[]; step: number }
+  const [review, setReview] = useState<ReviewState | null>(null)
+
   // Human action helpers (seat 0 only)
   const act = (type: BettingAction['type'], amount?: number) => {
+    if (review) return
     setTable((t) => {
       if (t.currentToAct !== 0) return t
       appendEvent(t.handId, { ts: Date.now(), type: 'action', seat: 0, action: type, amount: amount ?? null, toCall: Math.max(0, t.betToCall - (t.seats[0]?.committedThisStreet||0)), street: t.street })
@@ -99,6 +111,7 @@ export function usePokerGame() {
 
   // CPU autoplay for seats other than 0
   useEffect(() => {
+    if (review) return
     if (table.status !== 'in_hand') return
     const idx = table.currentToAct
     if (idx == null) return
@@ -116,10 +129,11 @@ export function usePokerGame() {
     }, delay)
     actionTimersRef.current.push(timer)
     return () => actionTimersRef.current.forEach((id) => clearTimeout(id))
-  }, [table, revealBusyUntilMs])
+  }, [table, revealBusyUntilMs, review])
 
   // Player autoplay
   useEffect(() => {
+    if (review) return
     if (!autoPlay) return
     if (table.status !== 'in_hand') return
     if (table.currentToAct !== 0) return
@@ -132,10 +146,11 @@ export function usePokerGame() {
     }, delay)
     actionTimersRef.current.push(timer)
     return () => actionTimersRef.current.forEach((id) => clearTimeout(id))
-  }, [autoPlay, table, revealBusyUntilMs])
+  }, [autoPlay, table, revealBusyUntilMs, review])
 
   // Auto-begin next hand when over
   useEffect(() => {
+    if (review) return
     if (!autoPlay) return
     if (table.status !== 'hand_over') return
     if (table.gameOver) return
@@ -146,10 +161,11 @@ export function usePokerGame() {
     const timer = window.setTimeout(() => dealNext(), delay)
     actionTimersRef.current.push(timer)
     return () => actionTimersRef.current.forEach((id) => clearTimeout(id))
-  }, [autoPlay, table.status, revealBusyUntilMs])
+  }, [autoPlay, table.status, revealBusyUntilMs, review])
 
   // Staged board reveal when community updates (flop/turn/river)
   useEffect(() => {
+    if (review) return
     const targetCount = table.community.length
     if (targetCount <= revealed.boardCount) return
     // Clear only reveal timers (do not touch gameplay timers)
@@ -184,6 +200,26 @@ export function usePokerGame() {
     })
     // snapshot stacks at hand start (after blinds)
     handStartStacksRef.current = { handId: table.handId, stacks: table.seats.map(s => s.stack) }
+    // record full setup needed to recreate hand from this point (preflop after blinds and hole deal)
+    const toCode = (c: Card) => `${c.rank}${c.suit[0]}`
+    appendEvent(table.handId, {
+      ts: Date.now(),
+      type: 'hand_setup',
+      handId: table.handId,
+      buttonIndex: table.buttonIndex,
+      rules: { smallBlind: table.rules.smallBlind, bigBlind: table.rules.bigBlind },
+      deck: table.deck.map(toCode),
+      deckRemaining: table.deck.length,
+      deckTotal: table.deck.length + table.community.length + table.seats.reduce((sum, s) => sum + s.hole.length, 0),
+      seats: table.seats.map((s) => ({
+        stack: s.stack,
+        committedThisStreet: s.committedThisStreet,
+        totalCommitted: s.totalCommitted,
+        hasFolded: s.hasFolded,
+        isAllIn: s.isAllIn,
+        hole: s.hole.map(toCode),
+      })),
+    })
   }, [table.handId, table.street])
 
   // Log board deals
@@ -274,12 +310,159 @@ export function usePokerGame() {
 
   const available = useMemo(() => getAvailableActions(table), [table])
 
+  // Loader helpers
+  const fromCode = (code: string): Card => ({ rank: code.slice(0, code.length - 1) as any, suit: ({ C: 'Clubs', D: 'Diamonds', H: 'Hearts', S: 'Spades' } as any)[code.slice(-1)] })
+
+  function loadFromSetup(setup: Extract<HistoryEvent, { type: 'hand_setup' }>) {
+    setAutoPlay(false)
+    setTable(() => {
+      const seatsLen = setup.seats.length
+      const cpuSeats = Array.from({ length: Math.max(0, seatsLen - 1) }, (_, i) => i + 1)
+      let s = createInitialPokerTable(seatsLen, cpuSeats, 0)
+      s.handId = setup.handId
+      s.buttonIndex = setup.buttonIndex
+      s.rules.smallBlind = setup.rules.smallBlind
+      s.rules.bigBlind = setup.rules.bigBlind
+      s.deck = setup.deck.map(fromCode)
+      s.community = []
+      s.status = 'in_hand'
+      s.street = 'preflop'
+      s.seats = s.seats.map((seat, i) => {
+        const snap = setup.seats[i]
+        return {
+          ...seat,
+          stack: snap.stack,
+          committedThisStreet: snap.committedThisStreet,
+          totalCommitted: snap.totalCommitted,
+          hasFolded: snap.stack <= 0 ? true : false,
+          isAllIn: snap.isAllIn,
+          hole: snap.hole.map(fromCode),
+        }
+      })
+      s.pot.main = s.seats.reduce((sum, x) => sum + x.committedThisStreet, 0)
+      s.betToCall = Math.max(0, ...s.seats.map((x) => x.committedThisStreet))
+      const bbIndex = s.seats.reduce((best, x, i) => (x.committedThisStreet > (s.seats[best]?.committedThisStreet ?? -1) ? i : best), 0)
+      s.currentToAct = nextSeatIndex(s.seats as any, bbIndex)
+      s.lastAggressorIndex = bbIndex
+      setRevealed({ holeCounts: Array.from({ length: Math.max(6, s.seats.length) }, () => 2), boardCount: 0 })
+      return s
+    })
+  }
+
+  function loadFromHistory(h: HandHistory) {
+    const setup = h.events.find((e) => (e as any).type === 'hand_setup') as Extract<HistoryEvent, { type: 'hand_setup' }> | undefined
+    if (!setup) return
+    setAutoPlay(false)
+    loadFromSetup(setup)
+  }
+
+  function stopReplay() {
+    replayTimersRef.current.forEach((id) => clearTimeout(id))
+    replayTimersRef.current = []
+  }
+
+  function replayHistory(h: HandHistory, stepMs = 600) {
+    stopReplay()
+    setAutoPlay(false)
+    const setup = h.events.find((e) => (e as any).type === 'hand_setup') as Extract<HistoryEvent, { type: 'hand_setup' }> | undefined
+    if (!setup) return
+    // Load starting snapshot
+    loadFromSetup(setup)
+    // Sequence all recorded actions (in order)
+    const actions = h.events.filter((e) => (e as any).type === 'action') as Array<Extract<HistoryEvent, { type: 'action' }>>
+    actions.forEach((a, i) => {
+      const tid = window.setTimeout(() => {
+        setTable((t) => {
+          const forced = { ...t, currentToAct: a.seat } as PokerTableState
+          return applyAction(forced, { type: a.action, amount: (a.amount == null ? undefined : a.amount) })
+        })
+      }, i * stepMs)
+      replayTimersRef.current.push(tid)
+    })
+  }
+
+  // Review builders
+
+  function buildTableFrom(setup: SetupEvent, actions: ActionEvent[], uptoExclusive: number): PokerTableState {
+    const seatsLen = setup.seats.length
+    const cpuSeats = Array.from({ length: Math.max(0, seatsLen - 1) }, (_, i) => i + 1)
+    let s = createInitialPokerTable(seatsLen, cpuSeats, 0)
+    s.handId = setup.handId
+    s.buttonIndex = setup.buttonIndex
+    s.rules.smallBlind = setup.rules.smallBlind
+    s.rules.bigBlind = setup.rules.bigBlind
+    s.deck = setup.deck.map(fromCode)
+    s.community = []
+    s.status = 'in_hand'
+    s.street = 'preflop'
+    s.seats = s.seats.map((seat, i) => {
+      const snap = setup.seats[i]
+      return {
+        ...seat,
+        stack: snap.stack,
+        committedThisStreet: snap.committedThisStreet,
+        totalCommitted: snap.totalCommitted,
+        hasFolded: snap.stack <= 0 ? true : false,
+        isAllIn: snap.isAllIn,
+        hole: snap.hole.map(fromCode),
+      }
+    })
+    s.pot.main = s.seats.reduce((sum, x) => sum + x.committedThisStreet, 0)
+    s.betToCall = Math.max(0, ...s.seats.map((x) => x.committedThisStreet))
+    const bbIndex = s.seats.reduce((best, x, i) => (x.committedThisStreet > (s.seats[best]?.committedThisStreet ?? -1) ? i : best), 0)
+    s.currentToAct = nextSeatIndex(s.seats as any, bbIndex)
+    s.lastAggressorIndex = bbIndex
+    // Apply actions up to target
+    for (let i = 0; i < uptoExclusive; i += 1) {
+      const a = actions[i]
+      s = { ...s, currentToAct: a.seat } as PokerTableState
+      s = applyAction(s, { type: a.action, amount: (a.amount == null ? undefined : a.amount) })
+    }
+    return s
+  }
+
+  function startReviewFromHistory(h: HandHistory) {
+    stopReplay()
+    setAutoPlay(false)
+    const setup = h.events.find((e) => (e as any).type === 'hand_setup') as SetupEvent | undefined
+    if (!setup) return
+    const actions = h.events.filter((e) => (e as any).type === 'action') as ActionEvent[]
+    // Build table from setup only (no actions applied) and display player hole only
+    const initial = buildTableFrom(setup, [], 0)
+    setReview({ handId: h.handId, setup, actions, step: 0 })
+    setRevealed({
+      holeCounts: Array.from({ length: Math.max(6, initial.seats.length) }, (_, i) => (i === 0 ? 2 : 0)),
+      boardCount: 0,
+    })
+    setTable(initial)
+  }
+
+  function reviewToStep(step: number) {
+    if (!review) return
+    const clamped = Math.max(0, Math.min(step, review.actions.length))
+    const nextState = buildTableFrom(review.setup, review.actions, clamped)
+    setReview({ ...review, step: clamped })
+    // Reveal only player hole until showdown
+    const contenders = nextState.seats.filter((s) => !s.hasFolded && s.hole.length === 2).length
+    const showAll = nextState.street === 'showdown' && nextState.community.length >= 5 && contenders > 1
+    setRevealed({
+      holeCounts: Array.from({ length: Math.max(6, nextState.seats.length) }, (_, i) => (i === 0 || showAll ? 2 : 0)),
+      boardCount: nextState.community.length,
+    })
+    setTable(nextState)
+  }
+
+  function reviewNextStep() { if (review) reviewToStep(review.step + 1) }
+  function reviewPrevStep() { if (review) reviewToStep(review.step - 1) }
+  function endReview() { setReview(null) }
+
   return {
     table,
     revealed,
     clearing,
     histories,
     historyLines,
+    review,
     hideCpuHoleUntilShowdown,
     setHideCpuHoleUntilShowdown,
     numPlayers,
@@ -296,6 +479,15 @@ export function usePokerGame() {
     call,
     bet,
     raise,
+    loadFromSetup,
+    loadFromHistory,
+    replayHistory,
+    stopReplay,
+    startReviewFromHistory,
+    reviewToStep,
+    reviewNextStep,
+    reviewPrevStep,
+    endReview,
   }
 }
 

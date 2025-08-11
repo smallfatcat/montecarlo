@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Table } from './Table'
 import { CONFIG } from '../config'
 import { DeckGallery } from './DeckGallery'
-import { PokerTable } from './poker/PokerTable'
 import { PokerTableHorseshoe } from './poker/PokerTableHorseshoe'
 import { PokerGameProvider } from './poker/PokerGameContext'
 import { PokerTestDashboard } from './poker/PokerTestDashboard'
@@ -24,16 +23,10 @@ export function App() {
   const showPoker = hash === '#poker'
   const showPokerTest = hash === '#poker-test'
   const showPokerHistory = hash === '#poker-history'
-  const showPokerHorseshoe = hash === '#poker-horseshoe'
   const showBlackjack = hash === '#blackjack'
 
   let content: ReactNode
   if (showDeck) content = <DeckGallery />
-  else if (showPokerHorseshoe) content = (
-    <PokerGameProvider>
-      <PokerTableHorseshoe />
-    </PokerGameProvider>
-  )
   else if (showPokerTest) content = <PokerTestDashboard />
   else if (showPokerHistory) content = (
     <PokerGameProvider>
@@ -42,7 +35,7 @@ export function App() {
   )
   else if (showPoker) content = (
     <PokerGameProvider>
-      <PokerTable />
+      <PokerTableHorseshoe />
     </PokerGameProvider>
   )
   else if (showBlackjack) content = <Table />

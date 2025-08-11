@@ -8,7 +8,7 @@ import { useEquity } from './useEquity'
 import { ChipStack } from '../components/ChipStack'
 
 export function PokerTableHorseshoe() {
-  const { table, revealed, dealNext, autoPlay, setAutoPlay, available, fold, check, call, bet, raise, hideCpuHoleUntilShowdown, setHideCpuHoleUntilShowdown, historyLines } = usePokerGameContext()
+  const { table, revealed, dealNext, autoPlay, setAutoPlay, available, fold, check, call, bet, raise, hideCpuHoleUntilShowdown, setHideCpuHoleUntilShowdown, historyLines, review, reviewNextStep, reviewPrevStep, endReview } = usePokerGameContext()
   const [betSize, setBetSize] = useState<'33'|'50'|'75'|'pot'|'shove'>('50')
   const { equity, run: runEquity, running: equityRunning } = useEquity()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -20,6 +20,7 @@ export function PokerTableHorseshoe() {
     pot?: Rect
     showdown?: Rect
     bets?: Record<number, Rect>
+    stacks?: Record<number, Rect>
   }
   const [editLayoutMode, setEditLayoutMode] = useState<boolean>(false)
   const GRID_SIZE = 10
@@ -40,7 +41,8 @@ export function PokerTableHorseshoe() {
             board: (data as any).board,
             pot: (data as any).pot,
             showdown: (data as any).showdown,
-            bets: (data as any).bets ?? {}
+            bets: (data as any).bets ?? {},
+            stacks: (data as any).stacks ?? {},
           }
           defaultFromFileRef.current = next
           setLayoutOverrides(next)
@@ -133,7 +135,14 @@ export function PokerTableHorseshoe() {
   }, [table.status, community, table.seats])
 
   const winnersSet = useMemo(() => {
-    if (table.status !== 'hand_over' || community.length < 5) return new Set<number>()
+    const winners = new Set<number>()
+    if (table.status !== 'hand_over') return winners
+    const contenders = table.seats.filter((s) => !s.hasFolded && s.hole.length === 2).length
+    // If no showdown (e.g., everyone folded), remaining non-folded seats are winners
+    if (community.length < 5 || contenders <= 1) {
+      table.seats.forEach((s, i) => { if (!s.hasFolded && s.hole.length > 0) winners.add(i) })
+      return winners
+    }
     const classOrder: Record<string, number> = { high_card:0,pair:1,two_pair:2,three_kind:3,straight:4,flush:5,full_house:6,four_kind:7,straight_flush:8 } as const as any
     let best: { classIdx: number; ranks: number[] } | null = null
     table.seats.forEach((s) => {
@@ -153,7 +162,6 @@ export function PokerTableHorseshoe() {
         }
       }
     })
-    const winners = new Set<number>()
     if (!best) return winners
     table.seats.forEach((s, i) => {
       if (s.hasFolded || s.hole.length !== 2) return
@@ -179,8 +187,9 @@ export function PokerTableHorseshoe() {
   function getPotPos(): Rect | null { return layoutOverrides.pot ?? null }
   function getShowdownPos(): Rect | null { return layoutOverrides.showdown ?? null }
   function getBetPos(seatIndex: number): Rect | null { return layoutOverrides.bets?.[seatIndex] ?? null }
+  function getStackPos(seatIndex: number): Rect | null { return layoutOverrides.stacks?.[seatIndex] ?? null }
 
-  function makeDragMouseHandlers(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet', index?: number) {
+  function makeDragMouseHandlers(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet' | 'stack', index?: number) {
     if (!editLayoutMode) return {}
     return {
       onMouseDown: (e: React.MouseEvent) => {
@@ -197,6 +206,10 @@ export function PokerTableHorseshoe() {
             const i = index as number
             const b = layoutOverrides.bets?.[i]
             if (b) return b
+          } else if (kind === 'stack') {
+            const i = index as number
+            const s = layoutOverrides.stacks?.[i]
+            if (s) return s
           } else {
             const v = (layoutOverrides as any)[kind]
             if (v) return v
@@ -227,6 +240,10 @@ export function PokerTableHorseshoe() {
               const i = index as number
               return { ...prev, bets: { ...(prev.bets ?? {}), [i]: { ...(prev.bets?.[i] ?? {}), ...next } } }
             }
+            if (kind === 'stack') {
+              const i = index as number
+              return { ...prev, stacks: { ...(prev.stacks ?? {}), [i]: { ...(prev.stacks?.[i] ?? {}), ...next } } }
+            }
             const prevRect: Rect = (prev as any)[kind] ?? {}
             return { ...prev, [kind]: { ...prevRect, ...next } } as LayoutOverrides
           })
@@ -241,16 +258,17 @@ export function PokerTableHorseshoe() {
     }
   }
 
-  function elementDomId(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet', index?: number) {
+  function elementDomId(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet' | 'stack', index?: number) {
     if (kind === 'seat') return `horseshoe-seat-wrapper-${index}`
     if (kind === 'bet') return `horseshoe-bet-${index}`
+    if (kind === 'stack') return `horseshoe-stack-${index}`
     if (kind === 'board') return `horseshoe-board`
     if (kind === 'pot') return `horseshoe-pot`
     if (kind === 'showdown') return `horseshoe-showdown`
     return ''
   }
 
-  function makeResizeMouseHandlers(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet', index?: number) {
+  function makeResizeMouseHandlers(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet' | 'stack', index?: number) {
     if (!editLayoutMode) return {}
     return {
       onMouseDown: (e: React.MouseEvent) => {
@@ -309,6 +327,10 @@ export function PokerTableHorseshoe() {
               const prevRect = prev.bets?.[keyIndex] ?? {}
               return { ...prev, bets: { ...(prev.bets ?? {}), [keyIndex]: { ...prevRect, width: nextW, height: nextH, left: nextCenterLeft, top: nextCenterTop } } }
             }
+            if (kind === 'stack' && keyIndex !== undefined) {
+              const prevRect = prev.stacks?.[keyIndex] ?? {}
+              return { ...prev, stacks: { ...(prev.stacks ?? {}), [keyIndex]: { ...prevRect, width: nextW, height: nextH, left: nextCenterLeft, top: nextCenterTop } } }
+            }
             const prevRect: Rect = (prev as any)[kind] ?? {}
             return { ...prev, [kind]: { ...prevRect, width: nextW, height: nextH, left: nextCenterLeft, top: nextCenterTop } } as LayoutOverrides
           })
@@ -338,13 +360,17 @@ export function PokerTableHorseshoe() {
     }
     const seats: Record<number, Rect> = {}
     const bets: Record<number, Rect> = {}
+    const stacks: Record<number, Rect> = {}
     for (let i = 0; i < table.seats.length; i += 1) {
       const seatEl = document.getElementById(`horseshoe-seat-wrapper-${i}`) as HTMLElement | null
       const betEl = document.getElementById(`horseshoe-bet-${i}`) as HTMLElement | null
+      const stackEl = document.getElementById(`horseshoe-stack-${i}`) as HTMLElement | null
       const seatR = toCenterRect(seatEl)
       const betR = toCenterRect(betEl)
+      const stackR = toCenterRect(stackEl)
       if (seatR) seats[i] = seatR
       if (betR) bets[i] = betR
+      if (stackR) stacks[i] = stackR
     }
     const board = toCenterRect(document.getElementById('horseshoe-board'))
     const pot = toCenterRect(document.getElementById('horseshoe-pot'))
@@ -352,6 +378,7 @@ export function PokerTableHorseshoe() {
     const out: LayoutOverrides = {
       seats,
       bets,
+      stacks,
       board: board ?? undefined,
       pot: pot ?? undefined,
       showdown: showdown ?? undefined,
@@ -382,7 +409,7 @@ export function PokerTableHorseshoe() {
       <div id="poker-controlbar" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <button onClick={() => dealNext()} disabled={table.status === 'in_hand' || table.gameOver}>Deal</button>
         <label><input type="checkbox" checked={autoPlay} onChange={(e) => setAutoPlay(e.target.checked)} /> Autoplay</label>
-        <button onClick={() => { window.location.hash = '#poker' }}>Normal View</button>
+        {/* Normal view removed; horseshoe is now the default */}
         <label title="Hide CPU hole cards until showdown">
           <input type="checkbox" checked={hideCpuHoleUntilShowdown} onChange={(e) => setHideCpuHoleUntilShowdown(e.target.checked)} />
           Hide CPU hole
@@ -421,6 +448,14 @@ export function PokerTableHorseshoe() {
         </label>
         <button onClick={exportLayoutToJson}>Export Layout JSON</button>
         <button onClick={resetLayout} disabled={Object.keys(layoutOverrides.seats).length === 0 && !layoutOverrides.board && !layoutOverrides.pot && !layoutOverrides.showdown}>Reset Layout</button>
+        {review && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 16 }}>
+            <span style={{ opacity: 0.85 }}>Review Hand #{review.handId} • Step {review.step}/{review.actions.length}</span>
+            <button onClick={reviewPrevStep}>&laquo; Prev</button>
+            <button onClick={reviewNextStep}>Next &raquo;</button>
+            <button onClick={endReview}>Exit Review</button>
+          </div>
+        )}
       </div>
 
       <div
@@ -509,6 +544,7 @@ export function PokerTableHorseshoe() {
           // Place seats clockwise by reversing the visual index around the arc
           const pos = getSeatPos(i)
           const betPos = getBetPos(i)
+          const stackPos = getStackPos(i)
           return [
             (
               <div
@@ -525,6 +561,7 @@ export function PokerTableHorseshoe() {
                   buttonIndex={table.buttonIndex}
                   currentToAct={table.currentToAct}
                   highlightSet={highlightSet}
+                  hideStackRow={true}
                    showPerSeatEquity={(!hideCpuHoleUntilShowdown) || (table.status === 'hand_over' && community.length >= 5) ? (!s.hasFolded && s.hole.length === 2) : (i === 0)}
                   equityWinPct={equity ? (equity.win[i] / samples) * 100 : null}
                   equityTiePct={equity ? (equity.tie[i] / samples) * 100 : null}
@@ -557,6 +594,25 @@ export function PokerTableHorseshoe() {
                     aria-hidden
                     style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }}
                     {...makeResizeMouseHandlers('bet', i)}
+                  />
+                )}
+              </div>
+            ),
+            (
+              <div
+                id={`horseshoe-stack-${i}`}
+                key={`stack-${i}`}
+                style={{ position: 'absolute', left: stackPos?.left ?? centerX, top: stackPos?.top ?? centerY, transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined, width: stackPos?.width, height: stackPos?.height }}
+                {...makeDragMouseHandlers('stack', i)}
+              >
+                <span>Stack:</span>
+                <ChipStack amount={s.stack} />
+                <span style={{ marginLeft: 6, fontSize: 14, lineHeight: 1, opacity: 0.9 }}>({s.stack})</span>
+                {editLayoutMode && (
+                  <div
+                    aria-hidden
+                    style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }}
+                    {...makeResizeMouseHandlers('stack', i)}
                   />
                 )}
               </div>

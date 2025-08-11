@@ -14,7 +14,7 @@ function download(text: string, filename: string) {
 }
 
 export function PokerHistoryPage() {
-  const { histories } = usePokerGameContext()
+  const { histories, loadFromHistory, replayHistory, stopReplay, startReviewFromHistory } = usePokerGameContext()
   const [selected, setSelected] = useState<number | null>(null)
 
   const sorted = useMemo(() => {
@@ -27,11 +27,15 @@ export function PokerHistoryPage() {
   }, [selected, sorted])
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 12 }}>
       <div style={{ display: 'grid', gap: 8, alignContent: 'start' }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={() => { window.location.hash = '#poker' }}>Back to Table</button>
           <button onClick={() => download(JSON.stringify(histories, null, 2), 'poker-hand-histories.json')}>Export JSON</button>
+          <button disabled={selected == null} onClick={() => { const h = sorted.find(x => x.handId === selected!); if (h) { loadFromHistory(h); window.location.hash = '#poker' } }}>Load into Table</button>
+          <button disabled={selected == null} onClick={() => { const h = sorted.find(x => x.handId === selected!); if (h) { startReviewFromHistory(h); window.location.hash = '#poker' } }}>Review</button>
+          <button disabled={selected == null} onClick={() => { const h = sorted.find(x => x.handId === selected!); if (h) replayHistory(h, 700) }}>Replay</button>
+          <button onClick={() => stopReplay()}>Stop</button>
         </div>
         <div style={{ fontWeight: 700 }}>Hands</div>
         <div style={{ maxHeight: 520, overflowY: 'auto', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8 }}>
@@ -56,9 +60,9 @@ export function PokerHistoryPage() {
             <div style={{ opacity: 0.85 }}>Hand #{selected}</div>
           )}
         </div>
-        <div style={{ marginTop: 8, minHeight: 200, border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8, padding: 8, background: 'rgba(0,0,0,0.12)' }}>
+        <div style={{ marginTop: 8, minHeight: 200, width: 780, border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8, padding: 8, background: 'rgba(0,0,0,0.12)', overflowX: 'hidden' }}>
           {selectedHistory ? (
-            <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 12, display: 'grid', gap: 4 }}>
+            <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 12, display: 'grid', gap: 4, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
               {selectedHistory.events.map((e, i) => (
                 <div key={i}>
                   {(() => {

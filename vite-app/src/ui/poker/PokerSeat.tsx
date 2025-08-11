@@ -27,6 +27,8 @@ export interface PokerSeatProps {
   visibleHoleCount?: number // 0..2
   // force face-down regardless of visible count
   forceFaceDown?: boolean
+  // hide stack row inside seat container (for external placement)
+  hideStackRow?: boolean
 }
 
 const CARD_HEIGHT_PX = 140
@@ -51,6 +53,7 @@ export function PokerSeat(props: PokerSeatProps) {
     containerStyle,
     visibleHoleCount = 2,
     forceFaceDown = false,
+    hideStackRow = false,
   } = props
 
   const outline = seatIndex === currentToAct ? '2px solid #ffd54f' : undefined
@@ -107,11 +110,13 @@ export function PokerSeat(props: PokerSeatProps) {
       <div id={`${idPrefix}-label-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>
         Seat {seatIndex}{seatIndex === buttonIndex ? ' (BTN)' : ''}{seat.hasFolded ? ' · Folded' : ''}{seat.isAllIn ? ' · All-in' : ''}
       </div>
-      <div id={`${idPrefix}-stack-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-        <span>Stack:</span>
-        <ChipStack amount={seat.stack} />
-        <span style={{ opacity: 0.9 }}>({seat.stack})</span>
-      </div>
+      {!hideStackRow && (
+        <div id={`${idPrefix}-stack-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <span>Stack:</span>
+          <ChipStack amount={seat.stack} />
+          <span style={{ opacity: 0.9 }}>({seat.stack})</span>
+        </div>
+      )}
       {/* <div id={`${idPrefix}-bets-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}> */}
         {/* <span style={{ marginRight: 6 }}>In pot:</span>
         <ChipStack amount={seat.totalCommitted} />

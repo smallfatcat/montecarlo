@@ -1,4 +1,4 @@
-import { createShoe, shuffleInPlace } from "../blackjack/deck";
+import { createStandardDeck, shuffleInPlace } from "../blackjack/deck";
 import type { Card } from "../blackjack/types";
 import { DEFAULT_RULES, cloneState, countActiveSeats, getStreetBetSize, nextSeatIndex, nextSeatIndexWithChips } from "./types";
 import { CONFIG } from "../config";
@@ -6,15 +6,9 @@ import type { PokerTableState, SeatState, BettingAction } from "./types";
 import { evaluateSeven } from "./handEval";
 
 function drawCard(deck: Card[]): Card {
-  // Robust draw with automatic refills; loops until a card is drawn
-  // In pathological cases, this avoids throwing in long randomized simulations
-  // while keeping the same deck reference.
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const c = deck.pop();
-    if (c) return c;
-    deck.push(...shuffleInPlace(createShoe(6)));
-  }
+  const c = deck.pop();
+  if (!c) throw new Error("Deck exhausted while dealing – expected fresh 52-card deck per hand");
+  return c;
 }
 
 export function createInitialPokerTable(numSeats: number, cpuSeats: number[], startingStack = 200, shoe?: Card[]): PokerTableState {
@@ -30,7 +24,7 @@ export function createInitialPokerTable(numSeats: number, cpuSeats: number[], st
   }));
   return {
     handId: 0,
-    deck: shoe ? [...shoe] : shuffleInPlace(createShoe(6)),
+    deck: shoe ? [...shoe] : shuffleInPlace(createStandardDeck()),
     community: [],
     seats,
     buttonIndex: 0,
@@ -56,10 +50,8 @@ export function startHand(state: PokerTableState): PokerTableState {
     s.rules.smallBlind = Math.max(1, s.rules.smallBlind * incFactor);
     s.rules.bigBlind = Math.max(1, s.rules.bigBlind * incFactor);
   }
-  // New shoe if too few cards (simple threshold)
-  if (s.deck.length < 20) {
-    s.deck = shuffleInPlace(createShoe(6));
-  }
+  // Always start each hand with a freshly shuffled single 52-card deck
+  s.deck = shuffleInPlace(createStandardDeck());
   s.handId += 1;
   s.community = [];
   s.seats = s.seats.map((seat) => ({
@@ -89,9 +81,8 @@ export function startHand(state: PokerTableState): PokerTableState {
   postBlind(s, sbIndex, s.rules.smallBlind);
   postBlind(s, bbIndex, s.rules.bigBlind);
 
-  // Deal hole cards (ensure enough cards, else reshuffle)
-  const neededCards = s.seats.filter((seat) => seat.stack > 0).length * 2
-  if (s.deck.length < neededCards) s.deck = shuffleInPlace(createShoe(6))
+  // Deal hole cards
+  // const neededCards = s.seats.filter((seat) => seat.stack > 0).length * 2
   for (let r = 0; r < 2; r += 1) {
     for (let i = 0; i < s.seats.length; i += 1) {
       const idx = (s.buttonIndex + 1 + i) % s.seats.length;
