@@ -1,4 +1,5 @@
 export const CONFIG = {
+  version: '0.1.0',
   autoplay: {
     cpuActionDelayMs: 350,
     playerActionDelayMs: 450,

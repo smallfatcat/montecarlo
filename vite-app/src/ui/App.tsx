@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Table } from './Table'
 import { CONFIG } from '../config'
 import { DeckGallery } from './DeckGallery'
@@ -24,20 +24,45 @@ export function App() {
   const showPokerTest = hash === '#poker-test'
   const showPokerHorseshoe = hash === '#poker-horseshoe'
   const showBlackjack = hash === '#blackjack'
-  if (showDeck) return <DeckGallery />
-  if (showPokerHorseshoe) return (
+
+  let content: ReactNode
+  if (showDeck) content = <DeckGallery />
+  else if (showPokerHorseshoe) content = (
     <PokerGameProvider>
       <PokerTableHorseshoe />
     </PokerGameProvider>
   )
-  if (showPokerTest) return <PokerTestDashboard />
-  if (showPoker) return (
+  else if (showPokerTest) content = <PokerTestDashboard />
+  else if (showPoker) content = (
     <PokerGameProvider>
       <PokerTable />
     </PokerGameProvider>
   )
-  if (showBlackjack) return <Table />
-  return <Landing />
+  else if (showBlackjack) content = <Table />
+  else content = <Landing />
+
+  const version = (typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__) ? __APP_VERSION__ : CONFIG.version
+
+  return (
+    <div style={{ position: 'relative' }}>
+      {content}
+      <div
+        id="app-version"
+        style={{
+          position: 'fixed',
+          bottom: 6,
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          fontSize: 12,
+          opacity: 0.6,
+          pointerEvents: 'none',
+        }}
+      >
+        v{version}
+      </div>
+    </div>
+  )
 }
 
 
