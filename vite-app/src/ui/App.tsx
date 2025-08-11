@@ -6,6 +6,7 @@ import { PokerTable } from './poker/PokerTable'
 import { PokerTableHorseshoe } from './poker/PokerTableHorseshoe'
 import { PokerGameProvider } from './poker/PokerGameContext'
 import { PokerTestDashboard } from './poker/PokerTestDashboard'
+import { Landing } from './Landing'
 
 export function App() {
   const [hash, setHash] = useState<string>(typeof window !== 'undefined' ? window.location.hash : '')
@@ -22,6 +23,7 @@ export function App() {
   const showPoker = hash === '#poker'
   const showPokerTest = hash === '#poker-test'
   const showPokerHorseshoe = hash === '#poker-horseshoe'
+  const showBlackjack = hash === '#blackjack'
   if (showDeck) return <DeckGallery />
   if (showPokerHorseshoe) return (
     <PokerGameProvider>
@@ -34,7 +36,8 @@ export function App() {
       <PokerTable />
     </PokerGameProvider>
   )
-  return <Table />
+  if (showBlackjack) return <Table />
+  return <Landing />
 }
 
 

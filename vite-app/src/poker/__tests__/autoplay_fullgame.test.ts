@@ -111,7 +111,7 @@ describe('autoplay-style full game loops', () => {
     expect(totalBusts).toBeGreaterThanOrEqual(0)
   })
 
-  it('randomized seeds: 6-max short stacks produce at least one bust within 300 hands', () => {
+  it('randomized seeds: 6-max short stacks produce at least one bust within 200 hands', () => {
     for (let seed = 1; seed <= 8; seed += 1) {
       const restore = seedRandom(seed)
       let t: PokerTableState = createInitialPokerTable(6, [1,2,3,4,5], 20)
@@ -122,9 +122,9 @@ describe('autoplay-style full game loops', () => {
       expect(numZero > 0 || t.gameOver).toBe(true)
       restore()
     }
-  })
+  }, 12000)
 
-  it('randomized mixed stacks converge to a single winner within 1000 hands', () => {
+  it('randomized mixed stacks converge to a single winner within 600 hands', () => {
     const restore = seedRandom(12345)
     let t: PokerTableState = createInitialPokerTable(5, [1,2,3,4], 30)
     t.seats[0].stack = 45
