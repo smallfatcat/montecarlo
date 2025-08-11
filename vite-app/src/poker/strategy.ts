@@ -125,7 +125,6 @@ export function suggestActionPoker(state: PokerTableState, profile: BotProfile =
   const pos = actingPosition(state, seatIndex);
   const lastRaise = state.lastRaiseAmount || state.rules.bigBlind;
   const bb = Math.max(1, state.rules.bigBlind);
-  const heroBB = seat.stack / bb;
   const otherStacks = state.seats
     .map((s, i) => (i === seatIndex || s.hasFolded ? 0 : s.stack))
     .filter((x) => x > 0);

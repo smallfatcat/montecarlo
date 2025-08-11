@@ -1,6 +1,7 @@
-import { createContext, useContext, PropsWithChildren } from 'react'
+import { createContext, useContext } from 'react'
+import type { PropsWithChildren } from 'react'
 import { usePokerGame } from './usePokerGame'
-import type { PokerTableState } from '../../poker/types'
+// (removed unused type import)
 
 type PokerGameContextValue = ReturnType<typeof usePokerGame>
 

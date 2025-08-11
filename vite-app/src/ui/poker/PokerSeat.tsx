@@ -1,4 +1,5 @@
-import { CSSProperties, Fragment } from 'react'
+import { Fragment } from 'react'
+import type { CSSProperties } from 'react'
 import { Card3D } from '../components/Card3D'
 // import { CONFIG } from '../../config'
 import type { SeatState } from '../../poker/types'
