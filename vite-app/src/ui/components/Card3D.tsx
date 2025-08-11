@@ -70,12 +70,14 @@ function FaceCenter({ suit, rank }: { suit: Card['suit']; rank: 'A' | 'J' | 'Q' 
   // Use an <img> that hides on error, falling back to SVG FaceArt
   return (
     <div style={{ width: '84%', height: '84%', display: 'grid', placeItems: 'center' }}>
-      <img
-        src={url}
-        alt={`${rank} of ${suit}`}
-        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-      />
+      {CONFIG.ui.enableFaceImages ? (
+        <img
+          src={url}
+          alt={`${rank} of ${suit}`}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+        />
+      ) : null}
       <FaceArt suit={suit} rank={rank} />
     </div>
   )
