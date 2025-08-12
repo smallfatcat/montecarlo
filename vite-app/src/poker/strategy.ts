@@ -244,9 +244,12 @@ export function suggestActionPoker(state: PokerTableState, profile: BotProfile =
       const amt = Math.max(Math.floor(pot * 0.66), bb);
       return { type: "bet", amount: Math.min(amt, seat.stack) };
     }
-    if ((mediumMade || hasDraw) && available.has("bet") && Math.random() < 0.4) {
+    if ((mediumMade || hasDraw) && available.has("bet")) {
+      const rand = (globalThis as any).__POKER_RNG__ ? (globalThis as any).__POKER_RNG__() : Math.random()
+      if (rand < 0.4) {
       const amt = Math.max(Math.floor(pot * 0.5), bb);
       return { type: "bet", amount: Math.min(amt, seat.stack) };
+      }
     }
     if (available.has("check")) return { type: "check" };
     return available.has("call") ? { type: "call" } : { type: "fold" };

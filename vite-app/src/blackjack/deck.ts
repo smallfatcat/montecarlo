@@ -39,12 +39,27 @@ export function createShoe(numberOfDecks: number): Card[] {
 }
 
 export function shuffleInPlace(deck: Card[], rng: () => number = Math.random): Card[] {
-  // Fisher-Yates shuffle
+  // Fisher-Yates shuffle with robust index clamping in case rng() returns 1.0 due to rounding
   for (let i = deck.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rng() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
+    const r = rng()
+    const clamped = r >= 1 ? (1 - Number.EPSILON) : (r < 0 ? 0 : r)
+    const j = Math.floor(clamped * (i + 1))
+    const tmp = deck[i]
+    deck[i] = deck[j]
+    deck[j] = tmp
   }
   return deck;
+}
+
+// Deterministic PRNG (xorshift32)
+export function makeXorShift32(seed: number): () => number {
+  let x = seed >>> 0
+  return () => {
+    x ^= x << 13; x >>>= 0
+    x ^= x >> 17; x >>>= 0
+    x ^= x << 5;  x >>>= 0
+    return (x >>> 0) / 4294967296
+  }
 }
 
 export function drawCard(deck: Card[]): Card {

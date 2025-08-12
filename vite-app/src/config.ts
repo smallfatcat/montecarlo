@@ -6,9 +6,9 @@ export const CONFIG = {
     autoDealDelayMs: 900,
   },
   pokerAutoplay: {
-    cpuActionDelayMs: 250,
-    playerActionDelayMs: 300,
-    autoDealDelayMs: 700,
+    cpuActionDelayMs: 5,
+    playerActionDelayMs: 5,
+    autoDealDelayMs: 5,
   },
   poker: {
     chipIconSizePx: 30,
@@ -43,6 +43,11 @@ export const CONFIG = {
       showdownOffsetY: 70,
     }
     ,
+    random: {
+      useSeeded: true,
+      seed: 123456789,
+      perHandIncrement: 1,
+    },
     deal: {
       perHoleCardMs: 300,
       perBoardCardMs: 300,

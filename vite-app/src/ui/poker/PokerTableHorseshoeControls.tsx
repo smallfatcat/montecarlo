@@ -1,0 +1,109 @@
+import { useState } from 'react'
+import type { BettingActionType, PokerTableState } from '../../poker/types'
+
+export function PokerTableHorseshoeControls(props: {
+  table: PokerTableState
+  autoPlay: boolean
+  onToggleAutoPlay: (v: boolean) => void
+  onDealNext: () => void
+  available: BettingActionType[]
+  onFold: () => void
+  onCheck: () => void
+  onCall: () => void
+  onBet: (amount?: number) => void
+  onRaise: (amount?: number) => void
+  hideCpuHoleUntilShowdown: boolean
+  onToggleHideCpuHole: (v: boolean) => void
+  onExportLayout?: () => void
+  onResetLayout?: () => void
+  editLayoutMode?: boolean
+  onToggleEditLayout?: (v: boolean) => void
+  reviewInfo?: { handId: number; step: number; total: number } | null
+  onReviewPrev?: () => void
+  onReviewNext?: () => void
+  onEndReview?: () => void
+  onOpenHistory?: () => void
+}) {
+  const {
+    table,
+    autoPlay,
+    onToggleAutoPlay,
+    onDealNext,
+    available,
+    onFold,
+    onCheck,
+    onCall,
+    onBet,
+    onRaise,
+    hideCpuHoleUntilShowdown,
+    onToggleHideCpuHole,
+    onExportLayout,
+    onResetLayout,
+    editLayoutMode,
+    onToggleEditLayout,
+    reviewInfo,
+    onReviewPrev,
+    onReviewNext,
+    onEndReview,
+    onOpenHistory,
+  } = props
+
+  const [betSize, setBetSize] = useState<'33'|'50'|'75'|'pot'|'shove'>('50')
+
+  return (
+    <div id="poker-controlbar" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <button onClick={() => onDealNext()} disabled={table.status === 'in_hand' || table.gameOver}>Deal</button>
+      <label><input type="checkbox" checked={autoPlay} onChange={(e) => onToggleAutoPlay(e.target.checked)} /> Autoplay</label>
+      <label title="Hide CPU hole cards until showdown">
+        <input type="checkbox" checked={hideCpuHoleUntilShowdown} onChange={(e) => onToggleHideCpuHole(e.target.checked)} />
+        Hide CPU hole
+      </label>
+      <select value={betSize} onChange={(e)=>setBetSize(e.target.value as any)}>
+        <option value="33">33%</option>
+        <option value="50">50%</option>
+        <option value="75">75%</option>
+        <option value="pot">Pot</option>
+        <option value="shove">Shove</option>
+      </select>
+      <button onClick={() => {
+        const pot = table.pot.main
+        let amt = 0
+        if (betSize === 'shove') amt = Number.MAX_SAFE_INTEGER
+        else if (betSize === 'pot') amt = Math.floor(pot)
+        else amt = Math.floor(pot * (parseInt(betSize,10)/100))
+        onBet(amt)
+      }} disabled={!available.includes('bet')}>Bet</button>
+      <button onClick={() => {
+        const toCall = Math.max(0, table.betToCall - (table.seats[0]?.committedThisStreet||0))
+        const pot = table.pot.main
+        let extra = 0
+        if (betSize === 'shove') extra = Number.MAX_SAFE_INTEGER
+        else if (betSize === 'pot') extra = Math.floor(pot + toCall)
+        else extra = Math.floor((pot + toCall) * (parseInt(betSize,10)/100))
+        onRaise(extra)
+      }} disabled={!available.includes('raise')}>Raise</button>
+      <button onClick={onFold} disabled={!available.includes('fold')}>Fold</button>
+      <button onClick={onCheck} disabled={!available.includes('check')}>Check</button>
+      <button onClick={onCall} disabled={!available.includes('call')}>Call</button>
+
+      <span className="sep" />
+      <label title="Edit and drag layout elements">
+        <input type="checkbox" checked={!!editLayoutMode} onChange={(e) => onToggleEditLayout?.(e.target.checked)} /> Edit Layout
+      </label>
+      {onExportLayout && <button onClick={onExportLayout}>Export Layout JSON</button>}
+      {onResetLayout && <button onClick={onResetLayout}>Reset Layout</button>}
+      <span className="sep" />
+      {onOpenHistory && <button onClick={onOpenHistory}>Open History</button>}
+      {reviewInfo && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 16 }}>
+          <span style={{ opacity: 0.85 }}>Review Hand #{reviewInfo.handId} • Step {reviewInfo.step}/{reviewInfo.total}</span>
+          <button onClick={onReviewPrev}>&laquo; Prev</button>
+          <button onClick={onReviewNext}>Next &raquo;</button>
+          <button onClick={onEndReview}>Exit Review</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+

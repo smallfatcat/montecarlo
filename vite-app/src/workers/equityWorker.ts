@@ -1,6 +1,7 @@
 // Web Worker to compute Monte Carlo equities for current poker hand
 import { evaluateSeven } from '../poker/handEval'
-import { createStandardDeck } from '../blackjack/deck'
+import { createStandardDeck, makeXorShift32 } from '../blackjack/deck'
+import { CONFIG } from '../config'
 import type { Card } from '../blackjack/types'
 
 type SeatIn = { hole: Card[]; folded: boolean }
@@ -53,7 +54,14 @@ function runEquity(seats: SeatIn[], community: Card[], samples: number): { win: 
   const baseRemaining: Card[] = full.filter((c) => !knownKey.has(key(c)))
 
   const needBoard = Math.max(0, 5 - community.length)
-  const rng = Math.random
+  let rng = Math.random
+  // Seeded RNG for deterministic equity sims when enabled
+  try {
+    if ((CONFIG as any)?.poker?.random?.useSeeded) {
+      const base = ((CONFIG.poker.random.seed ?? 1) ^ 0xA5A5A5A5) >>> 0
+      rng = makeXorShift32(base)
+    }
+  } catch {}
 
   for (let t = 0; t < samples; t += 1) {
     // Copy and shuffle remaining deck for this trial
