@@ -13,7 +13,7 @@ import { buildTableFrom } from '../../poker/history'
 
 export function usePokerGame() {
   const [numPlayers, setNumPlayers] = useState<number>(6)
-  const [startingStack, setStartingStack] = useState<number>(200)
+  const [startingStack, setStartingStack] = useState<number>(CONFIG.poker.startingStack)
   const [table, setTable] = useState<PokerTableState>(() => {
     const cpuSeats = Array.from({ length: Math.max(0, 6 - 1) }, (_, i) => i + 1)
     return createInitialPokerTable(6, cpuSeats, startingStack)

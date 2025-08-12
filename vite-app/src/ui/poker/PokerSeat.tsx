@@ -113,8 +113,10 @@ export function PokerSeat(props: PokerSeatProps) {
       {!hideStackRow && (
         <div id={`${idPrefix}-stack-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
           <span>Stack:</span>
-          <ChipStack amount={seat.stack} />
-          <span style={{ opacity: 0.9 }}>({seat.stack})</span>
+          <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <ChipStack amount={seat.stack} />
+            <span style={{ opacity: 0.9 }}>{seat.stack}</span>
+          </div>
         </div>
       )}
       {/* <div id={`${idPrefix}-bets-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}> */}

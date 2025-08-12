@@ -7,7 +7,7 @@ const C = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit })
 
 describe('showdown ties and splits', () => {
   it('splits pot evenly on exact tie between two hands', () => {
-    let t: PokerTableState = createInitialPokerTable(2, [1], 200)
+    let t: PokerTableState = createInitialPokerTable(2, [1], 200 as number)
     t = { ...t, status: 'in_hand', street: 'river' }
     // Both players have same best five cards: community straight
     t.community = [C('5','Hearts'), C('6','Spades'), C('7','Clubs'), C('8','Diamonds'), C('9','Clubs')]

@@ -8,7 +8,7 @@ const C = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit })
 
 describe('side pots', () => {
   it('constructs layered pots for 3-way uneven commitments', () => {
-    const t = createInitialPokerTable(3, [1,2], 0)
+    const t = createInitialPokerTable(3, [1,2], 0 as number)
     t.seats.forEach(s => { s.hasFolded = false })
     t.seats[0].totalCommitted = 10
     t.seats[1].totalCommitted = 20
@@ -23,7 +23,7 @@ describe('side pots', () => {
   })
 
   it('awards all pots to the best eligible hand', () => {
-    let t: PokerTableState = createInitialPokerTable(3, [1,2], 0)
+    let t: PokerTableState = createInitialPokerTable(3, [1,2], 0 as number)
     t.buttonIndex = 0
     t.seats.forEach(s => { s.hasFolded = false; s.stack = 0 })
     // Commitments: 10, 20, 50 -> pots 30,20,30 (rake 0)
@@ -47,7 +47,7 @@ describe('side pots', () => {
     const restore = { pct: CONFIG.poker.rakePercent, cap: CONFIG.poker.rakeCap }
     ;(CONFIG.poker as any).rakePercent = 0.05
     ;(CONFIG.poker as any).rakeCap = 0
-    let t: PokerTableState = createInitialPokerTable(2, [1], 0)
+    let t: PokerTableState = createInitialPokerTable(2, [1], 0 as number)
     t.buttonIndex = 0
     t.seats.forEach(s => { s.hasFolded = false; s.stack = 0 })
     // Both commit 10 -> single pot amount 20; rake=1 -> distributable 19

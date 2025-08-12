@@ -46,6 +46,8 @@ export class PokerRuntime {
     watchdog: null,
   }
   private readonly cb: RuntimeCallbacks
+  // One-shot delay bump to allow UI animations (e.g., chips flying to pot) to complete
+  private delayBumpOnceMs: number = 0
 
   constructor(opts: RuntimeOptions, cb: RuntimeCallbacks) {
     this.state = createInitialPokerTable(opts.seats, opts.cpuSeats, opts.startingStack)
@@ -96,6 +98,14 @@ export class PokerRuntime {
     this.cb.onHandSetup?.(setup)
     // Publish state and arm timers
     this.cb.onState(this.state)
+    // If blinds were posted (committed present), allow stack->bet animation to complete before first action
+    try {
+      const committedSum = this.state.seats.reduce((sum, s) => sum + (s.committedThisStreet || 0), 0)
+      if (committedSum > 0) {
+        const bump = CONFIG.poker.animations?.chipFlyDurationMs ?? 0
+        this.delayBumpOnceMs = Math.max(this.delayBumpOnceMs, bump)
+      }
+    } catch {}
     this.armTimers()
   }
 
@@ -110,19 +120,39 @@ export class PokerRuntime {
     const toCall = Math.max(0, before.betToCall - (before.seats[actorIndex]?.committedThisStreet || 0))
     const street = before.street
     const handId = before.handId
+    const prevCommittedSum = before.seats.reduce((sum, s) => sum + (s.committedThisStreet || 0), 0)
     const next = applyAction(before, action)
     if (next === before) return
-    // If a new street was dealt (community increased), emit deal event synchronously
     const prevComm = before.community.length
     const nextComm = next.community.length
+    this.state = next
+    // If this action closed betting for the street, the flow resets committedThisStreet to 0 when advancing.
+    // Detect that transition and bump next timers to allow chip fly animation to complete.
+    const nextCommittedSum = next.seats.reduce((sum, s) => sum + (s.committedThisStreet || 0), 0)
+    if (prevCommittedSum > 0 && nextCommittedSum === 0) {
+      const bump = CONFIG.poker.animations?.chipFlyDurationMs ?? 0
+      this.delayBumpOnceMs = Math.max(this.delayBumpOnceMs, bump)
+    }
+    // If this action committed additional chips from actor stack -> bet spot, bump once for that animation
+    try {
+      const actorBefore = before.seats[actorIndex]
+      const actorAfter = next.seats[actorIndex]
+      if (actorBefore && actorAfter) {
+        const deltaCommitted = (actorAfter.committedThisStreet || 0) - (actorBefore.committedThisStreet || 0)
+        if (deltaCommitted > 0) {
+          const bump = CONFIG.poker.animations?.chipFlyDurationMs ?? 0
+          this.delayBumpOnceMs = Math.max(this.delayBumpOnceMs, bump)
+        }
+      }
+    } catch {}
+    if (this.cb.onAction) this.cb.onAction(handId, actorIndex, action, toCall, street)
+    // After logging the action, emit deal event if street advanced
     if (nextComm > prevComm) {
       const toCode = (c: any) => `${c.rank}${c.suit[0]}`
       if (nextComm === 3) this.cb.onDeal?.(handId, 'flop', next.community.slice(0, 3).map(toCode))
       else if (nextComm === 4) this.cb.onDeal?.(handId, 'turn', next.community.slice(3, 4).map(toCode))
       else if (nextComm === 5) this.cb.onDeal?.(handId, 'river', next.community.slice(4, 5).map(toCode))
     }
-    this.state = next
-    if (this.cb.onAction) this.cb.onAction(handId, actorIndex, action, toCall, street)
     this.cb.onState(this.state)
     this.armTimers()
   }
@@ -145,7 +175,10 @@ export class PokerRuntime {
       if (s.gameOver) return
       // Auto-deal next hand if autoplay is on
       if (this.autoPlay) {
-        const delay = CONFIG.pokerAutoplay.autoDealDelayMs
+        const bump = this.delayBumpOnceMs
+        this.delayBumpOnceMs = 0
+        // Add bump to allow pot->stack payout animation before next hand
+        const delay = CONFIG.pokerAutoplay.autoDealDelayMs + (CONFIG.poker.animations?.chipFlyDurationMs ?? 0) + bump
         this.timers.autoDeal = setTimeout(() => this.beginHand(), delay) as unknown as number
       }
       return
@@ -156,7 +189,9 @@ export class PokerRuntime {
     if (toAct == null) return
 
     const scheduleCpu = () => {
-      const delay = CONFIG.pokerAutoplay.cpuActionDelayMs
+      const bump = this.delayBumpOnceMs
+      this.delayBumpOnceMs = 0
+      const delay = CONFIG.pokerAutoplay.cpuActionDelayMs + bump
       this.timers.cpu = setTimeout(() => {
         // Only act if still same turn
         if (this.state.status !== 'in_hand' || this.state.currentToAct !== toAct) return
@@ -173,7 +208,9 @@ export class PokerRuntime {
 
     const schedulePlayer = () => {
       if (!this.autoPlay) return
-      const delay = CONFIG.pokerAutoplay.playerActionDelayMs
+      const bump = this.delayBumpOnceMs
+      this.delayBumpOnceMs = 0
+      const delay = CONFIG.pokerAutoplay.playerActionDelayMs + bump
       this.timers.player = setTimeout(() => {
         if (this.state.status !== 'in_hand' || this.state.currentToAct !== 0) return
         const a = this.suggestCpuAction()

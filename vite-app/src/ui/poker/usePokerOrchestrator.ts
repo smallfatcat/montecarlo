@@ -65,7 +65,7 @@ export function usePokerOrchestrator(
     const targetCount = table.community.length
     const startIndex = Math.max(currentBoardCount, lastScheduledBoardCountRef.current)
     if (targetCount <= startIndex) return
-    const pause = CONFIG.poker.deal.streetPauseMs
+    const pause = CONFIG.poker.deal.streetPauseMs + (CONFIG.poker.animations?.chipFlyDurationMs ?? 0)
     const per = CONFIG.poker.deal.perBoardCardMs
     for (let i = startIndex; i < targetCount; i += 1) {
       const delay = pause + (i - startIndex) * per

@@ -6,11 +6,12 @@ export const CONFIG = {
     autoDealDelayMs: 900,
   },
   pokerAutoplay: {
-    cpuActionDelayMs: 5,
-    playerActionDelayMs: 5,
-    autoDealDelayMs: 5,
+    cpuActionDelayMs: 150,
+    playerActionDelayMs: 200,
+    autoDealDelayMs: 500,
   },
   poker: {
+    startingStack: 5000,
     chipIconSizePx: 30,
     chipSizePx: 30,
     chipOverlap: 0.8,
@@ -19,6 +20,8 @@ export const CONFIG = {
     rakeCap: 0,     // absolute cap in chips; set >0 to cap rake
     showRakeInUI: true,
     blinds: {
+      startingSmallBlind: 5,
+      startingBigBlind: 10,
       increaseEveryHands: 50, // increase blinds every N hands (0 disables)
       increaseFactor: 2,      // multiply blinds by this factor at each level
     },
@@ -45,13 +48,17 @@ export const CONFIG = {
     ,
     random: {
       useSeeded: true,
-      seed: 123456789,
+      seed: 42,
       perHandIncrement: 1,
     },
     deal: {
       perHoleCardMs: 300,
       perBoardCardMs: 300,
       streetPauseMs: 1000,
+    }
+    ,
+    animations: {
+      chipFlyDurationMs: 150,
     }
   },
   shoe: {

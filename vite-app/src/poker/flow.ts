@@ -1,6 +1,6 @@
 import { createStandardDeck, shuffleInPlace, makeXorShift32 } from "../blackjack/deck";
 import type { Card } from "../blackjack/types";
-import { DEFAULT_RULES, cloneState, countActiveSeats, getStreetBetSize, nextSeatIndex, nextSeatIndexWithChips } from "./types";
+import { cloneState, countActiveSeats, getStreetBetSize, nextSeatIndex, nextSeatIndexWithChips } from "./types";
 import { CONFIG } from "../config";
 import type { PokerTableState, SeatState, BettingAction } from "./types";
 import { evaluateSeven } from "./handEval";
@@ -47,7 +47,7 @@ function __assertConservation(state: PokerTableState, context: string, expectedR
   }
 }
 
-export function createInitialPokerTable(numSeats: number, cpuSeats: number[], startingStack = 200, shoe?: Card[]): PokerTableState {
+export function createInitialPokerTable(numSeats: number, cpuSeats: number[], startingStack: number = CONFIG.poker.startingStack, shoe?: Card[]): PokerTableState {
   const seats: SeatState[] = Array.from({ length: numSeats }, (_, i) => ({
     seatIndex: i,
     isCPU: cpuSeats.includes(i),
@@ -69,9 +69,9 @@ export function createInitialPokerTable(numSeats: number, cpuSeats: number[], st
     currentToAct: null,
     lastAggressorIndex: null,
     betToCall: 0,
-    lastRaiseAmount: DEFAULT_RULES.bigBlind,
+    lastRaiseAmount: CONFIG.poker.blinds.startingBigBlind,
     pot: { main: 0 },
-    rules: { ...DEFAULT_RULES },
+    rules: { smallBlind: CONFIG.poker.blinds.startingSmallBlind, bigBlind: CONFIG.poker.blinds.startingBigBlind },
     gameOver: false,
   };
 }

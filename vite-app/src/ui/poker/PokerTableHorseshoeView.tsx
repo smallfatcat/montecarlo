@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { PokerTableState } from '../../poker/types'
 import { Card3D } from '../components/Card3D'
 import { PokerSeat } from './PokerSeat'
 import { CONFIG } from '../../config'
 import { ChipStack } from '../components/ChipStack'
+import { ChipIcon, DEFAULT_DENOMS, type ChipDenomination } from '../components/ChipIcon'
 import { computePots } from '../../poker/flow'
 
 export interface PokerTableHorseshoeViewProps {
@@ -209,6 +211,145 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
     }
   }
 
+  // --- Animated chip moves (bet stacks fly into pot on street close) ---
+  const [chipMoves, setChipMoves] = useState<Array<{ key: string; from: { x: number; y: number }; to: { x: number; y: number }; amount: number }>>([])
+  const prevCommittedRef = useRef<number[] | null>(null)
+  const prevStacksRef = useRef<number[] | null>(null)
+  const prevStatusRef = useRef<PokerTableState['status'] | null>(null)
+  const prevStreetRef = useRef<PokerTableState['street'] | null>(null)
+  const [hiddenBets, setHiddenBets] = useState<Set<number>>(new Set())
+  const betTimersRef = useRef<Map<number, number>>(new Map())
+  const [potHidden, setPotHidden] = useState<boolean>(false)
+  const potTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const currCommitted = table.seats.map((s) => s.committedThisStreet)
+    const prevCommitted = prevCommittedRef.current
+    // const sumCurr = currCommitted.reduce((a, b) => a + b, 0)
+    // const sumPrev = (prevCommitted ?? []).reduce((a, b) => a + b, 0)
+    const potPos = getPotPos()
+    const pendingMoves: Array<{ key: string; from: { x: number; y: number }; to: { x: number; y: number }; amount: number }> = []
+
+    // Detect commit increases: chips move from stack -> bet spot
+    if (prevCommitted) {
+      for (let i = 0; i < currCommitted.length; i += 1) {
+        const delta = (currCommitted[i] ?? 0) - (prevCommitted[i] ?? 0)
+        if (delta > 0) {
+          const stackPos = getStackPos(i)
+          const betPos = getBetPos(i)
+          const fromX = stackPos?.left ?? centerX
+          const fromY = stackPos?.top ?? centerY
+          const toX = betPos?.left ?? centerX
+          const toY = betPos?.top ?? centerY
+          pendingMoves.push({
+            key: `stack2bet-${table.handId}-${table.street ?? 'pre'}-${i}-${Date.now()}`,
+            from: { x: fromX, y: fromY },
+            to: { x: toX, y: toY },
+            amount: delta,
+          })
+          // Hide bet until chips arrive
+          setHiddenBets((prev) => {
+            const next = new Set(prev)
+            next.add(i)
+            return next
+          })
+          const durationMs = CONFIG.poker.animations?.chipFlyDurationMs ?? 250
+          const existing = betTimersRef.current.get(i)
+          if (existing != null) window.clearTimeout(existing)
+          const tid = window.setTimeout(() => {
+            setHiddenBets((prev) => {
+              const next = new Set(prev)
+              next.delete(i)
+              return next
+            })
+            betTimersRef.current.delete(i)
+          }, durationMs) as unknown as number
+          betTimersRef.current.set(i, tid)
+        }
+      }
+    }
+
+    // Detect end-of-street (street change) and move each seat's last bet to pot
+    // More robust than sum check: trigger when street changed and a seat's committed reset to 0
+    const prevStreet = prevStreetRef.current
+    if (potPos && prevCommitted && prevStreet !== table.street) {
+      for (let i = 0; i < prevCommitted.length; i += 1) {
+        const was = prevCommitted[i] ?? 0
+        const now = currCommitted[i] ?? 0
+        if (was > 0 && now === 0) {
+          const betPos = getBetPos(i)
+          const fromX = betPos?.left ?? centerX
+          const fromY = betPos?.top ?? centerY
+          pendingMoves.push({
+            key: `bet2pot-${table.handId}-${prevStreet ?? 'pre'}-${i}-${Date.now()}`,
+            from: { x: fromX, y: fromY },
+            to: { x: potPos.left ?? centerX, y: potPos.top ?? centerY },
+            amount: was,
+          })
+          // Hide bet as it leaves
+          setHiddenBets((prev) => {
+            const next = new Set(prev)
+            next.add(i)
+            return next
+          })
+        }
+      }
+      // Hide pot until chips arrive
+      const durationMs = CONFIG.poker.animations?.chipFlyDurationMs ?? 250
+      setPotHidden(true)
+      if (potTimerRef.current != null) window.clearTimeout(potTimerRef.current)
+      potTimerRef.current = window.setTimeout(() => {
+        setPotHidden(false)
+        potTimerRef.current = null
+      }, durationMs) as unknown as number
+    }
+
+    // Detect payouts at hand end: stacks increased -> move from pot -> stack
+    const prevStacks = prevStacksRef.current
+    const prevStatus = prevStatusRef.current
+    if (potPos && prevStacks && (table.status === 'hand_over') && prevStatus !== 'hand_over') {
+      for (let i = 0; i < table.seats.length; i += 1) {
+        const delta = (table.seats[i]?.stack ?? 0) - (prevStacks[i] ?? 0)
+        if (delta > 0) {
+          const stackPos = getStackPos(i)
+          const toX = stackPos?.left ?? centerX
+          const toY = stackPos?.top ?? centerY
+          // Slight jitter per seat to avoid perfect overlap when multiple winners
+          const jitterX = (i % 2 === 0 ? -1 : 1) * Math.min(12, 4 * (i % 3))
+          const jitterY = (i % 2 === 1 ? -1 : 1) * Math.min(12, 3 * (i % 2))
+          pendingMoves.push({
+            key: `pot2stack-${table.handId}-${i}-${Date.now()}`,
+            from: { x: (potPos.left ?? centerX) + jitterX, y: (potPos.top ?? centerY) + jitterY },
+            to: { x: toX, y: toY },
+            amount: delta,
+          })
+        }
+      }
+      // Hide pot while paying out
+      const durationMs = CONFIG.poker.animations?.chipFlyDurationMs ?? 250
+      setPotHidden(true)
+      if (potTimerRef.current != null) window.clearTimeout(potTimerRef.current)
+      potTimerRef.current = window.setTimeout(() => {
+        setPotHidden(false)
+        potTimerRef.current = null
+      }, durationMs) as unknown as number
+    }
+
+    let cleanup: (() => void) | undefined
+    if (pendingMoves.length > 0) {
+      setChipMoves(pendingMoves)
+      const durationMs = CONFIG.poker.animations?.chipFlyDurationMs ?? 250
+      const t = window.setTimeout(() => setChipMoves([]), durationMs)
+      cleanup = () => window.clearTimeout(t)
+    }
+    // IMPORTANT: update previous refs even when scheduling animations to avoid duplicate triggers
+    prevCommittedRef.current = currCommitted
+    prevStacksRef.current = table.seats.map((s) => s.stack)
+    prevStatusRef.current = table.status
+    prevStreetRef.current = table.street
+    return cleanup
+  }, [table.seats, table.handId, table.street, table.status])
+
   function exportLayoutToJson() {
     const container = containerRef.current
     const contRect = container?.getBoundingClientRect()
@@ -264,6 +405,18 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
   const totalPot = useMemo(() => pots.reduce((sum, p) => sum + p.amount, 0), [pots])
   const mainPotAmount = useMemo(() => (pots[0]?.amount ?? 0), [pots])
 
+  // Local helper: split amount into denominations like ChipStack
+  function splitIntoDenomsLocal(amount: number, denoms: ChipDenomination[] = DEFAULT_DENOMS): Array<{ denom: ChipDenomination; count: number }> {
+    let remaining = Math.max(0, Math.floor(amount))
+    const out: Array<{ denom: ChipDenomination; count: number }> = []
+    for (const d of denoms) {
+      const cnt = Math.floor(remaining / d)
+      if (cnt > 0) out.push({ denom: d, count: cnt })
+      remaining -= cnt * d
+    }
+    return out
+  }
+
   return (
     <div id="poker-root" style={{ display: 'grid', gap: 12 }}>
       <div
@@ -293,24 +446,63 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             ))}
           </div>
         )})()}
+        {/* Chip fly-in overlay (bets -> pot) */}
+        <AnimatePresence>
+          {chipMoves.map((mv) => {
+            // Build realistic chip list by denomination
+            const groups = splitIntoDenomsLocal(mv.amount)
+            const chipList: Array<{ key: string; denom: ChipDenomination }> = []
+            groups.forEach(g => { for (let i = 0; i < g.count; i += 1) chipList.push({ key: `${g.denom}-${i}`, denom: g.denom }) })
+            const size = CONFIG.poker.chipIconSizePx
+            const overlap = CONFIG.poker.chipOverlap
+            const maxChipsPerRow = CONFIG.poker.maxChipsPerRow
+            const step = Math.max(1, Math.floor(size * overlap))
+            const rows: Array<typeof chipList> = []
+            for (let i = 0; i < chipList.length; i += maxChipsPerRow) rows.push(chipList.slice(i, i + maxChipsPerRow))
+            return (
+              <motion.div
+                key={mv.key}
+                initial={{ left: mv.from.x, top: mv.from.y, opacity: 0.95, scale: 1 }}
+                animate={{ left: mv.to.x, top: mv.to.y, opacity: 1, scale: 0.98 }}
+                exit={{ opacity: 0 }}
+                transition={{ type: 'tween', duration: (CONFIG.poker.animations?.chipFlyDurationMs ?? 250) / 1000 }}
+                style={{ position: 'absolute', transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 5 }}
+              >
+                <div style={{ display: 'inline-block' }}>
+                  {rows.map((row, r) => (
+                    <div key={r} style={{ display: 'flex', marginTop: r === 0 ? 0 : -Math.floor(size * 0.35) }}>
+                      {row.map((c, i) => (
+                        <ChipIcon key={`${r}-${c.key}`} denom={c.denom} size={size} style={{ marginLeft: i === 0 ? 0 : -step }} />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )
+          })}
+        </AnimatePresence>
         {/* Pot and Side Pots */}
         {(() => { const p = getPotPos(); if (!p) return null; return (
-          <div id="horseshoe-pot" style={{ position: 'absolute', left: p.left, top: p.top, transform: 'translate(-50%, -50%)', fontWeight: 700, opacity: 0.9, display: 'flex', alignItems: 'center', gap: 6, cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined, width: p.width, height: p.height }} {...makeDragMouseHandlers('pot')}>
+          <div id="horseshoe-pot" style={{ position: 'absolute', left: p.left, top: p.top, transform: 'translate(-50%, -50%)', fontWeight: 700, opacity: potHidden ? 0 : 0.9, transition: 'opacity 120ms linear', display: 'flex', alignItems: 'center', gap: 6, cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined, width: p.width, height: p.height }} {...makeDragMouseHandlers('pot')}>
             {editLayoutMode && (
               <div aria-hidden style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }} {...makeResizeMouseHandlers('pot')} />
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span>Pot:</span>
-              <ChipStack amount={mainPotAmount} />
-              <span style={{ opacity: 0.9 }}>({mainPotAmount})</span>
+              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <ChipStack amount={mainPotAmount} />
+                <span style={{ opacity: 0.9 }}>{mainPotAmount}</span>
+              </div>
             </div>
             {pots.length > 1 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 12, opacity: 0.95, fontWeight: 600 }}>
                 {pots.slice(1).map((pot, idx) => (
                   <div key={`sidepot-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ opacity: 0.9 }}>Side {idx + 1}:</span>
-                    <ChipStack amount={pot.amount} />
-                    <span style={{ opacity: 0.9 }}>({pot.amount})</span>
+                    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                      <ChipStack amount={pot.amount} />
+                      <span style={{ opacity: 0.9 }}>{pot.amount}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -365,9 +557,11 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
               </div>
             ),
             (
-              <div id={`horseshoe-bet-${i}`} key={`bet-${i}`} style={{ position: 'absolute', left: betPos?.left ?? centerX, top: betPos?.top ?? centerY, transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined, width: betPos?.width, height: betPos?.height }} {...makeDragMouseHandlers('bet', i)}>
-                <ChipStack amount={s.committedThisStreet} />
-                <span style={{ marginLeft: 6, fontSize: 14, lineHeight: 1, opacity: 0.9 }}>({s.committedThisStreet})</span>
+              <div id={`horseshoe-bet-${i}`} key={`bet-${i}`} style={{ position: 'absolute', left: betPos?.left ?? centerX, top: betPos?.top ?? centerY, transform: 'translate(-50%, -50%)', display: hiddenBets.has(i) ? 'none' : 'flex', alignItems: 'center', cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined, width: betPos?.width, height: betPos?.height }} {...makeDragMouseHandlers('bet', i)}>
+                <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <ChipStack amount={s.committedThisStreet} />
+                  <span style={{ fontSize: 14, lineHeight: 1, opacity: 0.9 }}>{s.committedThisStreet}</span>
+                </div>
                 {editLayoutMode && (
                   <div aria-hidden style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }} {...makeResizeMouseHandlers('bet', i)} />
                 )}
@@ -376,8 +570,10 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             (
               <div id={`horseshoe-stack-${i}`} key={`stack-${i}`} style={{ position: 'absolute', left: stackPos?.left ?? centerX, top: stackPos?.top ?? centerY, transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined, width: stackPos?.width, height: stackPos?.height }} {...makeDragMouseHandlers('stack', i)}>
                 <span>Stack:</span>
-                <ChipStack amount={s.stack} />
-                <span style={{ marginLeft: 6, fontSize: 14, lineHeight: 1, opacity: 0.9 }}>({s.stack})</span>
+                <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2, marginLeft: 6 }}>
+                  <ChipStack amount={s.stack} />
+                  <span style={{ fontSize: 14, lineHeight: 1, opacity: 0.9 }}>{s.stack}</span>
+                </div>
                 {editLayoutMode && (
                   <div aria-hidden style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }} {...makeResizeMouseHandlers('stack', i)} />
                 )}

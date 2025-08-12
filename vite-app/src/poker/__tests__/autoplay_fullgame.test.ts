@@ -48,7 +48,7 @@ function seedRandom(seed: number): () => void {
 
 describe('autoplay-style full game loops', () => {
   it('plays many hands without stalling (6-max NLHE)', () => {
-    let t: PokerTableState = createInitialPokerTable(6, [1,2,3,4,5], 100)
+    let t: PokerTableState = createInitialPokerTable(6, [1,2,3,4,5], 100 as number)
     const maxHands = 200
     for (let h = 0; h < maxHands && !t.gameOver; h += 1) {
       t = runOneHand(t, 8000).state
@@ -58,7 +58,7 @@ describe('autoplay-style full game loops', () => {
   })
 
   it('continues past bust-outs and ends the game when one player remains', () => {
-    let t: PokerTableState = createInitialPokerTable(4, [1,2,3], 20)
+    let t: PokerTableState = createInitialPokerTable(4, [1,2,3], 20 as number)
     const maxHands = 2000
     t = runManyHands(t, maxHands)
     const playersWithChips = t.seats.filter((s) => s.stack > 0).length
@@ -66,7 +66,7 @@ describe('autoplay-style full game loops', () => {
   })
 
   it('heads-up deep stacks plays through many hands without stalls', () => {
-    let t: PokerTableState = createInitialPokerTable(2, [1], 300)
+    let t: PokerTableState = createInitialPokerTable(2, [1], 300 as number)
     // Slightly increase blinds to exercise sizing logic
     t.rules.smallBlind = 2
     t.rules.bigBlind = 4
@@ -75,7 +75,7 @@ describe('autoplay-style full game loops', () => {
   })
 
   it('6-max short stacks with higher blinds does not stall', () => {
-    let t: PokerTableState = createInitialPokerTable(6, [1,2,3,4,5], 20)
+    let t: PokerTableState = createInitialPokerTable(6, [1,2,3,4,5], 20 as number)
     t.rules.smallBlind = 2
     t.rules.bigBlind = 4
     t = runManyHands(t, 400)
@@ -83,7 +83,7 @@ describe('autoplay-style full game loops', () => {
   })
 
   it('3-max mixed stacks continues and ends when only one remains', () => {
-    let t: PokerTableState = createInitialPokerTable(3, [1,2], 100)
+    let t: PokerTableState = createInitialPokerTable(3, [1,2], 100 as number)
     // Manually set uneven stacks
     t.seats[0].stack = 150
     t.seats[1].stack = 40
@@ -94,7 +94,7 @@ describe('autoplay-style full game loops', () => {
   })
 
   it('metrics: computes avg pot and bust count over a run', () => {
-    let t: PokerTableState = createInitialPokerTable(5, [1,2,3,4], 50)
+    let t: PokerTableState = createInitialPokerTable(5, [1,2,3,4], 50 as number)
     t.rules.smallBlind = 1
     t.rules.bigBlind = 2
     const hands = 200
@@ -114,7 +114,7 @@ describe('autoplay-style full game loops', () => {
   it('randomized seeds: 6-max short stacks produce at least one bust within 200 hands', () => {
     for (let seed = 1; seed <= 8; seed += 1) {
       const restore = seedRandom(seed)
-      let t: PokerTableState = createInitialPokerTable(6, [1,2,3,4,5], 20)
+      let t: PokerTableState = createInitialPokerTable(6, [1,2,3,4,5], 20 as number)
       t.rules.smallBlind = 2
       t.rules.bigBlind = 4
       t = runManyHands(t, 200)
@@ -126,7 +126,7 @@ describe('autoplay-style full game loops', () => {
 
   it('randomized mixed stacks converge to a single winner within 600 hands', () => {
     const restore = seedRandom(12345)
-    let t: PokerTableState = createInitialPokerTable(5, [1,2,3,4], 30)
+    let t: PokerTableState = createInitialPokerTable(5, [1,2,3,4], 30 as number)
     t.seats[0].stack = 45
     t.seats[1].stack = 10
     t.seats[2].stack = 25
