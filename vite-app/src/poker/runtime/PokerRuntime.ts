@@ -113,7 +113,6 @@ export class PokerRuntime {
     if (this.state.status !== 'in_hand') return
     const toAct = this.state.currentToAct
     const isPlayer = toAct === 0
-    if (isPlayer === false && this.autoPlay === false) return
     // Apply and publish
     const before = this.state
     const actorIndex = before.currentToAct ?? -1

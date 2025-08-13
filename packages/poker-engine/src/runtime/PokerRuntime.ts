@@ -100,7 +100,6 @@ export class PokerRuntime {
     if (this.state.status !== 'in_hand') return
     const toAct = this.state.currentToAct
     const isPlayer = toAct === 0
-    if (isPlayer === false && this.autoPlay === false) return
     const before = this.state
     const actorIndex = before.currentToAct ?? -1
     const toCall = Math.max(0, before.betToCall - (before.seats[actorIndex]?.committedThisStreet || 0))
