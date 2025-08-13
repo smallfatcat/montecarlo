@@ -1,127 +1,127 @@
 {
   "seats": {
     "0": {
-      "left": 1084,
-      "top": 184,
+      "left": 1087,
+      "top": 187,
       "width": 200,
       "height": 214
     },
     "1": {
-      "left": 1084,
-      "top": 534,
+      "left": 1087,
+      "top": 537,
       "width": 200,
       "height": 214
     },
     "2": {
-      "left": 804,
-      "top": 564,
+      "left": 722,
+      "top": 542,
       "width": 200,
       "height": 214
     },
     "3": {
-      "left": 404,
-      "top": 564,
+      "left": 432,
+      "top": 542,
       "width": 200,
       "height": 214
     },
     "4": {
-      "left": 124,
-      "top": 534,
+      "left": 127,
+      "top": 537,
       "width": 200,
       "height": 214
     },
     "5": {
-      "left": 124,
-      "top": 184,
+      "left": 127,
+      "top": 187,
       "width": 200,
       "height": 214
     }
   },
   "bets": {
     "0": {
-      "left": 934,
-      "top": 164,
-      "width": 22.015625,
-      "height": 14
+      "left": 913,
+      "top": 163,
+      "width": 60,
+      "height": 40
     },
     "1": {
-      "left": 934,
-      "top": 384,
+      "left": 937,
+      "top": 387,
       "width": 22.015625,
       "height": 14
     },
     "2": {
-      "left": 804,
-      "top": 424,
+      "left": 721,
+      "top": 401,
       "width": 22.015625,
       "height": 14
     },
     "3": {
-      "left": 404,
-      "top": 424,
+      "left": 421,
+      "top": 401,
       "width": 22.015625,
       "height": 14
     },
     "4": {
-      "left": 274,
-      "top": 384,
+      "left": 277,
+      "top": 387,
       "width": 22.015625,
       "height": 14
     },
     "5": {
-      "left": 274,
-      "top": 164,
+      "left": 283,
+      "top": 153,
       "width": 22.015625,
       "height": 14
     }
   },
   "stacks": {
     "0": {
-      "left": 1071,
-      "top": 321,
+      "left": 1074,
+      "top": 324,
       "width": 113.46875,
       "height": 30
     },
     "1": {
-      "left": 1081,
-      "top": 671,
+      "left": 1082,
+      "top": 682,
       "width": 113.46875,
       "height": 30
     },
     "2": {
-      "left": 801,
-      "top": 701,
+      "left": 722,
+      "top": 682,
       "width": 113.46875,
       "height": 30
     },
     "3": {
-      "left": 401,
-      "top": 701,
+      "left": 422,
+      "top": 682,
       "width": 113.46875,
       "height": 30
     },
     "4": {
-      "left": 121,
-      "top": 671,
+      "left": 122,
+      "top": 682,
       "width": 113.46875,
       "height": 30
     },
     "5": {
-      "left": 121,
-      "top": 321,
+      "left": 124,
+      "top": 324,
       "width": 113.46875,
       "height": 30
     }
   },
   "board": {
-    "left": 323,
-    "top": 153,
+    "left": 326,
+    "top": 156,
     "width": 0,
     "height": 0
   },
   "pot": {
-    "left": 553,
-    "top": 333,
+    "left": 556,
+    "top": 336,
     "width": 62.71875,
     "height": 24
   }
