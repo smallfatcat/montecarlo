@@ -1,4 +1,4 @@
-import type { BettingAction } from '../protocol'
+import type { BettingAction } from '../protocol.js'
 import { C2S } from '../protocol'
 
 export type TableId = string

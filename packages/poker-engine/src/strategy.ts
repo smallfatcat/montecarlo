@@ -1,8 +1,8 @@
 import type { BettingAction } from "./types";
 import type { PokerTableState } from "./types";
-import { getAvailableActions } from "./flow";
+import { getAvailableActions } from "./flow.js";
 import type { Card, Rank } from "./blackjack/types";
-import { evaluateSeven, evaluateFive, compareEvaluated } from "./handEval";
+import { evaluateSeven, evaluateFive, compareEvaluated } from "./handEval.js";
 
 export type BotProfile = "tight" | "loose";
 

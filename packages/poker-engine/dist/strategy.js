@@ -1,5 +1,5 @@
-import { getAvailableActions } from "./flow";
-import { evaluateSeven, evaluateFive, compareEvaluated } from "./handEval";
+import { getAvailableActions } from "./flow.js";
+import { evaluateSeven, evaluateFive, compareEvaluated } from "./handEval.js";
 const RANK_ORDER = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
 const RANK_TO_VAL = Object.fromEntries(RANK_ORDER.map((r, i) => [r, i]));
 function rankVal(r) { return RANK_TO_VAL[r]; }

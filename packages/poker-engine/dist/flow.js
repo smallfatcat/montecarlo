@@ -1,7 +1,7 @@
-import { createStandardDeck, shuffleInPlace, makeXorShift32 } from './blackjack/deck';
-import { cloneState, countActiveSeats, getStreetBetSize, nextSeatIndex, nextSeatIndexWithChips, } from './types';
-import { evaluateSeven } from './handEval';
-import { CONFIG } from './localConfig';
+import { createStandardDeck, shuffleInPlace, makeXorShift32 } from './blackjack/deck.js';
+import { cloneState, countActiveSeats, getStreetBetSize, nextSeatIndex, nextSeatIndexWithChips, } from './types.js';
+import { evaluateSeven } from './handEval.js';
+import { CONFIG } from './localConfig.js';
 function drawCard(deck) {
     const c = deck.pop();
     if (!c)

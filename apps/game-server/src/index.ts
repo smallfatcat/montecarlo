@@ -2,9 +2,9 @@ import 'dotenv/config'
 import fastify from 'fastify'
 import cors from '@fastify/cors'
 import { Server as SocketIOServer } from 'socket.io'
-import { C2S, S2C } from './protocol'
-import { createInMemoryTable } from './tables/inMemoryTable'
-import { createServerRuntimeTable } from './tables/serverRuntimeTable'
+import { C2S, S2C } from './protocol.js'
+import { createInMemoryTable } from './tables/inMemoryTable.js'
+import { createServerRuntimeTable } from './tables/serverRuntimeTable.js'
 
 function parseAllowedOrigins(): string[] {
   const raw = process.env.FRONTEND_ORIGINS || ''

@@ -1,4 +1,4 @@
-import { createStandardDeck, shuffleInPlace, makeXorShift32 } from './blackjack/deck'
+import { createStandardDeck, shuffleInPlace, makeXorShift32 } from './blackjack/deck.js'
 import type { Card } from './blackjack/types'
 import {
   cloneState,
@@ -6,10 +6,10 @@ import {
   getStreetBetSize,
   nextSeatIndex,
   nextSeatIndexWithChips,
-} from './types'
+} from './types.js'
 import type { PokerTableState, SeatState, BettingAction } from './types'
-import { evaluateSeven } from './handEval'
-import { CONFIG } from './localConfig'
+import { evaluateSeven } from './handEval.js'
+import { CONFIG } from './localConfig.js'
 
 function drawCard(deck: Card[]): Card {
   const c = deck.pop()

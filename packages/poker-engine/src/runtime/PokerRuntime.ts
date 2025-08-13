@@ -1,8 +1,8 @@
-import { makeXorShift32 } from '../blackjack/deck'
-import { applyAction, createInitialPokerTable, getAvailableActions, startHand } from '../flow'
-import { suggestActionPoker } from '../strategy'
+import { makeXorShift32 } from '../blackjack/deck.js'
+import { applyAction, createInitialPokerTable, getAvailableActions, startHand } from '../flow.js'
+import { suggestActionPoker } from '../strategy.js'
 import type { PokerTableState, BettingAction } from '../types'
-import { CONFIG } from '../localConfig'
+import { CONFIG } from '../localConfig.js'
 
 export type RuntimeCallbacks = {
   onState: (state: PokerTableState) => void

@@ -1,4 +1,4 @@
-import type { BettingAction } from '../protocol'
+import type { BettingAction } from '../protocol.js'
 import type { Server as SocketIOServer, Socket } from 'socket.io'
 import type { PokerTableState } from '@montecarlo/poker-engine'
 import { PokerRuntime } from '@montecarlo/poker-engine'

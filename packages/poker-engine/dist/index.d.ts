@@ -1,7 +1,7 @@
-export * from './types';
-export * from './flow';
-export * from './runtime/PokerRuntime';
-export * from './handEval';
-export * from './strategy';
-export * from './blackjack/types';
+export * from './types.js';
+export * from './flow.js';
+export * from './runtime/PokerRuntime.js';
+export * from './handEval.js';
+export * from './strategy.js';
+export * from './blackjack/types.js';
 //# sourceMappingURL=index.d.ts.map

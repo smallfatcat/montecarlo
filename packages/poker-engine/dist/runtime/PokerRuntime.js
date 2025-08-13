@@ -1,7 +1,7 @@
-import { makeXorShift32 } from '../blackjack/deck';
-import { applyAction, createInitialPokerTable, getAvailableActions, startHand } from '../flow';
-import { suggestActionPoker } from '../strategy';
-import { CONFIG } from '../localConfig';
+import { makeXorShift32 } from '../blackjack/deck.js';
+import { applyAction, createInitialPokerTable, getAvailableActions, startHand } from '../flow.js';
+import { suggestActionPoker } from '../strategy.js';
+import { CONFIG } from '../localConfig.js';
 export class PokerRuntime {
     state;
     autoPlay = false;
