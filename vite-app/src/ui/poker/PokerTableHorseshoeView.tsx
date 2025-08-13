@@ -13,6 +13,10 @@ export interface PokerTableHorseshoeViewProps {
   revealed: { holeCounts: number[]; boardCount: number }
   hideCpuHoleUntilShowdown: boolean
   editLayoutMode?: boolean
+  // seat control wiring
+  onSitHere?: (seatIndex: number) => void
+  onLeaveSeat?: (seatIndex: number) => void
+  mySeatIndex?: number | null
   // Derived display
   winnersSet?: Set<number>
   highlightSet?: Set<string>
@@ -42,6 +46,9 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
     revealed,
     hideCpuHoleUntilShowdown,
     editLayoutMode,
+    onSitHere,
+    onLeaveSeat,
+    mySeatIndex,
     winnersSet: winnersSetProp,
     highlightSet: highlightSetProp,
     showdownText: showdownTextProp,
@@ -530,7 +537,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
           const contenders = table.seats.filter((x) => !x.hasFolded && x.hole.length === 2).length
           const visible = (table.status === 'hand_over' && table.community.length >= 5 && contenders > 1) ? (s.hole.length) : (revealed.holeCounts[i] ?? 0)
           const forceFaceDown = (table.status === 'in_hand') && (i !== 0) && (revealed.holeCounts[i] === 0)
-          return [
+            return [
             (
               <div id={`horseshoe-seat-wrapper-${i}`} key={`seat-${i}`} style={{ position: 'absolute', left: pos?.left ?? centerX, top: pos?.top ?? centerY, transform: 'translate(-50%, -50%)', width: (pos?.width ?? CONFIG.poker.horseshoe.seatWidthPx), height: pos?.height, cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined }} {...makeDragMouseHandlers('seat', i)}>
                 <PokerSeat
@@ -550,6 +557,10 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
                   resultText={table.status === 'hand_over' ? ((winnersSet as Set<number>).has(i) ? 'Winner' : (s.hasFolded ? 'Folded' : 'Lost')) : ''}
                   visibleHoleCount={visible}
                   forceFaceDown={forceFaceDown}
+                  canControlSeat={table.status !== 'in_hand'}
+                  onSitHere={onSitHere}
+                  onLeaveSeat={onLeaveSeat}
+                  mySeatIndex={mySeatIndex}
                 />
                 {editLayoutMode && (
                   <div aria-hidden style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }} {...makeResizeMouseHandlers('seat', i)} />

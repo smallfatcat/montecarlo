@@ -30,10 +30,13 @@ export function usePokerGame() {
     clearByTag: eventQueue.clearByTag,
   } as any, setRevealed)
   const [clearing, setClearing] = useState<boolean>(false)
+  const [mySeatIndex, setMySeatIndex] = useState<number | null>(null)
   type RuntimeLike = {
     beginHand: () => void
     act: (action: BettingAction) => void
     setAutoPlay: (v: boolean) => void
+    sit?: (seatIndex: number, name: string) => void
+    leave?: () => void
     dispose: () => void
   }
   const runtimeRef = useRef<RuntimeLike | null>(null)
@@ -111,6 +114,8 @@ export function usePokerGame() {
   // Human action helpers (seat 0 only)
   const act = (type: BettingAction['type'], amount?: number) => {
     if (review) return
+    // Only allow acting when it's our turn
+    if (mySeatIndex == null || table.currentToAct !== mySeatIndex) return
     runtimeRef.current?.act({ type, amount })
   }
   const fold = () => act('fold')
@@ -203,7 +208,10 @@ export function usePokerGame() {
     orchestrator.scheduleHoleReveal(table, hideCpuHoleUntilShowdown)
   }, [table.handId, table.buttonIndex, table.seats.length, table.street, table.status, hideCpuHoleUntilShowdown, orchestrator.scheduleHoleReveal])
 
-  const available = useMemo(() => getAvailableActions(table), [table])
+  const available = useMemo(() => {
+    if (mySeatIndex == null || table.currentToAct !== mySeatIndex) return []
+    return getAvailableActions(table)
+  }, [table, mySeatIndex])
 
   // Loader helpers
   const fromCode = (code: string): Card => ({ rank: code.slice(0, code.length - 1) as any, suit: ({ C: 'Clubs', D: 'Diamonds', H: 'Hearts', S: 'Spades' } as any)[code.slice(-1)] })
@@ -230,6 +238,8 @@ export function usePokerGame() {
       onHandSetup: (setup: any) => {
         appendEvent(setup.handId, { ts: Date.now(), type: 'hand_setup', ...setup } as any)
       },
+      onSeatUpdate: (_m: any) => {},
+      onYouSeatChange: (seatIndex: number | null) => setMySeatIndex(seatIndex),
     }
     const wsUrl = (import.meta as any).env?.VITE_WS_URL as string | undefined
     if (wsUrl) {
@@ -355,6 +365,7 @@ export function usePokerGame() {
 
   return {
     table,
+    mySeatIndex,
     revealed,
     clearing,
     histories,
@@ -385,6 +396,9 @@ export function usePokerGame() {
     reviewNextStep,
     reviewPrevStep,
     endReview,
+    // seating control API (no-ops in local mode)
+    sit: (seatIndex: number, name: string) => runtimeRef.current?.sit?.(seatIndex, name),
+    leave: () => runtimeRef.current?.leave?.(),
   }
 }
 

@@ -39,6 +39,11 @@ export declare class PokerRuntime {
     constructor(opts: RuntimeOptions, cb: RuntimeCallbacks);
     dispose(): void;
     setAutoPlay(v: boolean): void;
+    /**
+     * Toggle whether a given seat should be driven by CPU logic.
+     * When set to false, the runtime will not schedule an automatic CPU action when it is this seat's turn.
+     */
+    setSeatCpu(seatIndex: number, isCpu: boolean): void;
     beginHand(): void;
     act(action: BettingAction): void;
     private clearAllTimers;

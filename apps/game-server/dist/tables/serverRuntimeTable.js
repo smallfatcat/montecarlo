@@ -2,11 +2,12 @@ import { PokerRuntime } from '@montecarlo/poker-engine';
 export function createServerRuntimeTable(io, tableId, opts) {
     const seats = opts?.seats ?? 6;
     const startingStack = opts?.startingStack ?? 5000;
-    const cpuSeats = Array.from({ length: Math.max(0, seats - 1) }, (_, i) => i + 1);
+    const cpuSeats = Array.from({ length: seats }, (_, i) => i);
     let lastState = null;
     const room = `table:${tableId}`;
-    // Simple seat assignment: first join gets seat 0; others are spectators
-    let seat0Owner = null;
+    // Seat ownership map socket.id -> seat index
+    const seatOwners = new Map();
+    const playerNames = new Map();
     const runtime = new PokerRuntime({ seats, cpuSeats, startingStack }, {
         onState: (s) => {
             lastState = s;
@@ -56,19 +57,26 @@ export function createServerRuntimeTable(io, tableId, opts) {
     });
     function addClient(socket) {
         socket.join(room);
-        if (seat0Owner == null)
-            seat0Owner = socket.id;
         if (lastState)
             socket.emit('state', lastState);
         try {
-            console.log('[server-runtime] join', { socketId: socket.id, seat0Owner });
+            console.log('[server-runtime] join', { socketId: socket.id });
         }
         catch { }
     }
     function removeClient(socket) {
         socket.leave(room);
-        if (seat0Owner === socket.id)
-            seat0Owner = null;
+        const seatIdx = seatOwners.get(socket.id);
+        if (seatIdx != null) {
+            // Vacate seat: flip back to CPU
+            seatOwners.delete(socket.id);
+            playerNames.delete(socket.id);
+            try {
+                runtime.setSeatCpu?.(seatIdx, true);
+            }
+            catch { }
+            io.to(room).emit('seat_update', { seatIndex: seatIdx, isCPU: true, playerId: null, playerName: null });
+        }
     }
     return {
         tableId,
@@ -77,8 +85,8 @@ export function createServerRuntimeTable(io, tableId, opts) {
             const s = lastState;
             if (!s)
                 return { ok: false, error: 'no_state' };
-            const seatIdx = (seat0Owner === socket.id) ? 0 : -1;
-            if (seatIdx !== 0) {
+            const seatIdx = seatOwners.get(socket.id);
+            if (seatIdx == null) {
                 try {
                     console.log('[server-runtime] act rejected', { socketId: socket.id, reason: 'not_seated' });
                 }
@@ -114,5 +122,57 @@ export function createServerRuntimeTable(io, tableId, opts) {
         getState() { return lastState; },
         addClient,
         removeClient,
+        sit(socket, seatIndex, name) {
+            const s = lastState;
+            if (!s)
+                return { ok: false, error: 'no_state' };
+            if (seatIndex < 0 || seatIndex >= s.seats.length)
+                return { ok: false, error: 'invalid_seat' };
+            if (s.status === 'in_hand')
+                return { ok: false, error: 'mid_hand' };
+            // If this socket already has a seat, vacate it first (move seats)
+            const existing = seatOwners.get(socket.id);
+            if (existing != null && existing !== seatIndex) {
+                try {
+                    runtime.setSeatCpu?.(existing, true);
+                }
+                catch { }
+                io.to(room).emit('seat_update', { seatIndex: existing, isCPU: true, playerId: null, playerName: null });
+                seatOwners.delete(socket.id);
+                playerNames.delete(socket.id);
+            }
+            // Reject if seat is already taken by another user
+            for (const [sid, idx] of seatOwners.entries()) {
+                if (idx === seatIndex && sid !== socket.id)
+                    return { ok: false, error: 'seat_taken' };
+            }
+            // Assign seat to this socket and flip to human
+            seatOwners.set(socket.id, seatIndex);
+            playerNames.set(socket.id, name);
+            try {
+                runtime.setSeatCpu?.(seatIndex, false);
+            }
+            catch { }
+            io.to(room).emit('seat_update', { seatIndex, isCPU: false, playerId: socket.id, playerName: name });
+            return { ok: true };
+        },
+        leave(socket) {
+            const s = lastState;
+            if (!s)
+                return { ok: false, error: 'no_state' };
+            const seatIdx = seatOwners.get(socket.id);
+            if (seatIdx == null)
+                return { ok: false, error: 'not_seated' };
+            if (s.status === 'in_hand')
+                return { ok: false, error: 'mid_hand' };
+            seatOwners.delete(socket.id);
+            playerNames.delete(socket.id);
+            try {
+                runtime.setSeatCpu?.(seatIdx, true);
+            }
+            catch { }
+            io.to(room).emit('seat_update', { seatIndex: seatIdx, isCPU: true, playerId: null, playerName: null });
+            return { ok: true };
+        },
     };
 }

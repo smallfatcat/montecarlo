@@ -5,6 +5,7 @@ import { Server as SocketIOServer } from 'socket.io'
 import { C2S, S2C } from './protocol.js'
 import { createInMemoryTable } from './tables/inMemoryTable.js'
 import { createServerRuntimeTable } from './tables/serverRuntimeTable.js'
+import type { TableId } from './tables/serverRuntimeTable.js'
 
 function parseAllowedOrigins(): string[] {
   const raw = process.env.FRONTEND_ORIGINS || ''
@@ -60,41 +61,71 @@ async function buildServer() {
     path: '/socket.io'
   })
 
+  // Single runtime per table id across all connections
+  const tables: Map<TableId, ReturnType<typeof createServerRuntimeTable>> = new Map()
+  function getTable(tableId: TableId) {
+    let t = tables.get(tableId)
+    if (!t) { t = createServerRuntimeTable(io, tableId); tables.set(tableId, t) }
+    return t
+  }
+
   io.on('connection', (socket) => {
     const origin = (socket.request?.headers?.origin as string | undefined) || 'unknown'
     app.log.info({ id: socket.id, origin }, 'socket connected')
     socket.emit('ready', S2C.ready.parse({ serverTime: Date.now() }))
 
-    // Use runtime-backed table for real-time migration testing
-    const table = createServerRuntimeTable(io, 'table-1')
+    // Ensure default table exists
+    const table = getTable('table-1')
 
     socket.on('join', (payload: unknown, ack?: (resp: unknown) => void) => {
       const p = C2S.joinTable.safeParse(payload)
       if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid join' }))
-      table.addClient(socket)
-      ack?.({ ok: true, state: table.getState() })
+      const t = getTable(p.data.tableId as any)
+      t.addClient(socket)
+      ack?.({ ok: true, state: t.getState() })
     })
 
     socket.on('begin', (payload: unknown, ack?: (resp: unknown) => void) => {
       const p = C2S.beginHand.safeParse(payload)
       if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid begin' }))
-      table.beginHand()
-      ack?.({ ok: true, state: table.getState() })
+      const t = getTable(p.data.tableId as any)
+      t.beginHand()
+      ack?.({ ok: true, state: t.getState() })
     })
 
     socket.on('act', (payload: unknown, ack?: (resp: unknown) => void) => {
       const p = C2S.act.safeParse(payload)
       if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid action' }))
-      const result = table.actFrom(socket, p.data.action)
+      const t = getTable(p.data.tableId as any)
+      const result = t.actFrom(socket, p.data.action)
       if (!result.ok) return ack?.(S2C.error.parse({ message: result.error }))
-      ack?.({ ok: true, state: table.getState() })
+      ack?.({ ok: true, state: t.getState() })
+    })
+
+    socket.on('sit', (payload: unknown, ack?: (resp: unknown) => void) => {
+      const p = C2S.sit.safeParse(payload)
+      if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid sit' }))
+      const t = getTable(p.data.tableId as any)
+      const result = t.sit(socket, p.data.seatIndex, p.data.name)
+      if (!result.ok) return ack?.(S2C.error.parse({ message: result.error }))
+      ack?.({ ok: true, state: t.getState() })
+    })
+
+    socket.on('leave', (payload: unknown, ack?: (resp: unknown) => void) => {
+      const p = C2S.leave.safeParse(payload)
+      if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid leave' }))
+      const t = getTable(p.data.tableId as any)
+      const result = t.leave(socket)
+      if (!result.ok) return ack?.(S2C.error.parse({ message: result.error }))
+      ack?.({ ok: true, state: t.getState() })
     })
 
     socket.on('setAuto', (payload: unknown, ack?: (resp: unknown) => void) => {
       const p = C2S.setAuto.safeParse(payload)
       if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid setAuto' }))
-      table.setAuto(p.data.auto)
-      ack?.({ ok: true, state: table.getState() })
+      const t = getTable(p.data.tableId as any)
+      t.setAuto(p.data.auto)
+      ack?.({ ok: true, state: t.getState() })
     })
 
     socket.on('echo', (payload: unknown, ack?: (resp: unknown) => void) => {
@@ -104,7 +135,7 @@ async function buildServer() {
 
     socket.on('disconnect', (reason) => {
       app.log.info({ id: socket.id, reason }, 'socket disconnected')
-      table.removeClient(socket)
+      for (const t of tables.values()) { try { t.removeClient(socket) } catch {} }
     })
   })
 

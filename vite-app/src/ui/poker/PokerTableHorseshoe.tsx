@@ -6,7 +6,7 @@ import { PokerTableHorseshoeView } from './PokerTableHorseshoeView'
 import { PokerTableHorseshoeControls } from './PokerTableHorseshoeControls'
 
 export function PokerTableHorseshoe() {
-  const { table, revealed, dealNext, autoPlay, setAutoPlay, available, fold, check, call, bet, raise, hideCpuHoleUntilShowdown, setHideCpuHoleUntilShowdown, review, reviewNextStep, reviewPrevStep, endReview } = usePokerGameContext()
+  const { table, revealed, dealNext, autoPlay, setAutoPlay, available, fold, check, call, bet, raise, hideCpuHoleUntilShowdown, setHideCpuHoleUntilShowdown, review, reviewNextStep, reviewPrevStep, endReview, sit, leave, mySeatIndex } = usePokerGameContext()
   const { equity, run: runEquity, running: equityRunning } = useEquity()
 
   const community = table.community
@@ -159,6 +159,17 @@ export function PokerTableHorseshoe() {
       revealed={revealed}
       hideCpuHoleUntilShowdown={hideCpuHoleUntilShowdown}
         editLayoutMode={editLayoutMode}
+      onSitHere={(i) => {
+        let name = sessionStorage.getItem('playerName') || ''
+        if (!name) {
+          const suggested = `Player-${Math.floor(Math.random() * 1000)}`
+          name = prompt('Enter your name', suggested) || suggested
+          sessionStorage.setItem('playerName', name)
+        }
+        sit?.(i, name)
+      }}
+      onLeaveSeat={() => leave?.()}
+      mySeatIndex={mySeatIndex}
       winnersSet={winnersSet}
       highlightSet={highlightSet}
       showdownText={showdownText}

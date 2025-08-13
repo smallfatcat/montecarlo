@@ -8,10 +8,13 @@ export type RuntimeCallbacks = {
   onHandStart?: (handId: number, buttonIndex: number, smallBlind: number, bigBlind: number) => void
   onPostBlind?: (seat: number, amount: number) => void
   onHandSetup?: (setup: any) => void
+  onSeatUpdate?: (m: { seatIndex: number; isCPU: boolean; playerId: string | null; playerName: string | null }) => void
+  onYouSeatChange?: (seatIndex: number | null) => void
 }
 
 export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks) {
   let socket: Socket | null = null
+  let mySeatIndexLocal: number | null = null
 
   function connect() {
     console.log('[wsAdapter] init', { wsUrl })
@@ -26,6 +29,15 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
       socket?.emit('join', { tableId: 'table-1' }, (ack: any) => {
         console.log('[wsAdapter] join ack', ack)
         if (ack?.state) cb.onState(ack.state)
+        // If no one is seated yet, attempt to auto-sit into seat 0 using a per-tab name
+        try {
+          if (ack?.state?.seats?.every((s:any)=>s.isCPU)) {
+            const suggested = `Player-${Math.floor(Math.random()*1000)}`
+            const name = sessionStorage?.getItem('playerName') || suggested
+            sessionStorage?.setItem('playerName', name)
+            socket?.emit('sit', { tableId: 'table-1', seatIndex: 0, name })
+          }
+        } catch {}
       })
     })
     socket.on('connect_error', (err) => console.error('[client] connect_error', err?.message || err))
@@ -36,6 +48,14 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
     socket.on('hand_setup', (m: any) => cb.onHandSetup?.(m))
     socket.on('deal', (m: any) => cb.onDeal?.(m.handId, m.street, m.cards))
     socket.on('action', (m: any) => cb.onAction?.(m.handId, m.seat, m.action, m.toCall, m.street))
+    socket.on('seat_update', (m: any) => {
+      try {
+        const myId = socket?.id
+        if (myId && (m.playerId === myId)) { mySeatIndexLocal = m.seatIndex; cb.onYouSeatChange?.(m.seatIndex) }
+        else if (myId && m.playerId == null && mySeatIndexLocal === m.seatIndex) { mySeatIndexLocal = null; cb.onYouSeatChange?.(null) }
+      } catch {}
+      cb.onSeatUpdate?.(m)
+    })
   }
 
   function beginHand() {
@@ -53,13 +73,23 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
     socket?.emit('setAuto', { tableId: 'table-1', auto: v })
   }
 
+  function sit(seatIndex: number, name: string) {
+    console.log('[wsAdapter] sit', { seatIndex, name })
+    socket?.emit('sit', { tableId: 'table-1', seatIndex, name })
+  }
+
+  function leave() {
+    console.log('[wsAdapter] leave')
+    socket?.emit('leave', { tableId: 'table-1' })
+  }
+
   function dispose() {
     try { socket?.disconnect() } catch {}
     socket = null
   }
 
   connect()
-  return { beginHand, act, setAutoPlay, dispose }
+  return { beginHand, act, setAutoPlay, sit, leave, dispose }
 }
 
 

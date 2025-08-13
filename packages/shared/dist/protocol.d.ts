@@ -62,6 +62,26 @@ export declare const C2S: {
         auto: boolean;
         tableId?: string | undefined;
     }>;
+    sit: z.ZodObject<{
+        tableId: z.ZodDefault<z.ZodString>;
+        seatIndex: z.ZodNumber;
+        name: z.ZodDefault<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        tableId: string;
+        seatIndex: number;
+        name: string;
+    }, {
+        seatIndex: number;
+        tableId?: string | undefined;
+        name?: string | undefined;
+    }>;
+    leave: z.ZodObject<{
+        tableId: z.ZodDefault<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        tableId: string;
+    }, {
+        tableId?: string | undefined;
+    }>;
     ping: z.ZodObject<{
         ts: z.ZodNumber;
     }, "strip", z.ZodTypeAny, {
@@ -91,6 +111,22 @@ export declare const S2C: {
         message: string;
     }, {
         message: string;
+    }>;
+    seatUpdate: z.ZodObject<{
+        seatIndex: z.ZodNumber;
+        isCPU: z.ZodBoolean;
+        playerId: z.ZodNullable<z.ZodString>;
+        playerName: z.ZodNullable<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        seatIndex: number;
+        isCPU: boolean;
+        playerId: string | null;
+        playerName: string | null;
+    }, {
+        seatIndex: number;
+        isCPU: boolean;
+        playerId: string | null;
+        playerName: string | null;
     }>;
 };
 //# sourceMappingURL=protocol.d.ts.map

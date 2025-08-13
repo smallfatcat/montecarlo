@@ -25,6 +25,20 @@ export class PokerRuntime {
     }
     dispose() { this.clearAllTimers(); }
     setAutoPlay(v) { this.autoPlay = v; this.armTimers(); }
+    /**
+     * Toggle whether a given seat should be driven by CPU logic.
+     * When set to false, the runtime will not schedule an automatic CPU action when it is this seat's turn.
+     */
+    setSeatCpu(seatIndex, isCpu) {
+        if (seatIndex < 0 || seatIndex >= this.state.seats.length)
+            return;
+        const before = this.state.seats[seatIndex].isCPU;
+        if (before === isCpu)
+            return;
+        this.state.seats[seatIndex].isCPU = isCpu;
+        this.cb.onState(this.state);
+        this.armTimers();
+    }
     beginHand() {
         this.state = startHand(this.state);
         const s = this.state;
@@ -128,18 +142,27 @@ export class PokerRuntime {
         const toAct = s.currentToAct;
         if (toAct == null)
             return;
+        const toActSeat = s.seats[toAct];
         const scheduleCpu = () => {
             const bump = this.delayBumpOnceMs;
             this.delayBumpOnceMs = 0;
             const delay = CONFIG.pokerAutoplay.cpuActionDelayMs + bump;
             this.timers.cpu = setTimeout(() => {
-                if (this.state.status !== 'in_hand' || this.state.currentToAct !== toAct)
+                const cur = this.state;
+                if (cur.status !== 'in_hand' || cur.currentToAct !== toAct)
+                    return;
+                const seat = cur.seats[toAct];
+                if (!seat?.isCPU)
                     return;
                 const a = this.suggestCpuAction();
                 this.act(a);
             }, delay);
             this.timers.watchdog = setTimeout(() => {
-                if (this.state.status !== 'in_hand' || this.state.currentToAct !== toAct)
+                const cur = this.state;
+                if (cur.status !== 'in_hand' || cur.currentToAct !== toAct)
+                    return;
+                const seat = cur.seats[toAct];
+                if (!seat?.isCPU)
                     return;
                 const a = this.suggestCpuAction();
                 this.act(a);
@@ -152,16 +175,17 @@ export class PokerRuntime {
             this.delayBumpOnceMs = 0;
             const delay = CONFIG.pokerAutoplay.playerActionDelayMs + bump;
             this.timers.player = setTimeout(() => {
-                if (this.state.status !== 'in_hand' || this.state.currentToAct !== 0)
+                if (this.state.status !== 'in_hand' || this.state.currentToAct !== toAct)
                     return;
                 const a = this.suggestCpuAction();
                 this.act(a);
             }, delay);
         };
-        if (toAct === 0)
-            schedulePlayer();
-        else
+        // Drive by seat type: if CPU seat, schedule CPU; otherwise, treat as human and only schedule player when autoplay is enabled
+        if (toActSeat?.isCPU)
             scheduleCpu();
+        else
+            schedulePlayer();
     }
     suggestCpuAction() {
         const suggested = suggestActionPoker(this.state, 'tight');

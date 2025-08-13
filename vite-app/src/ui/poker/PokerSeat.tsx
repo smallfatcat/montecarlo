@@ -29,6 +29,11 @@ export interface PokerSeatProps {
   forceFaceDown?: boolean
   // hide stack row inside seat container (for external placement)
   hideStackRow?: boolean
+  // seating controls
+  canControlSeat?: boolean
+  onSitHere?: (seatIndex: number) => void
+  onLeaveSeat?: (seatIndex: number) => void
+  mySeatIndex?: number | null
 }
 
 const CARD_HEIGHT_PX = 140
@@ -54,6 +59,10 @@ export function PokerSeat(props: PokerSeatProps) {
     visibleHoleCount = 2,
     forceFaceDown = false,
     hideStackRow = false,
+    canControlSeat = false,
+    onSitHere,
+    onLeaveSeat,
+    mySeatIndex = null,
   } = props
 
   const outline = seatIndex === currentToAct ? '2px solid #ffd54f' : undefined
@@ -108,7 +117,7 @@ export function PokerSeat(props: PokerSeatProps) {
         ))}
       </div>
       <div id={`${idPrefix}-label-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>
-        Seat {seatIndex}{seatIndex === buttonIndex ? ' (BTN)' : ''}{seat.hasFolded ? ' · Folded' : ''}{seat.isAllIn ? ' · All-in' : ''}
+        Seat {seatIndex}{seatIndex === buttonIndex ? ' (BTN)' : ''}{seat.hasFolded ? ' · Folded' : ''}{seat.isAllIn ? ' · All-in' : ''}{mySeatIndex === seatIndex ? ' · You' : ''}
       </div>
       {!hideStackRow && (
         <div id={`${idPrefix}-stack-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
@@ -139,6 +148,15 @@ export function PokerSeat(props: PokerSeatProps) {
       >
         {resultText || ''}
       </div>
+      {canControlSeat && (
+        <div id={`${idPrefix}-controls-${seatIndex}`} style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 6 }}>
+          {seat.isCPU ? (
+            <button onClick={() => onSitHere?.(seatIndex)} style={{ fontSize: 12, padding: '4px 8px' }}>Sit here</button>
+          ) : (mySeatIndex === seatIndex ? (
+            <button onClick={() => onLeaveSeat?.(seatIndex)} style={{ fontSize: 12, padding: '4px 8px' }}>Leave seat</button>
+          ) : null)}
+        </div>
+      )}
     </div>
   )
 }
