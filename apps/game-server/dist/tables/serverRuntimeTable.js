@@ -4,6 +4,7 @@ export function createServerRuntimeTable(io, tableId, opts) {
     const startingStack = opts?.startingStack ?? 5000;
     const cpuSeats = Array.from({ length: seats }, (_, i) => i);
     let lastState = null;
+    let autoPlay = false;
     const room = `table:${tableId}`;
     // Seat ownership map socket.id -> seat index
     const seatOwners = new Map();
@@ -59,6 +60,10 @@ export function createServerRuntimeTable(io, tableId, opts) {
         socket.join(room);
         if (lastState)
             socket.emit('state', lastState);
+        try {
+            socket.emit('autoplay', { auto: autoPlay });
+        }
+        catch { }
         try {
             console.log('[server-runtime] join', { socketId: socket.id });
         }
@@ -118,7 +123,19 @@ export function createServerRuntimeTable(io, tableId, opts) {
                 return { ok: false, error: e?.message || 'act_failed' };
             }
         },
-        setAuto(auto) { runtime.setAutoPlay ? runtime.setAutoPlay(auto) : undefined; },
+        setAuto(auto) {
+            autoPlay = !!auto;
+            try {
+                runtime.setAutoPlay?.(autoPlay);
+            }
+            catch { }
+            io.to(room).emit('autoplay', { auto: autoPlay });
+            try {
+                console.log('[server-runtime] autoplay', { auto: autoPlay });
+            }
+            catch { }
+        },
+        getAuto() { return autoPlay; },
         getState() { return lastState; },
         addClient,
         removeClient,

@@ -10,6 +10,7 @@ export type RuntimeCallbacks = {
   onHandSetup?: (setup: any) => void
   onSeatUpdate?: (m: { seatIndex: number; isCPU: boolean; playerId: string | null; playerName: string | null }) => void
   onYouSeatChange?: (seatIndex: number | null) => void
+  onAutoplay?: (auto: boolean) => void
 }
 
 export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks) {
@@ -32,6 +33,7 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
       socket?.emit('join', { tableId: 'table-1' }, (ack: any) => {
         console.log('[wsAdapter] join ack', ack)
         if (ack?.state) cb.onState(ack.state)
+        if (typeof ack?.auto === 'boolean') cb.onAutoplay?.(ack.auto)
         // If no one is seated yet, attempt to auto-sit into seat 0 using a per-tab name
         try {
           if (ack?.state?.seats?.every((s:any)=>s.isCPU)) {
@@ -54,6 +56,7 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
     })
     socket.on('error', (err) => console.error('[client] error', err))
     socket.on('state', (s: PokerTableState) => { console.log('[wsAdapter] state', { handId: s.handId, street: s.street, toAct: s.currentToAct }); cb.onState(s) })
+    socket.on('autoplay', (m: any) => { try { if (typeof m?.auto === 'boolean') cb.onAutoplay?.(m.auto) } catch {} })
     socket.on('hand_start', (m: any) => cb.onHandStart?.(m.handId, m.buttonIndex, m.smallBlind, m.bigBlind))
     socket.on('post_blind', (m: any) => cb.onPostBlind?.(m.seat, m.amount))
     socket.on('hand_setup', (m: any) => cb.onHandSetup?.(m))
@@ -81,7 +84,9 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
 
   function setAutoPlay(v: boolean) {
     console.log('[wsAdapter] setAuto', v)
-    socket?.emit('setAuto', { tableId: 'table-1', auto: v })
+    socket?.emit('setAuto', { tableId: 'table-1', auto: v }, (ack: any) => {
+      try { if (typeof ack?.auto === 'boolean') cb.onAutoplay?.(ack.auto) } catch {}
+    })
   }
 
   function sit(seatIndex: number, name: string) {

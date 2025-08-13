@@ -10,6 +10,7 @@ export interface TableApi {
   beginHand(): void
   actFrom(socket: Socket, action: BettingAction): { ok: true } | { ok: false; error: string }
   setAuto(auto: boolean): void
+  getAuto(): boolean
   getState(): PokerTableState
   addClient(socket: Socket): void
   removeClient(socket: Socket): void
@@ -22,6 +23,7 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
   const startingStack = opts?.startingStack ?? 5000
   const cpuSeats = Array.from({ length: seats }, (_, i) => i)
   let lastState: PokerTableState | null = null
+  let autoPlay = false
 
   const room = `table:${tableId}`
 
@@ -62,6 +64,8 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
   function addClient(socket: Socket) {
     socket.join(room)
     if (lastState) socket.emit('state', lastState)
+    // Always send current autoplay state on join
+    try { socket.emit('autoplay', { auto: autoPlay }) } catch {}
     try { console.log('[server-runtime] join', { socketId: socket.id }) } catch {}
   }
 
@@ -95,7 +99,13 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
         return { ok: false, error: e?.message || 'act_failed' }
       }
     },
-    setAuto(auto) { (runtime as any).setAutoPlay ? (runtime as any).setAutoPlay(auto) : undefined },
+    setAuto(auto) {
+      autoPlay = !!auto
+      try { (runtime as any).setAutoPlay?.(autoPlay) } catch {}
+      // Emit to everyone including sender so all clients get a consistent event
+      io.in(room).emit('autoplay', { auto: autoPlay })
+    },
+    getAuto() { return autoPlay },
     getState() { return lastState as PokerTableState },
     addClient,
     removeClient,

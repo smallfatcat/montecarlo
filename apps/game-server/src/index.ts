@@ -82,7 +82,8 @@ async function buildServer() {
       if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid join' }))
       const t = getTable(p.data.tableId as any)
       t.addClient(socket)
-      ack?.({ ok: true, state: t.getState() })
+      // include current autoplay state alongside state snapshot
+      ack?.({ ok: true, state: t.getState(), auto: t.getAuto?.() })
     })
 
     socket.on('begin', (payload: unknown, ack?: (resp: unknown) => void) => {
@@ -125,7 +126,8 @@ async function buildServer() {
       if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid setAuto' }))
       const t = getTable(p.data.tableId as any)
       t.setAuto(p.data.auto)
-      ack?.({ ok: true, state: t.getState() })
+      // echo back state and current autoplay value; other clients receive room broadcast from setAuto
+      ack?.({ ok: true, state: t.getState(), auto: t.getAuto?.() })
     })
 
     socket.on('echo', (payload: unknown, ack?: (resp: unknown) => void) => {

@@ -40,6 +40,7 @@ export function usePokerGame() {
     dispose: () => void
   }
   const runtimeRef = useRef<RuntimeLike | null>(null)
+  const lastRemoteAutoRef = useRef<boolean | null>(null)
   // legacy refs (now unused with runtime)
   // Hand history (structured) and flattened log lines
   const [histories, setHistories] = useState<HandHistory[]>([])
@@ -240,12 +241,11 @@ export function usePokerGame() {
       },
       onSeatUpdate: (_m: any) => {},
       onYouSeatChange: (seatIndex: number | null) => setMySeatIndex(seatIndex),
+      onAutoplay: (auto: boolean) => { lastRemoteAutoRef.current = auto; setAutoPlay(auto) },
     }
     const wsUrl = (import.meta as any).env?.VITE_WS_URL as string | undefined
     if (wsUrl) {
       runtimeRef.current = createRealtimeRuntimeAdapter(wsUrl, cb)
-      // When using server mode, disable local CPU autoplay and let the server drive
-      setAutoPlay(false)
     } else {
       const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
       const rt = new PokerRuntime({ seats: numPlayers, cpuSeats, startingStack }, cb as any)
@@ -255,8 +255,13 @@ export function usePokerGame() {
     return () => { runtimeRef.current?.dispose(); runtimeRef.current = null }
   }, [])
 
-  // Reflect autoplay toggle into runtime
+  // Reflect autoplay toggle into runtime, but avoid echoing remote-origin changes
   useEffect(() => {
+    if (lastRemoteAutoRef.current === autoPlay) {
+      // Consumed a remote update; do not echo back
+      lastRemoteAutoRef.current = null
+      return
+    }
     runtimeRef.current?.setAutoPlay(autoPlay)
   }, [autoPlay])
 
