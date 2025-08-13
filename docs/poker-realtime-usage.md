@@ -47,7 +47,7 @@ cat > .env << 'ENV'
 HOST=0.0.0.0
 PORT=8080
 # Frontend origins you will use. Add/remove as needed.
-FRONTEND_ORIGINS=http://192.168.1.113:5173,https://smallfatcat.github.io,https://smallfatcat.github.io/montecarlo/
+FRONTEND_ORIGINS=http://192.168.1.107:5173,https://smallfatcat.github.io,https://smallfatcat.github.io/montecarlo/
 ENV
 
 npm run dev
@@ -69,18 +69,18 @@ cd /home/pi/montecarlo/vite-app
 npm install
 
 # Create .env.local
-echo "VITE_WS_URL=ws://192.168.1.113:8080" > .env.local
+echo "VITE_WS_URL=ws://192.168.1.107:8080" > .env.local
 
 # Start dev server bound to LAN
 npm run dev -- --host 0.0.0.0
 ```
 Open from your PC browser:
 ```
-http://192.168.1.113:5173/montecarlo/
+http://192.168.1.107:5173/montecarlo/
 ```
 
 Expected:
-- Backend logs: `socket connected` with origin `http://192.168.1.113:5173`, then `[server-runtime] join`.
+- Backend logs: `socket connected` with origin `http://192.168.1.107:5173`, then `[server-runtime] join`.
 - Clicking Deal in the UI streams server events: `hand_start`, `post_blind`, `hand_setup`, `action`, `state`.
 
 If the browser console shows a brief “closed before connection established” on first mount, that is React dev Strict Mode re‑mounting effects. The socket reconnects immediately after.
