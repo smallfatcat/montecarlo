@@ -15,14 +15,17 @@ export type RuntimeCallbacks = {
 export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks) {
   let socket: Socket | null = null
   let mySeatIndexLocal: number | null = null
+  let forcedPolling = false
 
   function connect() {
     console.log('[wsAdapter] init', { wsUrl })
     socket = io(wsUrl, {
       path: '/socket.io',
-      transports: ['websocket'],
+      // Allow polling fallback for environments where websocket is blocked or TLS is misconfigured
+      transports: forcedPolling ? ['polling'] : ['websocket', 'polling'],
+      upgrade: !forcedPolling,
       withCredentials: false,
-      timeout: 8000,
+      timeout: 12000,
     })
     socket.on('connect', () => {
       console.log('[wsAdapter] connected', socket?.id)
@@ -40,7 +43,15 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
         } catch {}
       })
     })
-    socket.on('connect_error', (err) => console.error('[client] connect_error', err?.message || err))
+    socket.on('connect_error', (err) => {
+      console.error('[client] connect_error', err?.message || err)
+      if (!forcedPolling) {
+        try { socket?.disconnect() } catch {}
+        socket = null
+        forcedPolling = true
+        setTimeout(() => connect(), 200)
+      }
+    })
     socket.on('error', (err) => console.error('[client] error', err))
     socket.on('state', (s: PokerTableState) => { console.log('[wsAdapter] state', { handId: s.handId, street: s.street, toAct: s.currentToAct }); cb.onState(s) })
     socket.on('hand_start', (m: any) => cb.onHandStart?.(m.handId, m.buttonIndex, m.smallBlind, m.bigBlind))
