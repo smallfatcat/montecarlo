@@ -16,16 +16,16 @@ export function usePokerOrchestrator(
     setBusyUntilMs(Date.now() + Math.max(0, Math.floor(ms)))
   }, [])
 
-  const scheduleHoleReveal = useCallback((table: PokerTableState, hideCpuHoleUntilShowdown: boolean) => {
+  const scheduleHoleReveal = useCallback((table: PokerTableState, hideHoleCardsUntilShowdown: boolean, mySeatIndex: number | null) => {
     if (table.status !== 'in_hand' || table.street !== 'preflop') return
     // Idempotent: only schedule once per handId
     if (lastHoleRevealHandIdRef.current === table.handId) return
     lastHoleRevealHandIdRef.current = table.handId
-    // initialize reveal counts for current seats length — player (seat 0) always visible
+    // initialize reveal counts for current seats length — player's seat always visible
     const seatsLen = table.seats.length
     const initialHole = Array.from({ length: Math.max(6, seatsLen) }, (_, i) => {
-      if (i === 0) return 2
-      if (!hideCpuHoleUntilShowdown) return 2
+      if (i === (mySeatIndex ?? -1)) return 2
+      if (!hideHoleCardsUntilShowdown) return 2
       return 0
     })
     setRevealed({ holeCounts: initialHole, boardCount: 0 })
@@ -33,30 +33,31 @@ export function usePokerOrchestrator(
     // Clear any pending hole-reveal events
     eventQueue.clearByTag('hole-reveal')
     const perCard = CONFIG.poker.deal.perHoleCardMs
-    // If CPU hole cards are not hidden, we already revealed them; skip scheduling
-    if (!hideCpuHoleUntilShowdown) {
+    // If hole cards are to be shown for all, schedule reveal animation for non-player seats
+    if (!hideHoleCardsUntilShowdown) {
       setBusyUntilMs(Date.now() + 50)
+      // Schedule reveal for seats except player's (already set)
+      for (let r = 0; r < 2; r += 1) {
+        for (let i = 0; i < seatsLen; i += 1) {
+          const idx = ((table.buttonIndex + 1) + i) % seatsLen
+          if (idx === (mySeatIndex ?? -1)) continue
+          const delay = (r * seatsLen + i) * perCard
+          eventQueue.schedule(() => {
+            setRevealed((prev) => {
+              const hc = [...prev.holeCounts]
+              const nextCount = Math.min(2, (hc[idx] || 0) + 1)
+              hc[idx] = nextCount
+              return { ...prev, holeCounts: hc }
+            })
+          }, delay, 'hole-reveal')
+        }
+      }
+      const lastDelay = (2 * seatsLen - 1) * perCard
+      setBusyUntilMs(Date.now() + lastDelay + 50)
       return () => eventQueue.clearByTag('hole-reveal')
     }
-    for (let r = 0; r < 2; r += 1) {
-      for (let i = 0; i < seatsLen; i += 1) {
-        const idx = ((table.buttonIndex + 1) + i) % seatsLen
-        if (idx === 0) continue // already fully revealed for player seat
-        const delay = (r * seatsLen + i) * perCard
-        // Use non-unique scheduling so both hole cards reveal in sequence
-        eventQueue.schedule(() => {
-          setRevealed((prev) => {
-            const hc = [...prev.holeCounts]
-            const isPlayer = idx === 0
-            const nextCount = Math.min(2, (hc[idx] || 0) + 1)
-            hc[idx] = isPlayer || !hideCpuHoleUntilShowdown ? nextCount : 0
-            return { ...prev, holeCounts: hc }
-          })
-        }, delay, 'hole-reveal')
-      }
-    }
-    const lastDelay = (2 * seatsLen - 1) * perCard
-    setBusyUntilMs(Date.now() + lastDelay + 50)
+    // If hole cards are hidden for others, we already set visibility; keep UI snappy
+    setBusyUntilMs(Date.now() + 50)
     return () => eventQueue.clearByTag('hole-reveal')
   }, [eventQueue, setRevealed])
 

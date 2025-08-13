@@ -6,7 +6,7 @@ import { PokerTableHorseshoeView } from './PokerTableHorseshoeView'
 import { PokerTableHorseshoeControls } from './PokerTableHorseshoeControls'
 
 export function PokerTableHorseshoe() {
-  const { table, revealed, dealNext, autoPlay, setAutoPlay, available, fold, check, call, bet, raise, hideCpuHoleUntilShowdown, setHideCpuHoleUntilShowdown, review, reviewNextStep, reviewPrevStep, endReview, sit, leave, mySeatIndex } = usePokerGameContext()
+  const { table, revealed, dealNext, autoPlay, setAutoPlay, available, fold, check, call, bet, raise, hideHoleCardsUntilShowdown, setHideHoleCardsUntilShowdown, review, reviewNextStep, reviewPrevStep, endReview, sit, leave, mySeatIndex } = usePokerGameContext()
   const { equity, run: runEquity, running: equityRunning } = useEquity()
 
   const community = table.community
@@ -33,7 +33,7 @@ export function PokerTableHorseshoe() {
     if (!shouldRun) return
     const keyPartSeats = table.seats.map((s, i) => {
       if (s.hasFolded) return 'X'
-      const hidden = hideCpuHoleUntilShowdown && table.status !== 'hand_over' && i !== 0
+      const hidden = hideHoleCardsUntilShowdown && table.status !== 'hand_over' && i !== mySeatIndex
       return hidden ? '??' : (s.hole.map((c) => `${c.rank}${c.suit[0]}`).join(''))
     }).join('|')
     const keyPartBoard = community.map((c) => `${c.rank}${c.suit[0]}`).join('')
@@ -41,11 +41,11 @@ export function PokerTableHorseshoe() {
     if (k === lastEqKeyRef.current) return
     lastEqKeyRef.current = k
     const seatsForEquity = table.seats.map((s, i) => ({
-      hole: (hideCpuHoleUntilShowdown && table.status !== 'hand_over' && i !== 0) ? [] : s.hole,
+      hole: (hideHoleCardsUntilShowdown && table.status !== 'hand_over' && i !== mySeatIndex) ? [] : s.hole,
       folded: s.hasFolded,
     }))
     runEquity(seatsForEquity as any, community as any, samples)
-  }, [table.status, table.seats, community, hideCpuHoleUntilShowdown])
+  }, [table.status, table.seats, community, hideHoleCardsUntilShowdown, mySeatIndex])
 
   const highlightSet = useMemo(() => {
     if (table.status !== 'hand_over' || community.length < 5) return new Set<string>()
@@ -141,8 +141,8 @@ export function PokerTableHorseshoe() {
         onCall={call}
         onBet={bet}
         onRaise={raise}
-        hideCpuHoleUntilShowdown={hideCpuHoleUntilShowdown}
-        onToggleHideCpuHole={setHideCpuHoleUntilShowdown}
+        hideHoleCardsUntilShowdown={hideHoleCardsUntilShowdown}
+        onToggleHideHoleCards={setHideHoleCardsUntilShowdown}
         onExportLayout={() => viewRef.current?.exportLayoutToJson()}
         onResetLayout={() => viewRef.current?.resetLayout()}
         editLayoutMode={editLayoutMode}
@@ -157,7 +157,7 @@ export function PokerTableHorseshoe() {
         ref={viewRef as any}
       table={table}
       revealed={revealed}
-      hideCpuHoleUntilShowdown={hideCpuHoleUntilShowdown}
+      hideHoleCardsUntilShowdown={hideHoleCardsUntilShowdown}
         editLayoutMode={editLayoutMode}
       onSitHere={(i) => {
         let name = sessionStorage.getItem('playerName') || ''

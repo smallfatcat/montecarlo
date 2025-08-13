@@ -11,7 +11,7 @@ import { computePots } from '../../poker/flow'
 export interface PokerTableHorseshoeViewProps {
   table: PokerTableState
   revealed: { holeCounts: number[]; boardCount: number }
-  hideCpuHoleUntilShowdown: boolean
+  hideHoleCardsUntilShowdown: boolean
   editLayoutMode?: boolean
   // seat control wiring
   onSitHere?: (seatIndex: number) => void
@@ -44,7 +44,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
   const {
     table,
     revealed,
-    hideCpuHoleUntilShowdown,
+    hideHoleCardsUntilShowdown,
     editLayoutMode,
     onSitHere,
     onLeaveSeat,
@@ -536,7 +536,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
           const stackPos = getStackPos(i)
           const contenders = table.seats.filter((x) => !x.hasFolded && x.hole.length === 2).length
           const visible = (table.status === 'hand_over' && table.community.length >= 5 && contenders > 1) ? (s.hole.length) : (revealed.holeCounts[i] ?? 0)
-          const forceFaceDown = (table.status === 'in_hand') && (i !== 0) && (revealed.holeCounts[i] === 0)
+          const forceFaceDown = (table.status === 'in_hand') && (hideHoleCardsUntilShowdown) && (i !== (mySeatIndex ?? -1)) && (revealed.holeCounts[i] === 0)
             return [
             (
               <div id={`horseshoe-seat-wrapper-${i}`} key={`seat-${i}`} style={{ position: 'absolute', left: pos?.left ?? centerX, top: pos?.top ?? centerY, transform: 'translate(-50%, -50%)', width: (pos?.width ?? CONFIG.poker.horseshoe.seatWidthPx), height: pos?.height, cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined }} {...makeDragMouseHandlers('seat', i)}>
@@ -549,7 +549,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
                   currentToAct={table.currentToAct}
                   highlightSet={highlightSet}
                   hideStackRow={true}
-                  showPerSeatEquity={(!hideCpuHoleUntilShowdown) || (table.status === 'hand_over' && table.community.length >= 5) ? (!s.hasFolded && s.hole.length === 2) : (i === 0)}
+                  showPerSeatEquity={(!hideHoleCardsUntilShowdown) || (table.status === 'hand_over' && table.community.length >= 5) ? (!s.hasFolded && s.hole.length === 2) : (i === (mySeatIndex ?? -1))}
                   equityWinPct={equity ? equity.winPct[i] ?? null : null}
                   equityTiePct={equity ? equity.tiePct[i] ?? null : null}
                   equityRunning={!!equity?.running}

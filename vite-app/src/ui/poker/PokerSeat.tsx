@@ -66,6 +66,8 @@ export function PokerSeat(props: PokerSeatProps) {
   } = props
 
   const outline = seatIndex === currentToAct ? '2px solid #ffd54f' : undefined
+  const isYourSeat = (mySeatIndex != null) && (mySeatIndex === seatIndex)
+  const glow = isYourSeat ? '0 0 10px rgba(43, 168, 116, 0.8), 0 0 18px rgba(255,213,79,0.5)' : undefined
   const scaledCardHeight = Math.ceil(CARD_HEIGHT_PX * seatCardScale) + 2
 
   const baseStyle: CSSProperties = {
@@ -76,6 +78,7 @@ export function PokerSeat(props: PokerSeatProps) {
     background: 'rgba(0,0,0,0.18)',
     outline,
     outlineOffset: 2,
+    boxShadow: glow,
     // width intentionally not set; pass via containerStyle if needed (horseshoe)
   }
 

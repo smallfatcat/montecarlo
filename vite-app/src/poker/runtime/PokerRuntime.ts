@@ -111,8 +111,6 @@ export class PokerRuntime {
 
   act(action: BettingAction) {
     if (this.state.status !== 'in_hand') return
-    const toAct = this.state.currentToAct
-    const isPlayer = toAct === 0
     // Apply and publish
     const before = this.state
     const actorIndex = before.currentToAct ?? -1

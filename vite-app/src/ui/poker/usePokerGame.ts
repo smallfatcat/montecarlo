@@ -23,7 +23,7 @@ export function usePokerGame() {
   // Legacy timer refs removed after event queue refactor
   const [revealed, setRevealed] = useState<{ holeCounts: number[]; boardCount: number }>({ holeCounts: Array.from({ length: 9 }, () => 0), boardCount: 0 })
   const eventQueue = useTimerQueue()
-  const [hideCpuHoleUntilShowdown, setHideCpuHoleUntilShowdown] = useState<boolean>(false)
+  const [hideHoleCardsUntilShowdown, setHideHoleCardsUntilShowdown] = useState<boolean>(false)
   const orchestrator = usePokerOrchestrator({
     schedule: eventQueue.schedule,
     scheduleUnique: eventQueue.scheduleUnique,
@@ -205,8 +205,8 @@ export function usePokerGame() {
 
   // Staged hole reveal whenever a new hand begins
   useEffect(() => {
-    orchestrator.scheduleHoleReveal(table, hideCpuHoleUntilShowdown)
-  }, [table.handId, table.buttonIndex, table.seats.length, table.street, table.status, hideCpuHoleUntilShowdown, orchestrator.scheduleHoleReveal])
+    orchestrator.scheduleHoleReveal(table, hideHoleCardsUntilShowdown, mySeatIndex)
+  }, [table.handId, table.buttonIndex, table.seats.length, table.street, table.status, hideHoleCardsUntilShowdown, mySeatIndex, orchestrator.scheduleHoleReveal])
 
   const available = useMemo(() => {
     if (mySeatIndex == null || table.currentToAct !== mySeatIndex) return []
@@ -371,8 +371,8 @@ export function usePokerGame() {
     histories,
     historyLines,
     review,
-    hideCpuHoleUntilShowdown,
-    setHideCpuHoleUntilShowdown,
+    hideHoleCardsUntilShowdown,
+    setHideHoleCardsUntilShowdown,
     numPlayers,
     setNumPlayers,
     startingStack,

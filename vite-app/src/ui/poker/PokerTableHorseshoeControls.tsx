@@ -12,8 +12,8 @@ export function PokerTableHorseshoeControls(props: {
   onCall: () => void
   onBet: (amount?: number) => void
   onRaise: (amount?: number) => void
-  hideCpuHoleUntilShowdown: boolean
-  onToggleHideCpuHole: (v: boolean) => void
+  hideHoleCardsUntilShowdown: boolean
+  onToggleHideHoleCards: (v: boolean) => void
   onExportLayout?: () => void
   onResetLayout?: () => void
   editLayoutMode?: boolean
@@ -35,8 +35,8 @@ export function PokerTableHorseshoeControls(props: {
     onCall,
     onBet,
     onRaise,
-    hideCpuHoleUntilShowdown,
-    onToggleHideCpuHole,
+    hideHoleCardsUntilShowdown,
+    onToggleHideHoleCards,
     onExportLayout,
     onResetLayout,
     editLayoutMode,
@@ -54,9 +54,9 @@ export function PokerTableHorseshoeControls(props: {
     <div id="poker-controlbar" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
       <button onClick={() => onDealNext()} disabled={table.status === 'in_hand' || table.gameOver}>Deal</button>
       <label><input type="checkbox" checked={autoPlay} onChange={(e) => onToggleAutoPlay(e.target.checked)} /> Autoplay</label>
-      <label title="Hide CPU hole cards until showdown">
-        <input type="checkbox" checked={hideCpuHoleUntilShowdown} onChange={(e) => onToggleHideCpuHole(e.target.checked)} />
-        Hide CPU hole
+      <label title="Hide all hole cards until showdown (except your own)">
+        <input type="checkbox" checked={hideHoleCardsUntilShowdown} onChange={(e) => onToggleHideHoleCards(e.target.checked)} />
+        Hide hole cards
       </label>
       <select value={betSize} onChange={(e)=>setBetSize(e.target.value as any)}>
         <option value="33">33%</option>

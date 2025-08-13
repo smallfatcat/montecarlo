@@ -165,7 +165,7 @@ export function PokerHistoryPage() {
               <PokerTableHorseshoeView
                 table={previewState}
                 revealed={{ holeCounts: Array.from({ length: Math.max(6, previewState.seats.length) }, () => 2), boardCount: previewState.community.length }}
-                hideCpuHoleUntilShowdown={false}
+                hideHoleCardsUntilShowdown={false}
                 // Pass winnersSet so result labels show correctly on preview
                 winnersSet={winnersSet}
               />
