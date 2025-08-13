@@ -17,7 +17,7 @@ npm run dev
 
 ### Socket.IO testing
 
-Connect a client to `ws://127.0.0.1:8080/socket.io` and listen for `ready`. Emit `echo` to test round-trip.
+Connect locally via `ws://127.0.0.1:8080/socket.io` (dev). In production or behind TLS/tunnels use `wss://<host>/socket.io`. Listen for `ready` and emit `echo` to test round‑trip.
 
 
 

@@ -23,7 +23,6 @@ function parseAllowedOrigins(): string[] {
     // GitHub Pages / prod samples
     'https://smallfatcat.github.io',
     'https://smallfatcat.github.io/montecarlo/',
-    'https://app.yourdomain.com',
   ]
 }
 
