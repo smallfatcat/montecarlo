@@ -1,0 +1,11 @@
+{
+  "name": "montecarlo-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "vite-app",
+    "apps/game-server",
+    "packages/*"
+  ]
+}
+

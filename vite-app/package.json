@@ -24,7 +24,9 @@
     "rollup": "npm:@rollup/wasm-node@4.46.2"
   },
   "dependencies": {
+    "@montecarlo/shared": "file:../packages/shared",
     "framer-motion": "^12.23.12",
+    "socket.io-client": "^4.7.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

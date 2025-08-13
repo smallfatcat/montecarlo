@@ -8,6 +8,7 @@ import { CONFIG } from '../../config'
 import { useTimerQueue } from './useTimerQueue'
 import { usePokerOrchestrator } from './usePokerOrchestrator'
 import { PokerRuntime } from '../../poker/runtime/PokerRuntime'
+import { createRealtimeRuntimeAdapter } from '../../poker/realtime/wsAdapter'
 import type { HistoryEvent, HandHistory } from '../../poker/history'
 import { buildTableFrom } from '../../poker/history'
 
@@ -29,7 +30,13 @@ export function usePokerGame() {
     clearByTag: eventQueue.clearByTag,
   } as any, setRevealed)
   const [clearing, setClearing] = useState<boolean>(false)
-  const runtimeRef = useRef<PokerRuntime | null>(null)
+  type RuntimeLike = {
+    beginHand: () => void
+    act: (action: BettingAction) => void
+    setAutoPlay: (v: boolean) => void
+    dispose: () => void
+  }
+  const runtimeRef = useRef<RuntimeLike | null>(null)
   // legacy refs (now unused with runtime)
   // Hand history (structured) and flattened log lines
   const [histories, setHistories] = useState<HandHistory[]>([])
@@ -204,29 +211,36 @@ export function usePokerGame() {
   // Initialize runtime once and bridge state changes to React
   useEffect(() => {
     if (runtimeRef.current) return
-    const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
-    const rt = new PokerRuntime({ seats: numPlayers, cpuSeats, startingStack }, {
-      onState: (s) => setTable(s),
-      onAction: (handId, seat, action, toCall, street) => {
+    const cb = {
+      onState: (s: PokerTableState) => setTable(s),
+      onAction: (handId: number, seat: number, action: BettingAction, toCall: number, street: PokerTableState['street']) => {
         appendEvent(handId, { ts: Date.now(), type: 'action', seat, action: action.type, amount: (action as any).amount ?? null, toCall, street })
       },
-      onDeal: (handId, street, cardCodes) => {
+      onDeal: (handId: number, street: any, cardCodes: string[]) => {
         const type = street === 'flop' ? 'deal_flop' : street === 'turn' ? 'deal_turn' : 'deal_river'
         appendEvent(handId, { ts: Date.now(), type: type as any, cards: cardCodes as any })
       },
-      onHandStart: (handId, buttonIndex, smallBlind, bigBlind) => {
+      onHandStart: (handId: number, buttonIndex: number, smallBlind: number, bigBlind: number) => {
         appendEvent(handId, { ts: Date.now(), type: 'hand_start', handId, buttonIndex, smallBlind, bigBlind } as any)
       },
-      onPostBlind: (seat, amount) => {
-        // Attach to current hand id; we can read from latest table state
+      onPostBlind: (seat: number, amount: number) => {
         const hid = (runtimeRef.current as any)?.['state']?.handId ?? table.handId
         appendEvent(hid, { ts: Date.now(), type: 'post_blind', seat, amount } as any)
       },
-      onHandSetup: (setup) => {
+      onHandSetup: (setup: any) => {
         appendEvent(setup.handId, { ts: Date.now(), type: 'hand_setup', ...setup } as any)
       },
-    })
-    runtimeRef.current = rt
+    }
+    const wsUrl = (import.meta as any).env?.VITE_WS_URL as string | undefined
+    if (wsUrl) {
+      runtimeRef.current = createRealtimeRuntimeAdapter(wsUrl, cb)
+      // When using server mode, disable local CPU autoplay and let the server drive
+      setAutoPlay(false)
+    } else {
+      const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
+      const rt = new PokerRuntime({ seats: numPlayers, cpuSeats, startingStack }, cb as any)
+      runtimeRef.current = rt as unknown as RuntimeLike
+    }
     // start first hand is driven by UI control (Deal button)
     return () => { runtimeRef.current?.dispose(); runtimeRef.current = null }
   }, [])
