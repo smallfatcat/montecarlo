@@ -99,13 +99,18 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
     socket?.emit('leave', { tableId: 'table-1' })
   }
 
+  function reset() {
+    console.log('[wsAdapter] reset')
+    socket?.emit('reset', { tableId: 'table-1' })
+  }
+
   function dispose() {
     try { socket?.disconnect() } catch {}
     socket = null
   }
 
   connect()
-  return { beginHand, act, setAutoPlay, sit, leave, dispose }
+  return { beginHand, act, setAutoPlay, sit, leave, reset, dispose }
 }
 
 

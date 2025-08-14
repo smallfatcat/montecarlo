@@ -13,6 +13,7 @@ export interface PokerSeatProps {
   buttonIndex: number
   currentToAct: number | null
   highlightSet: Set<string>
+  displayName?: string
   // Equity display options
   showPerSeatEquity?: boolean
   equityWinPct?: number | null
@@ -120,7 +121,11 @@ export function PokerSeat(props: PokerSeatProps) {
         ))}
       </div>
       <div id={`${idPrefix}-label-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>
-        Seat {seatIndex}{seatIndex === buttonIndex ? ' (BTN)' : ''}{seat.hasFolded ? ' · Folded' : ''}{seat.isAllIn ? ' · All-in' : ''}{mySeatIndex === seatIndex ? ' · You' : ''}
+        {props.displayName ?? (seat.isCPU ? `CPU ${seatIndex}` : `Player ${seatIndex}`)}
+        {seatIndex === buttonIndex ? ' (BTN)' : ''}
+        {seat.hasFolded ? ' · Folded' : ''}
+        {seat.isAllIn ? ' · All-in' : ''}
+        {mySeatIndex === seatIndex ? ' · You' : ''}
       </div>
       {!hideStackRow && (
         <div id={`${idPrefix}-stack-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>

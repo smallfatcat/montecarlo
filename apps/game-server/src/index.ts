@@ -130,6 +130,14 @@ async function buildServer() {
       ack?.({ ok: true, state: t.getState(), auto: t.getAuto?.() })
     })
 
+    socket.on('reset', (payload: unknown, ack?: (resp: unknown) => void) => {
+      const p = C2S.resetTable.safeParse(payload)
+      if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid reset' }))
+      const t = getTable(p.data.tableId as any)
+      t.reset()
+      ack?.({ ok: true, state: t.getState(), auto: t.getAuto?.() })
+    })
+
     socket.on('echo', (payload: unknown, ack?: (resp: unknown) => void) => {
       socket.emit('echo', payload)
       if (ack) ack({ ok: true, echoedAt: Date.now() })

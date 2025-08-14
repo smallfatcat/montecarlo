@@ -9,7 +9,7 @@ export function createServerRuntimeTable(io, tableId, opts) {
     // Seat ownership map socket.id -> seat index
     const seatOwners = new Map();
     const playerNames = new Map();
-    const runtime = new PokerRuntime({ seats, cpuSeats, startingStack }, {
+    let runtime = new PokerRuntime({ seats, cpuSeats, startingStack }, {
         onState: (s) => {
             lastState = s;
             io.to(room).emit('state', s);
@@ -60,6 +60,7 @@ export function createServerRuntimeTable(io, tableId, opts) {
         socket.join(room);
         if (lastState)
             socket.emit('state', lastState);
+        // Always send current autoplay state on join
         try {
             socket.emit('autoplay', { auto: autoPlay });
         }
@@ -129,11 +130,8 @@ export function createServerRuntimeTable(io, tableId, opts) {
                 runtime.setAutoPlay?.(autoPlay);
             }
             catch { }
-            io.to(room).emit('autoplay', { auto: autoPlay });
-            try {
-                console.log('[server-runtime] autoplay', { auto: autoPlay });
-            }
-            catch { }
+            // Emit to everyone including sender so all clients get a consistent event
+            io.in(room).emit('autoplay', { auto: autoPlay });
         },
         getAuto() { return autoPlay; },
         getState() { return lastState; },
@@ -190,6 +188,62 @@ export function createServerRuntimeTable(io, tableId, opts) {
             catch { }
             io.to(room).emit('seat_update', { seatIndex: seatIdx, isCPU: true, playerId: null, playerName: null });
             return { ok: true };
+        },
+        reset() {
+            try {
+                runtime.dispose?.();
+            }
+            catch { }
+            runtime = new PokerRuntime({ seats, cpuSeats, startingStack }, {
+                onState: (s) => {
+                    lastState = s;
+                    io.to(room).emit('state', s);
+                    try {
+                        console.log('[server-runtime] state', { handId: s.handId, street: s.street, toAct: s.currentToAct });
+                    }
+                    catch { }
+                },
+                onAction: (handId, seat, action, toCall, street) => {
+                    io.to(room).emit('action', { handId, seat, action, toCall, street });
+                    try {
+                        console.log('[server-runtime] action', { handId, seat, action: action?.type, toCall, street });
+                    }
+                    catch { }
+                },
+                onDeal: (handId, street, cardCodes) => {
+                    io.to(room).emit('deal', { handId, street, cards: cardCodes });
+                    try {
+                        console.log('[server-runtime] deal', { handId, street, cards: cardCodes.join(' ') });
+                    }
+                    catch { }
+                },
+                onHandStart: (handId, buttonIndex, smallBlind, bigBlind) => {
+                    io.to(room).emit('hand_start', { handId, buttonIndex, smallBlind, bigBlind });
+                    try {
+                        console.log('[server-runtime] hand_start', { handId, buttonIndex, smallBlind, bigBlind });
+                    }
+                    catch { }
+                },
+                onPostBlind: (seat, amount) => {
+                    const hid = lastState?.handId ?? null;
+                    io.to(room).emit('post_blind', { handId: hid, seat, amount });
+                    try {
+                        console.log('[server-runtime] post_blind', { handId: hid, seat, amount });
+                    }
+                    catch { }
+                },
+                onHandSetup: (setup) => {
+                    io.to(room).emit('hand_setup', setup);
+                    try {
+                        console.log('[server-runtime] hand_setup', { handId: setup.handId, seats: setup.seats.length, deckRemaining: setup.deckRemaining });
+                    }
+                    catch { }
+                },
+            });
+            autoPlay = false;
+            lastState = runtime['state'];
+            io.to(room).emit('state', lastState);
+            io.in(room).emit('autoplay', { auto: autoPlay });
         },
     };
 }

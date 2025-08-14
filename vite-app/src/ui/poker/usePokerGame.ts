@@ -24,6 +24,7 @@ export function usePokerGame() {
   const [revealed, setRevealed] = useState<{ holeCounts: number[]; boardCount: number }>({ holeCounts: Array.from({ length: 9 }, () => 0), boardCount: 0 })
   const eventQueue = useTimerQueue()
   const [hideHoleCardsUntilShowdown, setHideHoleCardsUntilShowdown] = useState<boolean>(false)
+  const [playerNames, setPlayerNames] = useState<Array<string | null>>(() => Array.from({ length: 9 }, () => null))
   const orchestrator = usePokerOrchestrator({
     schedule: eventQueue.schedule,
     scheduleUnique: eventQueue.scheduleUnique,
@@ -37,6 +38,7 @@ export function usePokerGame() {
     setAutoPlay: (v: boolean) => void
     sit?: (seatIndex: number, name: string) => void
     leave?: () => void
+    reset?: () => void
     dispose: () => void
   }
   const runtimeRef = useRef<RuntimeLike | null>(null)
@@ -209,6 +211,64 @@ export function usePokerGame() {
     orchestrator.scheduleHoleReveal(table, hideHoleCardsUntilShowdown, mySeatIndex)
   }, [table.handId, table.buttonIndex, table.seats.length, table.street, table.status, hideHoleCardsUntilShowdown, mySeatIndex, orchestrator.scheduleHoleReveal])
 
+  // Reset the entire local game state and runtime
+  function resetGame() {
+    try { eventQueue.clearAll() } catch {}
+    setAutoPlay(false)
+    lastRemoteAutoRef.current = null
+    setRevealed({ holeCounts: Array.from({ length: 9 }, () => 0), boardCount: 0 })
+    setHistories([])
+    setHistoryLines([])
+    setReview(null)
+    handStartStacksRef.current = null
+    handEndLoggedRef.current = 0
+    const wsUrl = (import.meta as any).env?.VITE_WS_URL as string | undefined
+    if (wsUrl) {
+      // Ask server to reset table in place
+      runtimeRef.current?.reset?.()
+      return
+    }
+    // Local-only reset: Dispose runtime and re-create in local mode
+    try { runtimeRef.current?.dispose() } catch {}
+    runtimeRef.current = null
+    setTable(() => {
+      const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
+      return createInitialPokerTable(numPlayers, cpuSeats, startingStack)
+    })
+    const cb = {
+      onState: (s: PokerTableState) => setTable(s),
+      onAction: (handId: number, seat: number, action: BettingAction, toCall: number, street: PokerTableState['street']) => {
+        appendEvent(handId, { ts: Date.now(), type: 'action', seat, action: action.type, amount: (action as any).amount ?? null, toCall, street })
+      },
+      onDeal: (handId: number, street: any, cardCodes: string[]) => {
+        const type = street === 'flop' ? 'deal_flop' : street === 'turn' ? 'deal_turn' : 'deal_river'
+        appendEvent(handId, { ts: Date.now(), type: type as any, cards: cardCodes as any })
+      },
+      onHandStart: (handId: number, buttonIndex: number, smallBlind: number, bigBlind: number) => {
+        appendEvent(handId, { ts: Date.now(), type: 'hand_start', handId, buttonIndex, smallBlind, bigBlind } as any)
+      },
+      onPostBlind: (seat: number, amount: number) => {
+        const hid = (runtimeRef.current as any)?.['state']?.handId ?? table.handId
+        appendEvent(hid, { ts: Date.now(), type: 'post_blind', seat, amount } as any)
+      },
+      onHandSetup: (setup: any) => {
+        appendEvent(setup.handId, { ts: Date.now(), type: 'hand_setup', ...setup } as any)
+      },
+      onSeatUpdate: (m: { seatIndex: number; isCPU: boolean; playerId: string | null; playerName: string | null }) => {
+        setPlayerNames((prev) => {
+          const next = [...prev]
+          next[m.seatIndex] = m.playerName
+          return next
+        })
+      },
+      onYouSeatChange: (seatIndex: number | null) => setMySeatIndex(seatIndex),
+      onAutoplay: (auto: boolean) => { lastRemoteAutoRef.current = auto; setAutoPlay(auto) },
+    }
+    const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
+    const rt = new PokerRuntime({ seats: numPlayers, cpuSeats, startingStack }, cb as any)
+    runtimeRef.current = rt as unknown as RuntimeLike
+  }
+
   const available = useMemo(() => {
     if (mySeatIndex == null || table.currentToAct !== mySeatIndex) return []
     return getAvailableActions(table)
@@ -239,7 +299,13 @@ export function usePokerGame() {
       onHandSetup: (setup: any) => {
         appendEvent(setup.handId, { ts: Date.now(), type: 'hand_setup', ...setup } as any)
       },
-      onSeatUpdate: (_m: any) => {},
+      onSeatUpdate: (m: { seatIndex: number; isCPU: boolean; playerId: string | null; playerName: string | null }) => {
+        setPlayerNames((prev) => {
+          const next = [...prev]
+          next[m.seatIndex] = m.playerName
+          return next
+        })
+      },
       onYouSeatChange: (seatIndex: number | null) => setMySeatIndex(seatIndex),
       onAutoplay: (auto: boolean) => { lastRemoteAutoRef.current = auto; setAutoPlay(auto) },
     }
@@ -250,6 +316,8 @@ export function usePokerGame() {
       const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
       const rt = new PokerRuntime({ seats: numPlayers, cpuSeats, startingStack }, cb as any)
       runtimeRef.current = rt as unknown as RuntimeLike
+      // Local runtime has no concept of remote seating; treat seat 0 as the player's seat
+      setMySeatIndex(0)
     }
     // start first hand is driven by UI control (Deal button)
     return () => { runtimeRef.current?.dispose(); runtimeRef.current = null }
@@ -368,6 +436,15 @@ export function usePokerGame() {
   function reviewPrevStep() { if (review) reviewToStep(review.step - 1) }
   function endReview() { setReview(null) }
 
+  // Rename current player (reuses 'sit' to update name; only allowed when not in hand)
+  function renameCurrentPlayer(newName: string) {
+    if (!newName) return
+    if (mySeatIndex == null) return
+    if (table.status === 'in_hand') return
+    try { sessionStorage.setItem('playerName', newName) } catch {}
+    runtimeRef.current?.sit?.(mySeatIndex, newName)
+  }
+
   return {
     table,
     mySeatIndex,
@@ -392,6 +469,7 @@ export function usePokerGame() {
     call,
     bet,
     raise,
+    resetGame,
     loadFromSetup,
     loadFromHistory,
     replayHistory,
@@ -401,6 +479,8 @@ export function usePokerGame() {
     reviewNextStep,
     reviewPrevStep,
     endReview,
+    playerNames,
+    renameCurrentPlayer,
     // seating control API (no-ops in local mode)
     sit: (seatIndex: number, name: string) => runtimeRef.current?.sit?.(seatIndex, name),
     leave: () => runtimeRef.current?.leave?.(),

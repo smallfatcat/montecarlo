@@ -6,6 +6,7 @@ export function PokerTableHorseshoeControls(props: {
   autoPlay: boolean
   onToggleAutoPlay: (v: boolean) => void
   onDealNext: () => void
+  onResetGame?: () => void
   available: BettingActionType[]
   onFold: () => void
   onCheck: () => void
@@ -23,12 +24,16 @@ export function PokerTableHorseshoeControls(props: {
   onReviewNext?: () => void
   onEndReview?: () => void
   onOpenHistory?: () => void
+  mySeatIndex?: number | null
+  playerNames?: Array<string | null>
+  onRenameMe?: (newName: string) => void
 }) {
   const {
     table,
     autoPlay,
     onToggleAutoPlay,
     onDealNext,
+    onResetGame,
     available,
     onFold,
     onCheck,
@@ -46,6 +51,9 @@ export function PokerTableHorseshoeControls(props: {
     onReviewNext,
     onEndReview,
     onOpenHistory,
+    mySeatIndex,
+    playerNames,
+    onRenameMe,
   } = props
 
   const [betSize, setBetSize] = useState<'33'|'50'|'75'|'pot'|'shove'>('50')
@@ -53,7 +61,19 @@ export function PokerTableHorseshoeControls(props: {
   return (
     <div id="poker-controlbar" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
       <button onClick={() => onDealNext()} disabled={table.status === 'in_hand' || table.gameOver}>Deal</button>
+      {onResetGame && <button onClick={() => onResetGame()} style={{ marginLeft: 4 }}>Reset Game</button>}
       <label><input type="checkbox" checked={autoPlay} onChange={(e) => onToggleAutoPlay(e.target.checked)} /> Autoplay</label>
+      <span className="sep" />
+      <label title="Your display name shown on your seat">
+        Name: <input
+          type="text"
+          value={(mySeatIndex != null ? (playerNames?.[mySeatIndex] || '') : '')}
+          placeholder={mySeatIndex != null ? `Player ${mySeatIndex}` : 'Spectator'}
+          onChange={(e) => onRenameMe?.(e.target.value)}
+          disabled={mySeatIndex == null || table.status === 'in_hand'}
+          style={{ width: 140 }}
+        />
+      </label>
       <label title="Hide all hole cards until showdown (except your own)">
         <input type="checkbox" checked={hideHoleCardsUntilShowdown} onChange={(e) => onToggleHideHoleCards(e.target.checked)} />
         Hide hole cards

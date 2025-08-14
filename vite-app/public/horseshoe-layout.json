@@ -1,128 +1,200 @@
 {
   "seats": {
     "0": {
-      "left": 1087,
-      "top": 187,
+      "left": 1095,
+      "top": 155,
       "width": 200,
       "height": 214
     },
     "1": {
-      "left": 1087,
-      "top": 537,
+      "left": 1092,
+      "top": 542,
       "width": 200,
       "height": 214
     },
     "2": {
-      "left": 722,
-      "top": 542,
+      "left": 774,
+      "top": 544,
       "width": 200,
       "height": 214
     },
     "3": {
-      "left": 432,
-      "top": 542,
+      "left": 437,
+      "top": 547,
       "width": 200,
       "height": 214
     },
     "4": {
-      "left": 127,
-      "top": 537,
+      "left": 132,
+      "top": 542,
       "width": 200,
       "height": 214
     },
     "5": {
-      "left": 127,
-      "top": 187,
+      "left": 135,
+      "top": 155,
       "width": 200,
       "height": 214
     }
   },
   "bets": {
     "0": {
-      "left": 913,
-      "top": 163,
+      "left": 918,
+      "top": 168,
       "width": 60,
       "height": 40
     },
     "1": {
-      "left": 937,
-      "top": 387,
+      "left": 942,
+      "top": 392,
       "width": 22.015625,
       "height": 14
     },
     "2": {
-      "left": 721,
-      "top": 401,
+      "left": 726,
+      "top": 406,
       "width": 22.015625,
       "height": 14
     },
     "3": {
-      "left": 421,
-      "top": 401,
+      "left": 426,
+      "top": 406,
       "width": 22.015625,
       "height": 14
     },
     "4": {
-      "left": 277,
-      "top": 387,
+      "left": 282,
+      "top": 392,
       "width": 22.015625,
       "height": 14
     },
     "5": {
-      "left": 283,
-      "top": 153,
+      "left": 288,
+      "top": 158,
       "width": 22.015625,
       "height": 14
     }
   },
   "stacks": {
     "0": {
-      "left": 1074,
-      "top": 324,
+      "left": 1079,
+      "top": 329,
       "width": 113.46875,
       "height": 30
     },
     "1": {
-      "left": 1082,
-      "top": 682,
+      "left": 1087,
+      "top": 687,
       "width": 113.46875,
       "height": 30
     },
     "2": {
-      "left": 722,
-      "top": 682,
+      "left": 755,
+      "top": 695,
       "width": 113.46875,
       "height": 30
     },
     "3": {
-      "left": 422,
-      "top": 682,
+      "left": 428,
+      "top": 688,
       "width": 113.46875,
       "height": 30
     },
     "4": {
-      "left": 122,
-      "top": 682,
+      "left": 127,
+      "top": 688,
       "width": 113.46875,
       "height": 30
     },
     "5": {
-      "left": 124,
-      "top": 324,
+      "left": 129,
+      "top": 329,
       "width": 113.46875,
       "height": 30
     }
   },
   "board": {
-    "left": 326,
-    "top": 156,
+    "left": 322,
+    "top": 232,
     "width": 0,
     "height": 0
   },
   "pot": {
-    "left": 556,
-    "top": 336,
+    "left": 563,
+    "top": 403,
     "width": 62.71875,
     "height": 24
+  },
+  "controls": {
+    "left": 950,
+    "top": 215,
+    "width": 400,
+    "height": 220
+  },
+  "controlsBox": {
+    "width": 200,
+    "height": 240
+  },
+  "controlsChildren": {
+    "check": {
+      "left": 50,
+      "top": 30,
+      "width": 80,
+      "height": 45
+    },
+    "call": {
+      "left": 50,
+      "top": 80,
+      "width": 80,
+      "height": 45
+    },
+    "fold": {
+      "left": 50,
+      "top": 130,
+      "width": 80,
+      "height": 45
+    },
+    "betBtn": {
+      "left": 50,
+      "top": 180,
+      "width": 80,
+      "height": 45
+    },
+    "raise": {
+      "left": 50,
+      "top": 230,
+      "width": 80,
+      "height": 45
+    },
+    "betLabel": {
+      "left": 160,
+      "top": 50,
+      "width": 25,
+      "height": 25
+    },
+    "betInput": {
+      "left": 140,
+      "top": 20,
+      "width": 70,
+      "height": 25
+    },
+    "potSlider": {
+      "left": 125,
+      "top": 140,
+      "width": 125,
+      "height": 130
+    },
+    "stackSlider": {
+      "left": 180,
+      "top": 140,
+      "width": 125,
+      "height": 130
+    },
+    "stackLabel": {
+      "left": 150,
+      "top": 230,
+      "width": 100,
+      "height": 25
+    }
   }
 }

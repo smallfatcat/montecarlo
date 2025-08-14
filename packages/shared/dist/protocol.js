@@ -13,6 +13,7 @@ export const C2S = {
     sit: z.object({ tableId: z.string().default('table-1'), seatIndex: z.number().int().nonnegative(), name: z.string().min(1).max(32).default('Player') }),
     leave: z.object({ tableId: z.string().default('table-1') }),
     ping: z.object({ ts: z.number().int() }),
+    resetTable: z.object({ tableId: z.string().default('table-1') }),
 };
 // Server -> Client messages
 export const S2C = {

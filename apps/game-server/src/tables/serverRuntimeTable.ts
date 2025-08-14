@@ -16,6 +16,7 @@ export interface TableApi {
   removeClient(socket: Socket): void
   sit(socket: Socket, seatIndex: number, name: string): { ok: true } | { ok: false; error: string }
   leave(socket: Socket): { ok: true } | { ok: false; error: string }
+  reset(): void
 }
 
 export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, opts?: { seats?: number; startingStack?: number }): TableApi {
@@ -31,7 +32,7 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
   const seatOwners = new Map<string, number>()
   const playerNames = new Map<string, string>()
 
-  const runtime = new PokerRuntime({ seats, cpuSeats, startingStack }, {
+  let runtime = new PokerRuntime({ seats, cpuSeats, startingStack }, {
     onState: (s) => {
       lastState = s
       io.to(room).emit('state', s)
@@ -142,6 +143,41 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
       try { (runtime as any).setSeatCpu?.(seatIdx, true) } catch {}
       io.to(room).emit('seat_update', { seatIndex: seatIdx, isCPU: true, playerId: null, playerName: null })
       return { ok: true }
+    },
+    reset() {
+      try { (runtime as any).dispose?.() } catch {}
+      runtime = new PokerRuntime({ seats, cpuSeats, startingStack }, {
+        onState: (s) => {
+          lastState = s
+          io.to(room).emit('state', s)
+          try { console.log('[server-runtime] state', { handId: s.handId, street: s.street, toAct: s.currentToAct }) } catch {}
+        },
+        onAction: (handId, seat, action, toCall, street) => {
+          io.to(room).emit('action', { handId, seat, action, toCall, street })
+          try { console.log('[server-runtime] action', { handId, seat, action: (action as any)?.type, toCall, street }) } catch {}
+        },
+        onDeal: (handId, street, cardCodes) => {
+          io.to(room).emit('deal', { handId, street, cards: cardCodes })
+          try { console.log('[server-runtime] deal', { handId, street, cards: (cardCodes as any).join(' ') }) } catch {}
+        },
+        onHandStart: (handId, buttonIndex, smallBlind, bigBlind) => {
+          io.to(room).emit('hand_start', { handId, buttonIndex, smallBlind, bigBlind })
+          try { console.log('[server-runtime] hand_start', { handId, buttonIndex, smallBlind, bigBlind }) } catch {}
+        },
+        onPostBlind: (seat, amount) => {
+          const hid = (lastState as any)?.handId ?? null
+          io.to(room).emit('post_blind', { handId: hid, seat, amount })
+          try { console.log('[server-runtime] post_blind', { handId: hid, seat, amount }) } catch {}
+        },
+        onHandSetup: (setup) => {
+          io.to(room).emit('hand_setup', setup)
+          try { console.log('[server-runtime] hand_setup', { handId: setup.handId, seats: setup.seats.length, deckRemaining: setup.deckRemaining }) } catch {}
+        },
+      })
+      autoPlay = false
+      lastState = (runtime as any)['state'] as PokerTableState
+      io.to(room).emit('state', lastState as PokerTableState)
+      io.in(room).emit('autoplay', { auto: autoPlay })
     },
   }
 }

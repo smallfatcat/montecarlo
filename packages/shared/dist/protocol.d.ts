@@ -89,6 +89,13 @@ export declare const C2S: {
     }, {
         ts: number;
     }>;
+    resetTable: z.ZodObject<{
+        tableId: z.ZodDefault<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        tableId: string;
+    }, {
+        tableId?: string | undefined;
+    }>;
 };
 export declare const S2C: {
     ready: z.ZodObject<{

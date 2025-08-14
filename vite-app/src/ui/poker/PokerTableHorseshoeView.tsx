@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { PokerTableState } from '../../poker/types'
+import type { PokerTableState, BettingActionType } from '../../poker/types'
+import { PokerInlineControls } from './PokerInlineControls'
+import * as ReactDOM from 'react-dom'
 import { Card3D } from '../components/Card3D'
 import { PokerSeat } from './PokerSeat'
 import { CONFIG } from '../../config'
@@ -17,12 +19,20 @@ export interface PokerTableHorseshoeViewProps {
   onSitHere?: (seatIndex: number) => void
   onLeaveSeat?: (seatIndex: number) => void
   mySeatIndex?: number | null
+  playerNames?: Array<string | null>
   // Derived display
   winnersSet?: Set<number>
   highlightSet?: Set<string>
   showdownText?: string
   // Equity (percentages)
   equity?: { winPct: number[]; tiePct: number[]; running: boolean } | null
+  // Inline controls
+  available?: BettingActionType[]
+  onFold?: () => void
+  onCheck?: () => void
+  onCall?: () => void
+  onBet?: (amount?: number) => void
+  onRaise?: (amount?: number) => void
 }
 
 export interface PokerTableViewHandle {
@@ -38,6 +48,9 @@ type LayoutOverrides = {
   showdown?: Rect
   bets?: Record<number, Rect>
   stacks?: Record<number, Rect>
+  controls?: Rect
+  controlsChildren?: Record<string, Rect>
+  controlsBox?: { width?: number; height?: number }
 }
 
 export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTableHorseshoeViewProps>(function PokerTableHorseshoeView(props, ref) {
@@ -49,6 +62,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
     onSitHere,
     onLeaveSeat,
     mySeatIndex,
+    playerNames,
     winnersSet: winnersSetProp,
     highlightSet: highlightSetProp,
     showdownText: showdownTextProp,
@@ -76,6 +90,9 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             showdown: (data as any).showdown,
             bets: (data as any).bets ?? {},
             stacks: (data as any).stacks ?? {},
+            controls: (data as any).controls,
+            controlsChildren: (data as any).controlsChildren ?? {},
+            controlsBox: (data as any).controlsBox ?? {},
           }
           defaultFromFileRef.current = next
           setLayoutOverrides(next)
@@ -99,8 +116,9 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
   function getShowdownPos(): Rect | null { return layoutOverrides.showdown ?? null }
   function getBetPos(seatIndex: number): Rect | null { return layoutOverrides.bets?.[seatIndex] ?? null }
   function getStackPos(seatIndex: number): Rect | null { return layoutOverrides.stacks?.[seatIndex] ?? null }
+  function getControlsPos(): Rect | null { return layoutOverrides.controls ?? null }
 
-  function makeDragMouseHandlers(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet' | 'stack', index?: number) {
+  function makeDragMouseHandlers(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet' | 'stack' | 'controls', index?: number) {
     if (!editLayoutMode) return {}
     return {
       onMouseDown: (e: React.MouseEvent) => {
@@ -112,6 +130,12 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
           else if (kind === 'bet') { const b = layoutOverrides.bets?.[index as number]; if (b) return b }
           else if (kind === 'stack') { const s = layoutOverrides.stacks?.[index as number]; if (s) return s }
           else { const v = (layoutOverrides as any)[kind]; if (v) return v }
+          if (kind === 'controls') {
+            // Use viewport coordinates for global controls overlay
+            const left = e.clientX
+            const top = e.clientY
+            return { left, top }
+          }
           const rect = containerRef.current?.getBoundingClientRect()
           const left = rect ? e.clientX - rect.left : 0
           const top = rect ? e.clientY - rect.top : 0
@@ -126,6 +150,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             if (kind === 'seat') { const i = index as number; return { ...prev, seats: { ...prev.seats, [i]: { ...prev.seats[i], ...next } } } }
             if (kind === 'bet') { const i = index as number; return { ...prev, bets: { ...(prev.bets ?? {}), [i]: { ...(prev.bets?.[i] ?? {}), ...next } } } }
             if (kind === 'stack') { const i = index as number; return { ...prev, stacks: { ...(prev.stacks ?? {}), [i]: { ...(prev.stacks?.[i] ?? {}), ...next } } } }
+            if (kind === 'controls') { return { ...prev, controls: { ...((prev as any).controls ?? {}), ...next } } as LayoutOverrides }
             const prevRect: Rect = (prev as any)[kind] ?? {}
             return { ...prev, [kind]: { ...prevRect, ...next } } as LayoutOverrides
           })
@@ -137,17 +162,18 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
     }
   }
 
-  function elementDomId(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet' | 'stack', index?: number) {
+  function elementDomId(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet' | 'stack' | 'controls', index?: number) {
     if (kind === 'seat') return `horseshoe-seat-wrapper-${index}`
     if (kind === 'bet') return `horseshoe-bet-${index}`
     if (kind === 'stack') return `horseshoe-stack-${index}`
     if (kind === 'board') return `horseshoe-board`
     if (kind === 'pot') return `horseshoe-pot`
     if (kind === 'showdown') return `horseshoe-showdown`
+    if (kind === 'controls') return `horseshoe-controls`
     return ''
   }
 
-  function makeResizeMouseHandlers(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet' | 'stack', index?: number) {
+  function makeResizeMouseHandlers(kind: 'seat' | 'board' | 'pot' | 'showdown' | 'bet' | 'stack' | 'controls', index?: number) {
     if (!editLayoutMode) return {}
     return {
       onMouseDown: (e: React.MouseEvent) => {
@@ -158,6 +184,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
         const getCurrentRect = (): Rect => {
           if (kind === 'seat' && keyIndex !== undefined) return layoutOverrides.seats[keyIndex] ?? {}
           if (kind === 'bet' && keyIndex !== undefined) return layoutOverrides.bets?.[keyIndex] ?? {}
+          if (kind === 'controls') return (layoutOverrides as any)['controls'] ?? {}
           return (layoutOverrides as any)[kind] ?? {}
         }
         let initialWidth = getCurrentRect().width
@@ -168,11 +195,11 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
           const el = document.getElementById(elementDomId(kind, keyIndex)) as HTMLElement | null
           if (el) {
             const rect = el.getBoundingClientRect()
-            const cont = containerRef.current?.getBoundingClientRect()
+            const cont = kind === 'controls' ? null : (containerRef.current?.getBoundingClientRect() || null)
             initialWidth = initialWidth ?? rect.width
             initialHeight = initialHeight ?? rect.height
-            if (initialCenterLeft === undefined && cont) initialCenterLeft = (rect.left - cont.left) + (rect.width / 2)
-            if (initialCenterTop === undefined && cont) initialCenterTop = (rect.top - cont.top) + (rect.height / 2)
+            if (initialCenterLeft === undefined) initialCenterLeft = cont ? (rect.left - cont.left) + (rect.width / 2) : (rect.left + rect.width / 2)
+            if (initialCenterTop === undefined) initialCenterTop = cont ? (rect.top - cont.top) + (rect.height / 2) : (rect.top + rect.height / 2)
           } else {
             initialWidth = initialWidth ?? 200
             initialHeight = initialHeight ?? 100
@@ -207,6 +234,10 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
               const prevRect = prev.stacks?.[keyIndex] ?? {}
               return { ...prev, stacks: { ...(prev.stacks ?? {}), [keyIndex]: { ...prevRect, width: nextW, height: nextH, left: nextCenterLeft, top: nextCenterTop } } }
             }
+            if (kind === 'controls') {
+              const prevRect: Rect = (prev as any)['controls'] ?? {}
+              return { ...prev, controls: { ...prevRect, width: nextW, height: nextH, left: nextCenterLeft, top: nextCenterTop } } as LayoutOverrides
+            }
             const prevRect: Rect = (prev as any)[kind] ?? {}
             return { ...prev, [kind]: { ...prevRect, width: nextW, height: nextH, left: nextCenterLeft, top: nextCenterTop } } as LayoutOverrides
           })
@@ -218,68 +249,55 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
     }
   }
 
-  // --- Animated chip moves (bet stacks fly into pot on street close) ---
+  // --- Animated chip moves orchestrator ---
+  // We maintain a rendered view of each seat's committed chips so bets stay visible until end of street.
   const [chipMoves, setChipMoves] = useState<Array<{ key: string; from: { x: number; y: number }; to: { x: number; y: number }; amount: number }>>([])
   const prevCommittedRef = useRef<number[] | null>(null)
   const prevStacksRef = useRef<number[] | null>(null)
   const prevStatusRef = useRef<PokerTableState['status'] | null>(null)
   const prevStreetRef = useRef<PokerTableState['street'] | null>(null)
-  const [hiddenBets, setHiddenBets] = useState<Set<number>>(new Set())
-  const betTimersRef = useRef<Map<number, number>>(new Map())
+  const [renderCommitted, setRenderCommitted] = useState<number[]>(() => table.seats.map((s) => s.committedThisStreet))
   const [potHidden, setPotHidden] = useState<boolean>(false)
   const potTimerRef = useRef<number | null>(null)
 
+  // Re-sync rendered commitments at the start of each hand and whenever seat count changes
+  useEffect(() => {
+    setRenderCommitted(table.seats.map((s) => s.committedThisStreet))
+  }, [table.handId, table.seats.length])
+
   useEffect(() => {
     const currCommitted = table.seats.map((s) => s.committedThisStreet)
-    const prevCommitted = prevCommittedRef.current
-    // const sumCurr = currCommitted.reduce((a, b) => a + b, 0)
-    // const sumPrev = (prevCommitted ?? []).reduce((a, b) => a + b, 0)
+    const prevCommitted = prevCommittedRef.current ?? Array.from({ length: currCommitted.length }, () => 0)
     const potPos = getPotPos()
     const pendingMoves: Array<{ key: string; from: { x: number; y: number }; to: { x: number; y: number }; amount: number }> = []
 
-    // Detect commit increases: chips move from stack -> bet spot
-    if (prevCommitted) {
-      for (let i = 0; i < currCommitted.length; i += 1) {
-        const delta = (currCommitted[i] ?? 0) - (prevCommitted[i] ?? 0)
-        if (delta > 0) {
-          const stackPos = getStackPos(i)
-          const betPos = getBetPos(i)
-          const fromX = stackPos?.left ?? centerX
-          const fromY = stackPos?.top ?? centerY
-          const toX = betPos?.left ?? centerX
-          const toY = betPos?.top ?? centerY
-          pendingMoves.push({
-            key: `stack2bet-${table.handId}-${table.street ?? 'pre'}-${i}-${Date.now()}`,
-            from: { x: fromX, y: fromY },
-            to: { x: toX, y: toY },
-            amount: delta,
-          })
-          // Hide bet until chips arrive
-          setHiddenBets((prev) => {
-            const next = new Set(prev)
-            next.add(i)
-            return next
-          })
-          const durationMs = CONFIG.poker.animations?.chipFlyDurationMs ?? 250
-          const existing = betTimersRef.current.get(i)
-          if (existing != null) window.clearTimeout(existing)
-          const tid = window.setTimeout(() => {
-            setHiddenBets((prev) => {
-              const next = new Set(prev)
-              next.delete(i)
-              return next
-            })
-            betTimersRef.current.delete(i)
-          }, durationMs) as unknown as number
-          betTimersRef.current.set(i, tid)
-        }
+    // Detect commit increases: visual move stack -> bet spot for the delta; keep existing bet visible
+    for (let i = 0; i < currCommitted.length; i += 1) {
+      const delta = (currCommitted[i] ?? 0) - (prevCommitted[i] ?? 0)
+      if (delta > 0) {
+        const stackPos = getStackPos(i)
+        const betPos = getBetPos(i)
+        const fromX = stackPos?.left ?? centerX
+        const fromY = stackPos?.top ?? centerY
+        const toX = betPos?.left ?? centerX
+        const toY = betPos?.top ?? centerY
+        pendingMoves.push({
+          key: `stack2bet-${table.handId}-${table.street ?? 'pre'}-${i}-${Date.now()}`,
+          from: { x: fromX, y: fromY },
+          to: { x: toX, y: toY },
+          amount: delta,
+        })
+        const durationMs = CONFIG.poker.animations?.chipFlyDurationMs ?? 250
+        window.setTimeout(() => {
+          setRenderCommitted((prev) => prev.map((v, idx) => (idx === i ? v + delta : v)))
+        }, durationMs)
       }
     }
 
     // Detect end-of-street (street change) and move each seat's last bet to pot
     // More robust than sum check: trigger when street changed and a seat's committed reset to 0
     const prevStreet = prevStreetRef.current
-    if (potPos && prevCommitted && prevStreet !== table.street) {
+    if (potPos && prevCommittedRef.current && prevStreet !== table.street) {
       for (let i = 0; i < prevCommitted.length; i += 1) {
         const was = prevCommitted[i] ?? 0
         const now = currCommitted[i] ?? 0
@@ -293,12 +311,10 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             to: { x: potPos.left ?? centerX, y: potPos.top ?? centerY },
             amount: was,
           })
-          // Hide bet as it leaves
-          setHiddenBets((prev) => {
-            const next = new Set(prev)
-            next.add(i)
-            return next
-          })
+          const durationMs = CONFIG.poker.animations?.chipFlyDurationMs ?? 250
+          window.setTimeout(() => {
+            setRenderCommitted((prev) => prev.map((v, idx) => (idx === i ? 0 : v)))
+          }, durationMs)
         }
       }
       // Hide pot until chips arrive
@@ -311,20 +327,46 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
       }, durationMs) as unknown as number
     }
 
-    // Detect payouts at hand end: stacks increased -> move from pot -> stack
+    // Detect payouts at hand end: ensure bets -> pot, then pot -> winners
     const prevStacks = prevStacksRef.current
     const prevStatus = prevStatusRef.current
     if (potPos && prevStacks && (table.status === 'hand_over') && prevStatus !== 'hand_over') {
+      const durationMs = CONFIG.poker.animations?.chipFlyDurationMs ?? 250
+      const stage1Moves: typeof pendingMoves = [] // bets -> pot
+      const stage2Moves: typeof pendingMoves = [] // pot -> stacks
+
+      // Stage 1: any outstanding bets (renderCommitted) move into pot
+      for (let i = 0; i < renderCommitted.length; i += 1) {
+        const outstanding = renderCommitted[i] ?? 0
+        if (outstanding > 0) {
+          const betPos = getBetPos(i)
+          const fromX = betPos?.left ?? centerX
+          const fromY = betPos?.top ?? centerY
+          stage1Moves.push({
+            key: `bet2pot-payout-${table.handId}-${i}-${Date.now()}`,
+            from: { x: fromX, y: fromY },
+            to: { x: potPos.left ?? centerX, y: potPos.top ?? centerY },
+            amount: outstanding,
+          })
+        }
+      }
+      if (stage1Moves.length > 0) {
+        // After arrival, clear rendered bets
+        window.setTimeout(() => {
+          setRenderCommitted((prev) => prev.map(() => 0))
+        }, durationMs)
+      }
+
+      // Stage 2: pay winners from pot to stacks based on final stack deltas
       for (let i = 0; i < table.seats.length; i += 1) {
         const delta = (table.seats[i]?.stack ?? 0) - (prevStacks[i] ?? 0)
         if (delta > 0) {
           const stackPos = getStackPos(i)
           const toX = stackPos?.left ?? centerX
           const toY = stackPos?.top ?? centerY
-          // Slight jitter per seat to avoid perfect overlap when multiple winners
           const jitterX = (i % 2 === 0 ? -1 : 1) * Math.min(12, 4 * (i % 3))
           const jitterY = (i % 2 === 1 ? -1 : 1) * Math.min(12, 3 * (i % 2))
-          pendingMoves.push({
+          stage2Moves.push({
             key: `pot2stack-${table.handId}-${i}-${Date.now()}`,
             from: { x: (potPos.left ?? centerX) + jitterX, y: (potPos.top ?? centerY) + jitterY },
             to: { x: toX, y: toY },
@@ -332,14 +374,36 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
           })
         }
       }
-      // Hide pot while paying out
-      const durationMs = CONFIG.poker.animations?.chipFlyDurationMs ?? 250
-      setPotHidden(true)
-      if (potTimerRef.current != null) window.clearTimeout(potTimerRef.current)
-      potTimerRef.current = window.setTimeout(() => {
-        setPotHidden(false)
-        potTimerRef.current = null
-      }, durationMs) as unknown as number
+
+      // Sequence: if we have stage1, play it, then stage2; else play stage2 immediately
+      if (stage1Moves.length > 0) {
+        setChipMoves(stage1Moves)
+        // Show pot during collection; hide pot only when paying out
+        if (stage2Moves.length > 0) {
+          if (potTimerRef.current != null) window.clearTimeout(potTimerRef.current)
+          potTimerRef.current = window.setTimeout(() => {
+            // Begin payout: briefly hide pot to avoid double visuals while chips depart
+            setPotHidden(true)
+            setChipMoves(stage2Moves)
+            // Restore pot after payout flight
+            const tid = window.setTimeout(() => {
+              setChipMoves([])
+              setPotHidden(false)
+            }, durationMs)
+            potTimerRef.current = tid as unknown as number
+          }, durationMs) as unknown as number
+        }
+      } else if (stage2Moves.length > 0) {
+        // No outstanding bets: pay directly from pot
+        setPotHidden(true)
+        setChipMoves(stage2Moves)
+        if (potTimerRef.current != null) window.clearTimeout(potTimerRef.current)
+        potTimerRef.current = window.setTimeout(() => {
+          setChipMoves([])
+          setPotHidden(false)
+          potTimerRef.current = null
+        }, durationMs) as unknown as number
+      }
     }
 
     let cleanup: (() => void) | undefined
@@ -365,6 +429,11 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
       const r = el.getBoundingClientRect()
       return { left: (r.left - contRect.left) + r.width / 2, top: (r.top - contRect.top) + r.height / 2, width: r.width, height: r.height }
     }
+    const toViewportCenterRect = (el: HTMLElement | null): Rect | null => {
+      if (!el) return null
+      const r = el.getBoundingClientRect()
+      return { left: r.left + r.width / 2, top: r.top + r.height / 2, width: r.width, height: r.height }
+    }
     const seats: Record<number, Rect> = {}
     const bets: Record<number, Rect> = {}
     const stacks: Record<number, Rect> = {}
@@ -382,7 +451,30 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
     const board = toCenterRect(document.getElementById('horseshoe-board'))
     const pot = toCenterRect(document.getElementById('horseshoe-pot'))
     const showdown = toCenterRect(document.getElementById('horseshoe-showdown'))
-    const out: LayoutOverrides = { seats, bets, stacks, board: board ?? undefined, pot: pot ?? undefined, showdown: showdown ?? undefined }
+    const controlsEl = document.getElementById('horseshoe-controls') as HTMLElement | null
+    const controls = toViewportCenterRect(controlsEl)
+
+    // Collect child control offsets relative to the control box
+    const controlsChildren: Record<string, Rect> = {}
+    if (controlsEl) {
+      const cRect = controlsEl.getBoundingClientRect()
+      const centerFor = (id: string): Rect | null => {
+        const el = document.getElementById(id) as HTMLElement | null
+        if (!el) return null
+        const r = el.getBoundingClientRect()
+        return { left: (r.left - cRect.left) + r.width / 2, top: (r.top - cRect.top) + r.height / 2, width: r.width, height: r.height }
+      }
+      const keys = ['control-check','control-call','control-fold','control-betBtn','control-raise','control-betLabel','control-betInput','control-potSlider','control-stackSlider','control-stackLabel']
+      const mapKey = (domId: string) => domId.replace('control-','')
+      for (const k of keys) {
+        const v = centerFor(k)
+        if (v) controlsChildren[mapKey(k)] = v
+      }
+    } else if (layoutOverrides.controlsChildren) {
+      Object.assign(controlsChildren, layoutOverrides.controlsChildren)
+    }
+
+    const out: LayoutOverrides = { seats, bets, stacks, board: board ?? undefined, pot: pot ?? undefined, showdown: showdown ?? undefined, controls: controls ?? undefined, controlsChildren: Object.keys(controlsChildren).length ? controlsChildren : undefined as any, controlsBox: (layoutOverrides as any).controlsBox ?? {} }
     const data = JSON.stringify(out, null, 2)
     const blob = new Blob([data], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -411,6 +503,11 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
   const pots = useMemo(() => computePots(table), [table])
   const totalPot = useMemo(() => pots.reduce((sum, p) => sum + p.amount, 0), [pots])
   const mainPotAmount = useMemo(() => (pots[0]?.amount ?? 0), [pots])
+  const hasOutstandingBets = useMemo(() => table.seats.some((s) => (s.committedThisStreet || 0) > 0), [table])
+  const previousStreetPotSum = useMemo(() => table.seats.reduce((sum, s) => sum + Math.max(0, Math.floor((s.totalCommitted || 0) - (s.committedThisStreet || 0))), 0), [table])
+  const displayMainPotAmount = useMemo(() => hasOutstandingBets ? previousStreetPotSum : mainPotAmount, [hasOutstandingBets, previousStreetPotSum, mainPotAmount])
+  // Inline control model (player bet sizing via sliders)
+  const CONTROLS_SCALE = 0.8
 
   // Local helper: split amount into denominations like ChipStack
   function splitIntoDenomsLocal(amount: number, denoms: ChipDenomination[] = DEFAULT_DENOMS): Array<{ denom: ChipDenomination; count: number }> {
@@ -497,11 +594,11 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span>Pot:</span>
               <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                <ChipStack amount={mainPotAmount} />
-                <span style={{ opacity: 0.9 }}>{mainPotAmount}</span>
+                <ChipStack amount={displayMainPotAmount} />
+                <span style={{ opacity: 0.9 }}>{displayMainPotAmount}</span>
               </div>
             </div>
-            {pots.length > 1 && (
+            {(!hasOutstandingBets && pots.length > 1) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 12, opacity: 0.95, fontWeight: 600 }}>
                 {pots.slice(1).map((pot, idx) => (
                   <div key={`sidepot-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -514,7 +611,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
                 ))}
               </div>
             )}
-            {pots.length > 1 && (
+            {(!hasOutstandingBets && pots.length > 1) && (
               <div style={{ marginLeft: 12, opacity: 0.8, fontSize: 12 }}>Total: {totalPot}</div>
             )}
           </div>
@@ -549,6 +646,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
                   currentToAct={table.currentToAct}
                   highlightSet={highlightSet}
                   hideStackRow={true}
+                  displayName={playerNames?.[i] || (s.isCPU ? `CPU ${i}` : `Player ${i}`)}
                   showPerSeatEquity={(!hideHoleCardsUntilShowdown) || (table.status === 'hand_over' && table.community.length >= 5) ? (!s.hasFolded && s.hole.length === 2) : (i === (mySeatIndex ?? -1))}
                   equityWinPct={equity ? equity.winPct[i] ?? null : null}
                   equityTiePct={equity ? equity.tiePct[i] ?? null : null}
@@ -568,10 +666,10 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
               </div>
             ),
             (
-              <div id={`horseshoe-bet-${i}`} key={`bet-${i}`} style={{ position: 'absolute', left: betPos?.left ?? centerX, top: betPos?.top ?? centerY, transform: 'translate(-50%, -50%)', display: hiddenBets.has(i) ? 'none' : 'flex', alignItems: 'center', cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined, width: betPos?.width, height: betPos?.height }} {...makeDragMouseHandlers('bet', i)}>
+              <div id={`horseshoe-bet-${i}`} key={`bet-${i}`} style={{ position: 'absolute', left: betPos?.left ?? centerX, top: betPos?.top ?? centerY, transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined, width: betPos?.width, height: betPos?.height }} {...makeDragMouseHandlers('bet', i)}>
                 <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                  <ChipStack amount={s.committedThisStreet} />
-                  <span style={{ fontSize: 14, lineHeight: 1, opacity: 0.9 }}>{s.committedThisStreet}</span>
+                  <ChipStack amount={renderCommitted[i] ?? 0} />
+                  <span style={{ fontSize: 14, lineHeight: 1, opacity: 0.9 }}>{renderCommitted[i] ?? 0}</span>
                 </div>
                 {editLayoutMode && (
                   <div aria-hidden style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }} {...makeResizeMouseHandlers('bet', i)} />
@@ -592,6 +690,34 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             )
           ]
         })}
+
+        {/* Inline Controls (draggable) */}
+        {(() => { const p = getControlsPos(); if (!p) return null; const myIdx = mySeatIndex ?? -1; const my = (myIdx >= 0) ? table.seats[myIdx] : null; const stackNow = my?.stack ?? 0; const potNow = table.pot.main; const avail = props.available ?? [];
+          const disabled = table.status !== 'in_hand' || (mySeatIndex == null) || (table.currentToAct !== mySeatIndex)
+          return ReactDOM.createPortal(
+            <div id="horseshoe-controls" style={{ position: 'fixed', left: p.left, top: p.top, transform: 'translate(-50%, -50%)', width: p.width ?? 320, height: p.height ?? 220, zIndex: 1000, pointerEvents: 'auto', cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined }} {...makeDragMouseHandlers('controls')}>
+              <PokerInlineControls
+                available={avail}
+                disabled={disabled}
+                pot={potNow}
+                stack={stackNow}
+                onCheck={props.onCheck}
+                onCall={props.onCall}
+                onFold={props.onFold}
+                onBet={props.onBet}
+                onRaise={props.onRaise}
+                scale={CONTROLS_SCALE}
+                editLayout={!!editLayoutMode}
+                layout={(layoutOverrides as any).controlsChildren || undefined}
+                onLayoutChange={(next) => setLayoutOverrides((prev) => ({ ...prev, ...( { controlsChildren: next } as any) }))}
+                boxWidth={(layoutOverrides as any).controlsBox?.width ?? (p.width ?? 320)}
+                boxHeight={(layoutOverrides as any).controlsBox?.height ?? (p.height ?? 220)}
+              />
+              {editLayoutMode && (<div aria-hidden style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }} {...makeResizeMouseHandlers('controls')} />)}
+            </div>,
+            document.body
+          )
+        })()}
       </div>
     </div>
   )
