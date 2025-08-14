@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle }
 import { motion, AnimatePresence } from 'framer-motion'
 import type { PokerTableState, BettingActionType } from '../../poker/types'
 import { PokerInlineControls } from './PokerInlineControls'
-import * as ReactDOM from 'react-dom'
 import { Card3D } from '../components/Card3D'
 import { PokerSeat } from './PokerSeat'
 import { CONFIG } from '../../config'
@@ -131,9 +130,9 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
           else if (kind === 'stack') { const s = layoutOverrides.stacks?.[index as number]; if (s) return s }
           else { const v = (layoutOverrides as any)[kind]; if (v) return v }
           if (kind === 'controls') {
-            // Use viewport coordinates for global controls overlay
-            const left = e.clientX
-            const top = e.clientY
+            const rect = containerRef.current?.getBoundingClientRect()
+            const left = rect ? e.clientX - rect.left : 0
+            const top = rect ? e.clientY - rect.top : 0
             return { left, top }
           }
           const rect = containerRef.current?.getBoundingClientRect()
@@ -195,7 +194,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
           const el = document.getElementById(elementDomId(kind, keyIndex)) as HTMLElement | null
           if (el) {
             const rect = el.getBoundingClientRect()
-            const cont = kind === 'controls' ? null : (containerRef.current?.getBoundingClientRect() || null)
+            const cont = containerRef.current?.getBoundingClientRect() || null
             initialWidth = initialWidth ?? rect.width
             initialHeight = initialHeight ?? rect.height
             if (initialCenterLeft === undefined) initialCenterLeft = cont ? (rect.left - cont.left) + (rect.width / 2) : (rect.left + rect.width / 2)
@@ -236,7 +235,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             }
             if (kind === 'controls') {
               const prevRect: Rect = (prev as any)['controls'] ?? {}
-              return { ...prev, controls: { ...prevRect, width: nextW, height: nextH, left: nextCenterLeft, top: nextCenterTop } } as LayoutOverrides
+              return { ...prev, controls: { ...prevRect, width: nextW, height: nextH, left: startTopLeftX, top: startTopLeftY } } as LayoutOverrides
             }
             const prevRect: Rect = (prev as any)[kind] ?? {}
             return { ...prev, [kind]: { ...prevRect, width: nextW, height: nextH, left: nextCenterLeft, top: nextCenterTop } } as LayoutOverrides
@@ -260,9 +259,12 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
   const [potHidden, setPotHidden] = useState<boolean>(false)
   const potTimerRef = useRef<number | null>(null)
 
-  // Re-sync rendered commitments at the start of each hand and whenever seat count changes
+  // Re-sync rendered commitments at the start of each hand and whenever seat count changes.
+  // Keep prevCommittedRef in sync to avoid double-counting on the first delta detection.
   useEffect(() => {
-    setRenderCommitted(table.seats.map((s) => s.committedThisStreet))
+    const curr = table.seats.map((s) => s.committedThisStreet)
+    setRenderCommitted(curr)
+    prevCommittedRef.current = curr
   }, [table.handId, table.seats.length])
 
   useEffect(() => {
@@ -429,10 +431,10 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
       const r = el.getBoundingClientRect()
       return { left: (r.left - contRect.left) + r.width / 2, top: (r.top - contRect.top) + r.height / 2, width: r.width, height: r.height }
     }
-    const toViewportCenterRect = (el: HTMLElement | null): Rect | null => {
-      if (!el) return null
+    const toTopLeftRect = (el: HTMLElement | null): Rect | null => {
+      if (!el || !contRect) return null
       const r = el.getBoundingClientRect()
-      return { left: r.left + r.width / 2, top: r.top + r.height / 2, width: r.width, height: r.height }
+      return { left: (r.left - contRect.left), top: (r.top - contRect.top), width: r.width, height: r.height }
     }
     const seats: Record<number, Rect> = {}
     const bets: Record<number, Rect> = {}
@@ -452,7 +454,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
     const pot = toCenterRect(document.getElementById('horseshoe-pot'))
     const showdown = toCenterRect(document.getElementById('horseshoe-showdown'))
     const controlsEl = document.getElementById('horseshoe-controls') as HTMLElement | null
-    const controls = toViewportCenterRect(controlsEl)
+    const controls = toTopLeftRect(controlsEl)
 
     // Collect child control offsets relative to the control box
     const controlsChildren: Record<string, Rect> = {}
@@ -507,7 +509,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
   const previousStreetPotSum = useMemo(() => table.seats.reduce((sum, s) => sum + Math.max(0, Math.floor((s.totalCommitted || 0) - (s.committedThisStreet || 0))), 0), [table])
   const displayMainPotAmount = useMemo(() => hasOutstandingBets ? previousStreetPotSum : mainPotAmount, [hasOutstandingBets, previousStreetPotSum, mainPotAmount])
   // Inline control model (player bet sizing via sliders)
-  const CONTROLS_SCALE = 0.8
+  const CONTROLS_SCALE = 1.0
 
   // Local helper: split amount into denominations like ChipStack
   function splitIntoDenomsLocal(amount: number, denoms: ChipDenomination[] = DEFAULT_DENOMS): Array<{ denom: ChipDenomination; count: number }> {
@@ -694,13 +696,15 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
         {/* Inline Controls (draggable) */}
         {(() => { const p = getControlsPos(); if (!p) return null; const myIdx = mySeatIndex ?? -1; const my = (myIdx >= 0) ? table.seats[myIdx] : null; const stackNow = my?.stack ?? 0; const potNow = table.pot.main; const avail = props.available ?? [];
           const disabled = table.status !== 'in_hand' || (mySeatIndex == null) || (table.currentToAct !== mySeatIndex)
-          return ReactDOM.createPortal(
-            <div id="horseshoe-controls" style={{ position: 'fixed', left: p.left, top: p.top, transform: 'translate(-50%, -50%)', width: p.width ?? 320, height: p.height ?? 220, zIndex: 1000, pointerEvents: 'auto', cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined }} {...makeDragMouseHandlers('controls')}>
+          return (
+            <div id="horseshoe-controls" style={{ position: 'absolute', left: (p.left ?? 0), top: (p.top ?? 0), width: p.width ?? 320, height: p.height ?? 220, zIndex: 1000, pointerEvents: 'auto', cursor: editLayoutMode ? 'move' : undefined, outline: editLayoutMode ? '1px dashed rgba(255,255,255,0.4)' : undefined }} {...makeDragMouseHandlers('controls')}>
               <PokerInlineControls
                 available={avail}
                 disabled={disabled}
                 pot={potNow}
                 stack={stackNow}
+                toCall={Math.max(0, table.betToCall - (my?.committedThisStreet || 0))}
+                minOpen={table.rules.bigBlind}
                 onCheck={props.onCheck}
                 onCall={props.onCall}
                 onFold={props.onFold}
@@ -714,8 +718,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
                 boxHeight={(layoutOverrides as any).controlsBox?.height ?? (p.height ?? 220)}
               />
               {editLayoutMode && (<div aria-hidden style={{ position: 'absolute', right: -8, bottom: -8, width: 16, height: 16, background: 'rgba(255,255,255,0.6)', borderRadius: 4, cursor: 'nwse-resize' }} {...makeResizeMouseHandlers('controls')} />)}
-            </div>,
-            document.body
+            </div>
           )
         })()}
       </div>

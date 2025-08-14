@@ -128,8 +128,9 @@ export function PokerTableHorseshoe() {
   const viewRef = useRef<{ exportLayoutToJson: () => void; resetLayout: () => void } | null>(null)
   const [editLayoutMode, setEditLayoutMode] = useState<boolean>(false)
 
+  const SIDEBAR_WIDTH = 220
   return (
-    <>
+    <div style={{ display: 'flex' }}>
       <PokerTableHorseshoeControls
         table={table}
         autoPlay={autoPlay}
@@ -156,8 +157,11 @@ export function PokerTableHorseshoe() {
         mySeatIndex={mySeatIndex}
         playerNames={playerNames}
         onRenameMe={renameCurrentPlayer}
+        variant="sidebar"
+        sidebarWidth={SIDEBAR_WIDTH}
       />
-      <PokerTableHorseshoeView
+      <div style={{ marginLeft: SIDEBAR_WIDTH, width: '100%' }}>
+        <PokerTableHorseshoeView
         ref={viewRef as any}
         table={table}
         revealed={revealed}
@@ -185,8 +189,9 @@ export function PokerTableHorseshoe() {
         highlightSet={highlightSet}
         showdownText={showdownText}
         equity={equityVm}
-      />
-    </>
+        />
+      </div>
+    </div>
   )
 }
 

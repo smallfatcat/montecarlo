@@ -9,6 +9,8 @@ export function PokerInlineControls(props: {
   disabled: boolean
   pot: number
   stack: number
+  toCall?: number
+  minOpen?: number
   onCheck?: () => void
   onCall?: () => void
   onFold?: () => void
@@ -22,13 +24,39 @@ export function PokerInlineControls(props: {
   layout?: ControlsLayout
   onLayoutChange?: (next: ControlsLayout) => void
 }) {
-  const { available, disabled, pot, stack, onCheck, onCall, onFold, onBet, onRaise, scale = 1, boxWidth = 320, boxHeight = 220, editLayout = false, layout, onLayoutChange } = props
+  const { available, disabled, pot, stack, toCall, minOpen, onCheck, onCall, onFold, onBet, onRaise, scale = 1, boxWidth = 320, boxHeight = 220, editLayout = false, layout, onLayoutChange } = props
 
   const [betAmount, setBetAmount] = useState<number>(0)
+  const prevDisabledRef = useRef<boolean>(true)
+  const minVal = (() => {
+    const stackCapped = Math.max(0, Math.floor(stack || 0))
+    const callNeeded = Math.max(0, Math.floor(toCall || 0))
+    if (callNeeded > 0) return Math.min(stackCapped, callNeeded)
+    const minOpenLocal = Math.max(1, Math.floor(minOpen || 1))
+    return Math.min(stackCapped, minOpenLocal)
+  })()
+  const maxVal = Math.max(0, Math.floor(stack || 0))
+
   useEffect(() => {
-    const init = Math.min(Math.floor((pot || 0) * 0.5), Math.max(0, stack || 0))
-    setBetAmount((prev) => (prev > 0 ? prev : init))
-  }, [pot, stack])
+    const callNeeded = Math.max(0, Math.floor(toCall || 0))
+    const stackCapped = Math.max(0, Math.floor(stack || 0))
+    const initHalfPot = Math.min(Math.floor((pot || 0) * 0.5), stackCapped)
+    const init = callNeeded > 0 ? Math.min(callNeeded, stackCapped) : initHalfPot
+    const wasDisabled = prevDisabledRef.current
+    // Re-initialize when controls become enabled for a new turn
+    if (wasDisabled && !disabled) setBetAmount(init)
+    // If disabled, keep tracking; don't override mid-turn changes otherwise
+    prevDisabledRef.current = disabled
+  }, [disabled, pot, stack, toCall])
+
+  // Clamp to current legal bounds when constraints change during the turn
+  useEffect(() => {
+    if (disabled) return
+    setBetAmount((prev) => {
+      const clamped = Math.max(minVal, Math.min(maxVal, Math.floor(prev)))
+      return clamped
+    })
+  }, [toCall, minOpen, stack, disabled])
 
   const rootRef = useRef<HTMLDivElement | null>(null)
 
@@ -52,6 +80,25 @@ export function PokerInlineControls(props: {
     if (rect?.width != null) style.width = rect.width
     if (rect?.height != null) style.height = rect.height
     return style
+  }
+
+  const buttonStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+  }
+
+  function styleFor(action: BettingActionType): React.CSSProperties {
+    const isActive = !disabled && available.includes(action)
+    if (!isActive) return buttonStyle
+    return {
+      ...buttonStyle,
+      boxShadow: '0 0 5px rgba(0,255,180,0.85), 0 0 20px rgba(0,255,180,0.55)',
+      border: '1px solid rgba(31, 206, 54, 0.9)'
+    }
   }
 
   function makeDragHandlers(key: keyof typeof DEFAULTS) {
@@ -97,19 +144,23 @@ export function PokerInlineControls(props: {
     >
       {/* Buttons column */}
       <div id="control-check" style={{ position: 'absolute', left: currentLayout.check.left, top: currentLayout.check.top, transform: 'translate(-50%, -50%)', ...sized(currentLayout.check) }} {...makeDragHandlers('check')}>
-        <button onClick={() => onCheck?.()} disabled={disabled || !available.includes('check')} style={{ width: '100%', height: '100%' }}>CHECK</button>
+        <button onClick={() => onCheck?.()} disabled={disabled || !available.includes('check')} style={styleFor('check')}>CHECK</button>
       </div>
       <div id="control-call" style={{ position: 'absolute', left: currentLayout.call.left, top: currentLayout.call.top, transform: 'translate(-50%, -50%)', ...sized(currentLayout.call) }} {...makeDragHandlers('call')}>
-        <button onClick={() => onCall?.()} disabled={disabled || !available.includes('call')} style={{ width: '100%', height: '100%' }}>CALL</button>
+        <button onClick={() => onCall?.()} disabled={disabled || !available.includes('call')} style={styleFor('call')}>CALL</button>
       </div>
       <div id="control-fold" style={{ position: 'absolute', left: currentLayout.fold.left, top: currentLayout.fold.top, transform: 'translate(-50%, -50%)', ...sized(currentLayout.fold) }} {...makeDragHandlers('fold')}>
-        <button onClick={() => onFold?.()} disabled={disabled || !available.includes('fold')} style={{ width: '100%', height: '100%' }}>FOLD</button>
+        <button onClick={() => onFold?.()} disabled={disabled || !available.includes('fold')} style={styleFor('fold')}>FOLD</button>
       </div>
       <div id="control-betBtn" style={{ position: 'absolute', left: currentLayout.betBtn.left, top: currentLayout.betBtn.top, transform: 'translate(-50%, -50%)', ...sized(currentLayout.betBtn) }} {...makeDragHandlers('betBtn')}>
-        <button onClick={() => onBet?.(betAmount)} disabled={disabled || !available.includes('bet')} style={{ width: '100%', height: '100%' }}>BET</button>
+        <button onClick={() => onBet?.(betAmount)} disabled={disabled || !available.includes('bet')} style={styleFor('bet')}>BET</button>
       </div>
       <div id="control-raise" style={{ position: 'absolute', left: currentLayout.raise.left, top: currentLayout.raise.top, transform: 'translate(-50%, -50%)', ...sized(currentLayout.raise) }} {...makeDragHandlers('raise')}>
-        <button onClick={() => onRaise?.(betAmount)} disabled={disabled || !available.includes('raise')} style={{ width: '100%', height: '100%' }}>RAISE</button>
+        <button onClick={() => {
+          const callNeeded = Math.max(0, Math.floor(toCall || 0))
+          const extra = Math.max(0, betAmount - callNeeded)
+          onRaise?.(extra)
+        }} disabled={disabled || !available.includes('raise')} style={styleFor('raise')}>RAISE</button>
       </div>
 
       {/* Right column: Bet label/input */}
@@ -120,8 +171,13 @@ export function PokerInlineControls(props: {
         <input
           type="number"
           value={betAmount}
-          min={0}
-          onChange={(e) => setBetAmount(Math.max(0, Math.floor(parseInt(e.target.value || '0'))))}
+          min={minVal}
+          max={maxVal}
+          onChange={(e) => {
+            const raw = Math.floor(parseInt(e.target.value || '0'))
+            const clamped = Math.max(minVal, Math.min(maxVal, raw))
+            setBetAmount(clamped)
+          }}
           style={{ width: currentLayout.betInput.width ?? 100, padding: '4px 6px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', color: 'inherit' }}
         />
       </div>
@@ -136,7 +192,12 @@ export function PokerInlineControls(props: {
             step={1}
             onChange={(e) => {
               const pct = Math.max(0, Math.min(100, parseInt(e.target.value || '0')))
-              setBetAmount(Math.max(0, Math.floor((pot || 0) * (pct / 100))))
+              const target = Math.floor((pot || 0) * (pct / 100))
+              // When facing a bet, ensure total includes at least toCall
+              const callNeeded = Math.max(0, Math.floor(toCall || 0))
+              const desired = callNeeded > 0 ? Math.max(callNeeded, target) : target
+              const clamped = Math.max(minVal, Math.min(maxVal, desired))
+              setBetAmount(clamped)
             }}
             title="% of pot"
             style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', width: currentLayout.potSlider.height ?? 120, height: currentLayout.potSlider.width ?? 24 }}
@@ -153,7 +214,11 @@ export function PokerInlineControls(props: {
             step={1}
             onChange={(e) => {
               const pct = Math.max(0, Math.min(100, parseInt(e.target.value || '0')))
-              setBetAmount(Math.max(0, Math.floor((stack || 0) * (pct / 100))))
+              const target = Math.floor((stack || 0) * (pct / 100))
+              const callNeeded = Math.max(0, Math.floor(toCall || 0))
+              const desired = callNeeded > 0 ? Math.max(callNeeded, target) : target
+              const clamped = Math.max(minVal, Math.min(maxVal, desired))
+              setBetAmount(clamped)
             }}
             title="% of stack"
             style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', width: currentLayout.stackSlider.height ?? 120, height: currentLayout.stackSlider.width ?? 24 }}

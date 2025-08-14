@@ -27,6 +27,8 @@ export function PokerTableHorseshoeControls(props: {
   mySeatIndex?: number | null
   playerNames?: Array<string | null>
   onRenameMe?: (newName: string) => void
+  variant?: 'toolbar' | 'sidebar'
+  sidebarWidth?: number
 }) {
   const {
     table,
@@ -57,13 +59,33 @@ export function PokerTableHorseshoeControls(props: {
   } = props
 
   const [betSize, setBetSize] = useState<'33'|'50'|'75'|'pot'|'shove'>('50')
+  const layoutVariant = props.variant ?? 'toolbar'
+  const sidebarWidth = props.sidebarWidth ?? 220
+  const baseStyle: React.CSSProperties = layoutVariant === 'sidebar'
+    ? {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        alignItems: 'stretch',
+        width: sidebarWidth,
+        padding: 10,
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        height: '100vh',
+        overflowY: 'auto',
+        background: 'rgba(0,0,0,0.12)',
+        borderRight: '1px solid rgba(255,255,255,0.12)',
+        zIndex: 1100,
+      }
+    : { display: 'flex', gap: 12, alignItems: 'center' }
 
   return (
-    <div id="poker-controlbar" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+    <div id="poker-controlbar" style={baseStyle}>
       <button onClick={() => onDealNext()} disabled={table.status === 'in_hand' || table.gameOver}>Deal</button>
       {onResetGame && <button onClick={() => onResetGame()} style={{ marginLeft: 4 }}>Reset Game</button>}
       <label><input type="checkbox" checked={autoPlay} onChange={(e) => onToggleAutoPlay(e.target.checked)} /> Autoplay</label>
-      <span className="sep" />
+      {layoutVariant === 'toolbar' && <span className="sep" />}
       <label title="Your display name shown on your seat">
         Name: <input
           type="text"
@@ -105,17 +127,16 @@ export function PokerTableHorseshoeControls(props: {
       <button onClick={onFold} disabled={!available.includes('fold')}>Fold</button>
       <button onClick={onCheck} disabled={!available.includes('check')}>Check</button>
       <button onClick={onCall} disabled={!available.includes('call')}>Call</button>
-
-      <span className="sep" />
+      {layoutVariant === 'toolbar' && <span className="sep" />}
       <label title="Edit and drag layout elements">
         <input type="checkbox" checked={!!editLayoutMode} onChange={(e) => onToggleEditLayout?.(e.target.checked)} /> Edit Layout
       </label>
       {onExportLayout && <button onClick={onExportLayout}>Export Layout JSON</button>}
       {onResetLayout && <button onClick={onResetLayout}>Reset Layout</button>}
-      <span className="sep" />
+      {layoutVariant === 'toolbar' && <span className="sep" />}
       {onOpenHistory && <button onClick={onOpenHistory}>Open History</button>}
       {reviewInfo && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 16 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: layoutVariant === 'toolbar' ? 16 : 0 }}>
           <span style={{ opacity: 0.85 }}>Review Hand #{reviewInfo.handId} • Step {reviewInfo.step}/{reviewInfo.total}</span>
           <button onClick={onReviewPrev}>&laquo; Prev</button>
           <button onClick={onReviewNext}>Next &raquo;</button>
