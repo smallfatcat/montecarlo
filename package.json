@@ -6,6 +6,25 @@
     "vite-app",
     "apps/game-server",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "dev:all": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd vite-app && npm run dev",
+    "dev:backend": "cd apps/game-server && npm run dev",
+    "build:all": "npm run build:packages && npm run build:apps",
+    "build:packages": "npm run build --workspace=packages/shared && npm run build --workspace=packages/poker-engine",
+    "build:apps": "npm run build --workspace=apps/game-server && npm run build --workspace=vite-app",
+    "test:all": "npm run test --workspaces",
+    "test:watch": "cd vite-app && npm run test:watch",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "clean": "npm run clean:dist && npm run clean:node_modules",
+    "clean:dist": "find . -name 'dist' -type d -exec rm -rf {} +",
+    "clean:node_modules": "find . -name 'node_modules' -type d -exec rm -rf {} +",
+    "rebuild": "npm run clean && npm install && npm run build:all"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
 }
 
