@@ -1,4 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import './VersionDisplay.css';
+
+// Declare the global variable injected by Vite
+declare global {
+  const __APP_VERSION__: string | undefined;
+}
 
 interface VersionInfo {
   version: string;
@@ -23,7 +29,7 @@ const VersionDisplay: React.FC = () => {
     // Load version information
     const loadVersionInfo = async () => {
       try {
-        // Try to load from BUILD_INFO file if it exists
+        // First try to load from BUILD_INFO file if it exists
         const response = await fetch('/BUILD_INFO');
         if (response.ok) {
           const text = await response.text();
@@ -69,9 +75,32 @@ const VersionDisplay: React.FC = () => {
 
           setVersionInfo(info as VersionInfo);
           setComponentVersions(components);
+        } else {
+          // Fallback: use Vite environment variables and generate basic info
+          const fallbackVersion = (typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__) ? __APP_VERSION__ : '0.0.0';
+          const fallbackInfo: VersionInfo = {
+            version: fallbackVersion,
+            buildNumber: '0',
+            commitHash: 'unknown',
+            branch: 'unknown',
+            buildDate: new Date().toISOString(),
+            status: 'fallback'
+          };
+          setVersionInfo(fallbackInfo);
         }
       } catch (error) {
         console.warn('Could not load version info:', error);
+        // Fallback: use Vite environment variables
+        const fallbackVersion = (typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__) ? __APP_VERSION__ : '0.0.0';
+        const fallbackInfo: VersionInfo = {
+          version: fallbackVersion,
+          buildNumber: '0',
+          commitHash: 'unknown',
+          branch: 'unknown',
+          buildDate: new Date().toISOString(),
+          status: 'fallback'
+        };
+        setVersionInfo(fallbackInfo);
       }
     };
 

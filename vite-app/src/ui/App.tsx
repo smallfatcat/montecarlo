@@ -7,6 +7,7 @@ import { PokerGameProvider } from './poker/PokerGameContext'
 import { PokerTestDashboard } from './poker/PokerTestDashboard'
 import { PokerHistoryPage } from './poker/PokerHistoryPage'
 import { Landing } from './Landing'
+import VersionDisplay from '../components/VersionDisplay'
 
 export function App() {
   const [hash, setHash] = useState<string>(typeof window !== 'undefined' ? window.location.hash : '')
@@ -41,7 +42,7 @@ export function App() {
   else if (showBlackjack) content = <Table />
   else content = <Landing />
 
-  const version = (typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__) ? __APP_VERSION__ : CONFIG.version
+
 
   return (
     <div style={{ position: 'relative' }}>
@@ -59,7 +60,7 @@ export function App() {
           pointerEvents: 'none',
         }}
       >
-        v{version}
+        <VersionDisplay />
       </div>
     </div>
   )
