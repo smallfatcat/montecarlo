@@ -7,20 +7,11 @@ export interface PokerTablePotProps {
   table: PokerTableState
   showdownText?: string
   layoutOverride?: any
-  layoutOverrides?: any // Add this to access betting spot positions
 }
 
-export function PokerTablePot({ table, showdownText, layoutOverride, layoutOverrides }: PokerTablePotProps) {
+export function PokerTablePot({ table, showdownText, layoutOverride }: PokerTablePotProps) {
   const { horseshoe } = CONFIG.poker
   const { potOffsetY, showdownOffsetY } = horseshoe
-
-  // Calculate the pot position for animation calculations
-  const potPosition = layoutOverride || {
-    left: '50%',
-    top: '50%',
-    transform: 'translate(-50%, -50%)',
-    marginTop: potOffsetY
-  }
 
   return (
     <div 
@@ -81,10 +72,14 @@ export function PokerTablePot({ table, showdownText, layoutOverride, layoutOverr
             color: 'rgba(255,255,255,0.9)',
             fontWeight: 600,
             marginTop: '4px',
-            textShadow: '0 1px 2px rgba(0,0,0,0.8)'
+            textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+            background: 'rgba(0,0,0,0.4)',
+            padding: '2px 8px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255,255,255,0.2)'
           }}
         >
-          {table.pot.main}
+          ${table.pot.main}
         </motion.div>
       </motion.div>
 

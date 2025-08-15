@@ -20,7 +20,6 @@ export interface PokerTableHorseshoeViewProps {
   editLayoutMode?: boolean
   // seat control wiring
   onSitHere?: (seatIndex: number) => void
-  onLeaveSeat?: (seatIndex: number) => void
   mySeatIndex?: number | null
   playerNames?: Array<string | null>
   // Derived display
@@ -45,11 +44,12 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
     hideHoleCardsUntilShowdown,
     editLayoutMode,
     onSitHere,
-    onLeaveSeat,
     mySeatIndex,
     playerNames,
     highlightSet: highlightSetProp,
     showdownText: showdownTextProp,
+    equity,
+    winnersSet,
     available,
     onFold,
     onCheck,
@@ -60,8 +60,6 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [layoutOverrides, setLayoutOverrides] = useState<LayoutOverrides>({ seats: {} })
-
-
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
@@ -119,7 +117,6 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             table={table}
             showdownText={showdownTextProp}
             layoutOverride={layoutOverrides.pot}
-            layoutOverrides={layoutOverrides}
           />
 
                         {/* Seats */}
@@ -128,11 +125,13 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
                 revealed={revealed}
                 hideHoleCardsUntilShowdown={hideHoleCardsUntilShowdown}
                 onSitHere={onSitHere}
-                onLeaveSeat={onLeaveSeat}
                 mySeatIndex={mySeatIndex}
                 playerNames={playerNames}
                 highlightSet={highlightSetProp}
                 layoutOverrides={layoutOverrides}
+                equity={equity}
+                winnersSet={winnersSet}
+                showdownText={showdownTextProp}
               />
 
               {/* Stacks */}
@@ -159,6 +158,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
                 controlsChildren={layoutOverrides.controlsChildren}
                 controlsBox={layoutOverrides.controlsBox}
                 table={table}
+                mySeatIndex={mySeatIndex}
               />
         </div>
       </div>

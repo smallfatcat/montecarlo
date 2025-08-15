@@ -35,11 +35,7 @@ export function PokerTableBettingSpots({ table, layoutOverrides }: PokerTableBet
         }
         
         // Calculate the path from betting spot to pot for exit animation
-        const potPosition = potLayout || {
-          left: '50%',
-          top: '50%',
-          marginTop: 35
-        }
+        // potLayout is already defined above
         
         // Calculate the offset from stack to betting spot
         const deltaX = position.left - stackPosition.left
@@ -95,7 +91,7 @@ export function PokerTableBettingSpots({ table, layoutOverrides }: PokerTableBet
                 display: 'flex', 
                 flexDirection: 'column', 
                 alignItems: 'center', 
-                gap: 4,
+                gap: 2,
                 padding: '4px 8px',
                 borderRadius: '8px',
                 background: 'rgba(0,0,0,0.3)',
@@ -117,8 +113,8 @@ export function PokerTableBettingSpots({ table, layoutOverrides }: PokerTableBet
               }}
             >
               <motion.div
-                initial={{ scale: 0.5, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
+                initial={{ scale: 0.5 }}
+                animate={{ scale: 1 }}
                 transition={{ 
                   duration: 0.3,
                   ease: "easeOut",
@@ -146,7 +142,7 @@ export function PokerTableBettingSpots({ table, layoutOverrides }: PokerTableBet
                   textShadow: '0 1px 2px rgba(0,0,0,0.8)'
                 }}
               >
-                {seat.committedThisStreet}
+                ${seat.committedThisStreet}
               </motion.span>
             </motion.div>
           </motion.div>

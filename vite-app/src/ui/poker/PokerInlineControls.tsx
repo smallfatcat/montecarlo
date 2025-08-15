@@ -40,14 +40,37 @@ export function PokerInlineControls(props: {
   useEffect(() => {
     const callNeeded = Math.max(0, Math.floor(toCall || 0))
     const stackCapped = Math.max(0, Math.floor(stack || 0))
-    const initHalfPot = Math.min(Math.floor((pot || 0) * 0.5), stackCapped)
-    const init = callNeeded > 0 ? Math.min(callNeeded, stackCapped) : initHalfPot
+    
+    // Handle edge cases where stack might be 0
+    if (stackCapped === 0) {
+      setBetAmount(0)
+      return
+    }
+    
+    let init: number
+    if (callNeeded > 0) {
+      // When facing a bet, default to calling
+      init = Math.min(callNeeded, stackCapped)
+    } else {
+      // When betting first, default to half pot or minimum bet
+      const potAmount = Math.max(0, Math.floor(pot || 0))
+      if (potAmount > 0) {
+        init = Math.min(Math.floor(potAmount * 0.5), stackCapped)
+      } else {
+        // No pot yet, use minimum bet
+        init = Math.min(Math.max(1, Math.floor(minOpen || 1)), stackCapped)
+      }
+    }
+    
+    // Ensure the initial value is within bounds
+    init = Math.max(minVal, Math.min(maxVal, init))
+    
     const wasDisabled = prevDisabledRef.current
     // Re-initialize when controls become enabled for a new turn
     if (wasDisabled && !disabled) setBetAmount(init)
     // If disabled, keep tracking; don't override mid-turn changes otherwise
     prevDisabledRef.current = disabled
-  }, [disabled, pot, stack, toCall])
+  }, [disabled, pot, stack, toCall, minOpen, minVal, maxVal])
 
   // Clamp to current legal bounds when constraints change during the turn
   useEffect(() => {
@@ -56,7 +79,13 @@ export function PokerInlineControls(props: {
       const clamped = Math.max(minVal, Math.min(maxVal, Math.floor(prev)))
       return clamped
     })
-  }, [toCall, minOpen, stack, disabled])
+  }, [toCall, minOpen, stack, disabled, minVal, maxVal])
+
+  // Helper function to safely set bet amount with validation
+  const setBetAmountSafe = (value: number) => {
+    const clamped = Math.max(minVal, Math.min(maxVal, Math.floor(value)))
+    setBetAmount(clamped)
+  }
 
   const rootRef = useRef<HTMLDivElement | null>(null)
 
@@ -165,7 +194,9 @@ export function PokerInlineControls(props: {
 
       {/* Right column: Bet label/input */}
       <div id="control-betLabel" style={{ position: 'absolute', left: currentLayout.betLabel.left, top: currentLayout.betLabel.top, transform: 'translate(-50%, -50%)', ...sized(currentLayout.betLabel) }} {...makeDragHandlers('betLabel')}>
-        <span style={{ opacity: 0.9, display: 'inline-block', width: '100%' }}>Bet:</span>
+        <span style={{ opacity: 0.9, display: 'inline-block', width: '100%' }}>
+          Bet: {betAmount > 0 ? `$${betAmount}` : ''}
+        </span>
       </div>
       <div id="control-betInput" style={{ position: 'absolute', left: currentLayout.betInput.left, top: currentLayout.betInput.top, transform: 'translate(-50%, -50%)', ...sized(currentLayout.betInput) }} {...makeDragHandlers('betInput')}>
         <input
@@ -173,12 +204,38 @@ export function PokerInlineControls(props: {
           value={betAmount}
           min={minVal}
           max={maxVal}
+          step={1}
+          title={`Bet amount: $${minVal} - $${maxVal}${(toCall || 0) > 0 ? ` (must call at least $${toCall})` : ''}`}
           onChange={(e) => {
-            const raw = Math.floor(parseInt(e.target.value || '0'))
-            const clamped = Math.max(minVal, Math.min(maxVal, raw))
-            setBetAmount(clamped)
+            const inputValue = e.target.value
+            if (inputValue === '') {
+              // Allow empty input temporarily for better UX
+              setBetAmount(0)
+              return
+            }
+            const parsed = parseInt(inputValue, 10)
+            if (isNaN(parsed)) {
+              // Invalid input, reset to current value
+              return
+            }
+            setBetAmountSafe(parsed)
           }}
-          style={{ width: currentLayout.betInput.width ?? 100, padding: '4px 6px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', color: 'inherit' }}
+          onBlur={(e) => {
+            // Ensure value is clamped when input loses focus
+            const inputValue = e.target.value
+            if (inputValue === '' || isNaN(parseInt(inputValue, 10))) {
+              setBetAmountSafe(minVal)
+            }
+          }}
+          style={{ 
+            width: currentLayout.betInput.width ?? 100, 
+            padding: '4px 6px', 
+            borderRadius: 8, 
+            border: `1px solid ${betAmount === minVal || betAmount === maxVal ? 'rgba(255,255,0,0.5)' : 'rgba(255,255,255,0.25)'}`, 
+            background: betAmount === minVal || betAmount === maxVal ? 'rgba(255,255,0,0.1)' : 'rgba(255,255,255,0.06)', 
+            color: 'inherit',
+            textAlign: 'center'
+          }}
         />
       </div>
 
@@ -190,19 +247,34 @@ export function PokerInlineControls(props: {
             min={0}
             max={100}
             step={1}
+            value={(() => {
+              // Calculate current slider position based on bet amount
+              if (pot === 0 || betAmount === 0) return 0
+              const callNeeded = Math.max(0, Math.floor(toCall || 0))
+              const effectiveBet = callNeeded > 0 ? betAmount - callNeeded : betAmount
+              const percentage = Math.min(100, Math.floor((effectiveBet / pot) * 100))
+              return Math.max(0, percentage)
+            })()}
             onChange={(e) => {
               const pct = Math.max(0, Math.min(100, parseInt(e.target.value || '0')))
               const target = Math.floor((pot || 0) * (pct / 100))
               // When facing a bet, ensure total includes at least toCall
               const callNeeded = Math.max(0, Math.floor(toCall || 0))
               const desired = callNeeded > 0 ? Math.max(callNeeded, target) : target
-              const clamped = Math.max(minVal, Math.min(maxVal, desired))
-              setBetAmount(clamped)
+              setBetAmountSafe(desired)
             }}
             title="% of pot"
             style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', width: currentLayout.potSlider.height ?? 120, height: currentLayout.potSlider.width ?? 24 }}
           />
-          <span style={{ fontSize: 12, opacity: 0.8 }}>Pot%</span>
+          <span style={{ fontSize: 12, opacity: 0.8 }}>
+            Pot% {(() => {
+              if (pot === 0 || betAmount === 0) return ''
+              const callNeeded = Math.max(0, Math.floor(toCall || 0))
+              const effectiveBet = callNeeded > 0 ? betAmount - callNeeded : betAmount
+              const percentage = Math.min(100, Math.floor((effectiveBet / pot) * 100))
+              return `(${percentage}%)`
+            })()}
+          </span>
         </div>
       </div>
       <div id="control-stackSlider" style={{ position: 'absolute', left: currentLayout.stackSlider.left, top: currentLayout.stackSlider.top, transform: 'translate(-50%, -50%)', ...sized(currentLayout.stackSlider) }} {...makeDragHandlers('stackSlider')}>
@@ -212,26 +284,57 @@ export function PokerInlineControls(props: {
             min={0}
             max={100}
             step={1}
+            value={(() => {
+              // Calculate current slider position based on bet amount
+              if (stack === 0 || betAmount === 0) return 0
+              const callNeeded = Math.max(0, Math.floor(toCall || 0))
+              const effectiveBet = callNeeded > 0 ? betAmount - callNeeded : betAmount
+              const percentage = Math.min(100, Math.floor((effectiveBet / stack) * 100))
+              return Math.max(0, percentage)
+            })()}
             onChange={(e) => {
               const pct = Math.max(0, Math.min(100, parseInt(e.target.value || '0')))
               const target = Math.floor((stack || 0) * (pct / 100))
               const callNeeded = Math.max(0, Math.floor(toCall || 0))
               const desired = callNeeded > 0 ? Math.max(callNeeded, target) : target
-              const clamped = Math.max(minVal, Math.min(maxVal, desired))
-              setBetAmount(clamped)
+              setBetAmountSafe(desired)
             }}
             title="% of stack"
             style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', width: currentLayout.stackSlider.height ?? 120, height: currentLayout.stackSlider.width ?? 24 }}
           />
-          <span style={{ fontSize: 12, opacity: 0.8 }}>Stack%</span>
+          <span style={{ fontSize: 12, opacity: 0.8 }}>
+            Stack% {(() => {
+              if (stack === 0 || betAmount === 0) return ''
+              const callNeeded = Math.max(0, Math.floor(toCall || 0))
+              const effectiveBet = callNeeded > 0 ? betAmount - callNeeded : betAmount
+              const percentage = Math.min(100, Math.floor((effectiveBet / stack) * 100))
+              return `(${percentage}%)`
+            })()}
+          </span>
         </div>
       </div>
 
       {/* Stack label */}
       <div id="control-stackLabel" style={{ position: 'absolute', left: currentLayout.stackLabel.left, top: currentLayout.stackLabel.top, transform: 'translate(-50%, -50%)', ...sized(currentLayout.stackLabel) }} {...makeDragHandlers('stackLabel')}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, width: currentLayout.stackLabel.width ?? 120 }}>
-          <span style={{ opacity: 0.9 }}>Stack:</span>
-          <span style={{ opacity: 0.95 }}>{stack}</span>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          fontWeight: 600, 
+          width: currentLayout.stackLabel.width ?? 120,
+          padding: '4px 8px',
+          background: 'rgba(0,0,0,0.3)',
+          borderRadius: '8px',
+          border: '1px solid rgba(255,255,255,0.2)'
+        }}>
+          <span style={{ opacity: 0.9, fontSize: '12px' }}>Stack:</span>
+          <span style={{ 
+            opacity: 0.95, 
+            fontSize: '13px',
+            fontWeight: 700,
+            color: '#ffd54f',
+            textShadow: '0 1px 2px rgba(0,0,0,0.8)'
+          }}>${stack}</span>
         </div>
       </div>
     </div>

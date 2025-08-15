@@ -46,14 +46,14 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
           // Set a minimal default layout to ensure seats are visible
           const defaultLayout: LayoutOverrides = {
             seats: {},
-            board: null,
-            pot: null,
-            showdown: null,
+            board: undefined,
+            pot: undefined,
+            showdown: undefined,
             bets: {},
             stacks: {},
-            controls: null,
+            controls: undefined,
             controlsChildren: {},
-            controlsBox: null,
+            controlsBox: undefined,
           }
           setLayoutOverrides(defaultLayout)
           onLayoutChange(defaultLayout)

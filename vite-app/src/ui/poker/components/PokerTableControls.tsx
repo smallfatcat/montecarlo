@@ -14,6 +14,7 @@ export interface PokerTableControlsProps {
   controlsChildren?: any // Add controlsChildren layout
   controlsBox?: any // Add controlsBox layout
   table?: any // Add table prop to access pot and stack
+  mySeatIndex?: number | null // Add player seat index
 }
 
 export function PokerTableControls({
@@ -27,9 +28,13 @@ export function PokerTableControls({
   controlsChildren,
   controlsBox,
   table,
+  mySeatIndex,
 }: PokerTableControlsProps) {
   const { horseshoe } = CONFIG.poker
   const { potOffsetY } = horseshoe
+
+  // Calculate the player's stack from the table
+  const playerStack = mySeatIndex != null && table?.seats?.[mySeatIndex] ? table.seats[mySeatIndex].stack : 0
 
   return (
     <motion.div
@@ -51,7 +56,7 @@ export function PokerTableControls({
           available={available || []}
           disabled={false}
           pot={table?.pot?.main || 0}
-          stack={1000} // Default stack value
+          stack={playerStack}
           onFold={onFold}
           onCheck={onCheck}
           onCall={onCall}

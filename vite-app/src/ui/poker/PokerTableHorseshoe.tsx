@@ -157,6 +157,7 @@ export function PokerTableHorseshoe() {
         mySeatIndex={mySeatIndex}
         playerNames={playerNames}
         onRenameMe={renameCurrentPlayer}
+        onLeaveSeat={() => leave?.()}
         variant="sidebar"
         sidebarWidth={SIDEBAR_WIDTH}
       />
@@ -182,7 +183,6 @@ export function PokerTableHorseshoe() {
         }
         sit?.(i, name)
         }}
-        onLeaveSeat={() => leave?.()}
         mySeatIndex={mySeatIndex}
         playerNames={playerNames}
         winnersSet={winnersSet}

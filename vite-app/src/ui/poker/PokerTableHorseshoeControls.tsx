@@ -12,7 +12,7 @@ export function PokerTableHorseshoeControls(props: {
   onCheck: () => void
   onCall: () => void
   onBet: (amount?: number) => void
-  onRaise: (amount?: number) => void
+  onRaise?: (amount?: number) => void
   hideHoleCardsUntilShowdown: boolean
   onToggleHideHoleCards: (v: boolean) => void
   onExportLayout?: () => void
@@ -27,6 +27,7 @@ export function PokerTableHorseshoeControls(props: {
   mySeatIndex?: number | null
   playerNames?: Array<string | null>
   onRenameMe?: (newName: string) => void
+  onLeaveSeat?: () => void
   variant?: 'toolbar' | 'sidebar'
   sidebarWidth?: number
 }) {
@@ -56,6 +57,7 @@ export function PokerTableHorseshoeControls(props: {
     mySeatIndex,
     playerNames,
     onRenameMe,
+    onLeaveSeat,
   } = props
 
   const [betSize, setBetSize] = useState<'33'|'50'|'75'|'pot'|'shove'>('50')
@@ -96,6 +98,61 @@ export function PokerTableHorseshoeControls(props: {
           style={{ width: 140 }}
         />
       </label>
+      {mySeatIndex != null ? (
+        <div style={{ 
+          fontSize: '12px', 
+          opacity: 0.8, 
+          padding: '4px 8px',
+          background: 'rgba(76, 175, 80, 0.2)',
+          border: '1px solid rgba(76, 175, 80, 0.3)',
+          borderRadius: '6px',
+          color: '#4caf50'
+        }}>
+          🪑 Seated at Seat {mySeatIndex}
+        </div>
+      ) : (
+        <div style={{ 
+          fontSize: '12px', 
+          opacity: 0.8, 
+          padding: '4px 8px',
+          background: 'rgba(158, 158, 158, 0.2)',
+          border: '1px solid rgba(158, 158, 158, 0.3)',
+          borderRadius: '6px',
+          color: '#9e9e9e'
+        }}>
+          👁️ Spectating
+        </div>
+      )}
+      {onLeaveSeat && mySeatIndex != null && (
+        <button 
+          onClick={onLeaveSeat}
+          style={{ 
+            padding: '8px 16px',
+            background: 'rgba(244, 67, 54, 0.9)',
+            border: '1px solid rgba(244, 67, 54, 0.7)',
+            borderRadius: '8px',
+            color: 'white',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: '600',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(244, 67, 54, 1)'
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(244, 67, 54, 0.9)'
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)'
+          }}
+          title="Leave your current seat and become a spectator"
+        >
+          🪑 Leave Seat
+        </button>
+      )}
       <label title="Hide all hole cards until showdown (except your own)">
         <input type="checkbox" checked={hideHoleCardsUntilShowdown} onChange={(e) => onToggleHideHoleCards(e.target.checked)} />
         Hide hole cards
@@ -122,7 +179,7 @@ export function PokerTableHorseshoeControls(props: {
         if (betSize === 'shove') extra = Number.MAX_SAFE_INTEGER
         else if (betSize === 'pot') extra = Math.floor(pot + toCall)
         else extra = Math.floor((pot + toCall) * (parseInt(betSize,10)/100))
-        onRaise(extra)
+        onRaise?.(extra)
       }} disabled={!available.includes('raise')}>Raise</button>
       <button onClick={onFold} disabled={!available.includes('fold')}>Fold</button>
       <button onClick={onCheck} disabled={!available.includes('check')}>Check</button>
@@ -143,6 +200,7 @@ export function PokerTableHorseshoeControls(props: {
           <button onClick={onEndReview}>Exit Review</button>
         </div>
       )}
+      {onLeaveSeat && <button onClick={onLeaveSeat}>Leave Seat</button>}
     </div>
   )
 }

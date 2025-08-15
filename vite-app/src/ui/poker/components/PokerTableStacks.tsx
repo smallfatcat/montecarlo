@@ -48,6 +48,12 @@ export function PokerTableStacks({ table, layoutOverrides }: PokerTableStacksPro
               duration: CONFIG.poker.animations?.chipFlyDurationMs ? CONFIG.poker.animations.chipFlyDurationMs / 1000 : 0.15,
               ease: "easeOut"
             }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 4
+            }}
           >
             <ChipStack
               amount={seat.stack}
@@ -55,6 +61,26 @@ export function PokerTableStacks({ table, layoutOverrides }: PokerTableStacksPro
               overlap={0.8}
               maxChipsPerRow={20}
             />
+            <motion.span
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ 
+                duration: 0.2,
+                delay: 0.1
+              }}
+              style={{
+                fontSize: '11px',
+                color: 'rgba(255,255,255,0.9)',
+                fontWeight: 600,
+                textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+                background: 'rgba(0,0,0,0.6)',
+                padding: '2px 6px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.2)'
+              }}
+            >
+              ${seat.stack}
+            </motion.span>
           </motion.div>
         </motion.div>
       )

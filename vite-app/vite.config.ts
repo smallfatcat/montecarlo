@@ -36,6 +36,18 @@ export default defineConfig(({ command }) => ({
       interval: 200,
     },
   },
+  build: {
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress framer-motion "use client" warnings
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE' && warning.message.includes('use client')) {
+          return
+        }
+        // Call the default warn function for other warnings
+        warn(warning)
+      }
+    }
+  },
   plugins: [
     {
       name: 'restart-on-package-json-change',

@@ -7,11 +7,14 @@ export interface PokerTableSeatsProps {
   revealed: { holeCounts: number[]; boardCount: number }
   hideHoleCardsUntilShowdown: boolean
   onSitHere?: (seatIndex: number) => void
-  onLeaveSeat?: (seatIndex: number) => void
   mySeatIndex?: number | null
   playerNames?: Array<string | null>
   highlightSet?: Set<string>
   layoutOverrides: any
+  // Equity and results data
+  equity?: { winPct: number[]; tiePct: number[]; running: boolean } | null
+  winnersSet?: Set<number>
+  showdownText?: string
 }
 
 export function PokerTableSeats({
@@ -19,11 +22,13 @@ export function PokerTableSeats({
   revealed,
   hideHoleCardsUntilShowdown,
   onSitHere,
-  onLeaveSeat,
   mySeatIndex,
   playerNames,
   highlightSet,
   layoutOverrides,
+  equity,
+  winnersSet,
+  showdownText,
 }: PokerTableSeatsProps) {
   const renderSeats = () => {
     // Always render all seats, regardless of their state
@@ -37,7 +42,7 @@ export function PokerTableSeats({
         left: `${100 + (seatIndex * 180)}px`,
         top: `${50 + (seatIndex * 100)}px`,
         width: '160px',
-        height: '120px'
+        height: '140px'
       }
       
       return (
@@ -59,18 +64,20 @@ export function PokerTableSeats({
             idPrefix="poker-seat"
             seat={seat}
             seatIndex={seatIndex}
-            buttonIndex={0}
-            currentToAct={null}
+            buttonIndex={table.buttonIndex}
+            currentToAct={table.currentToAct}
             highlightSet={isHighlighted ? highlightSet || new Set() : new Set()}
             displayName={playerNames?.[seatIndex] ?? undefined}
             visibleHoleCount={revealed.holeCounts[seatIndex]}
             forceFaceDown={hideHoleCardsUntilShowdown && seatIndex !== mySeatIndex}
             canControlSeat={true}
             onSitHere={onSitHere}
-            onLeaveSeat={onLeaveSeat}
             mySeatIndex={mySeatIndex}
             containerStyle={{}}
             hideStackRow={true}
+            equity={equity}
+            winnersSet={winnersSet}
+            showdownText={showdownText}
           />
         </motion.div>
       )
