@@ -286,10 +286,6 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
   }, [onLayoutChange])
 
   const exportLayoutToJson = () => {
-    // Debug: Log what we're about to export
-    console.log('Exporting layout with layoutOverrides:', layoutOverrides)
-    console.log('Exporting layout with currentLayoutRef:', currentLayoutRef.current)
-    
     // Use the most up-to-date layout data
     const exportData = currentLayoutRef.current || layoutOverrides
     
@@ -305,8 +301,6 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
       controlsChildren: exportData.controlsChildren || {},
       controlsBox: exportData.controlsBox,
     }
-    
-    console.log('Final export data:', completeLayout)
     
     const dataStr = JSON.stringify(completeLayout, null, 2)
     const dataBlob = new Blob([dataStr], { type: 'application/json' })
