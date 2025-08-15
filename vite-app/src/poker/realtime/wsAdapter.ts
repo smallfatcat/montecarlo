@@ -13,10 +13,18 @@ export type RuntimeCallbacks = {
   onAutoplay?: (auto: boolean) => void
 }
 
-export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks) {
+export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks, tableIdParam?: string) {
   let socket: Socket | null = null
   let mySeatIndexLocal: number | null = null
   let forcedPolling = false
+  let playerToken: string | null = null
+  const tableId = tableIdParam || (() => {
+    try {
+      const h = typeof window !== 'undefined' ? window.location.hash : ''
+      if (h.startsWith('#poker/')) return h.slice('#poker/'.length)
+    } catch {}
+    return 'table-1'
+  })()
 
   function connect() {
     console.log('[wsAdapter] init', { wsUrl })
@@ -30,20 +38,35 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
     })
     socket.on('connect', () => {
       console.log('[wsAdapter] connected', socket?.id)
-      socket?.emit('join', { tableId: 'table-1' }, (ack: any) => {
-        console.log('[wsAdapter] join ack', ack)
-        if (ack?.state) cb.onState(ack.state)
-        if (typeof ack?.auto === 'boolean') cb.onAutoplay?.(ack.auto)
-        // If no one is seated yet, attempt to auto-sit into seat 0 using a per-tab name
-        try {
-          if (ack?.state?.seats?.every((s:any)=>s.isCPU)) {
-            const suggested = `Player-${Math.floor(Math.random()*1000)}`
-            const name = sessionStorage?.getItem('playerName') || suggested
-            sessionStorage?.setItem('playerName', name)
-            socket?.emit('sit', { tableId: 'table-1', seatIndex: 0, name })
-          }
-        } catch {}
-      })
+      // Identity first
+      try {
+        const existing = localStorage?.getItem('playerToken') || null
+        const suggested = `Player-${Math.floor(Math.random()*1000)}`
+        const name = sessionStorage?.getItem('playerName') || suggested
+        sessionStorage?.setItem('playerName', name)
+        socket?.emit('identify', { token: existing || undefined, name }, (ack: any) => {
+          try { if (ack?.token) { playerToken = String(ack.token); localStorage?.setItem('playerToken', playerToken) } } catch {}
+          // Join table after identity
+          socket?.emit('join', { tableId }, (ack2: any) => {
+            console.log('[wsAdapter] join ack', ack2)
+            if (ack2?.state) cb.onState(ack2.state)
+            if (typeof ack2?.auto === 'boolean') cb.onAutoplay?.(ack2.auto)
+            // If no one is seated yet, attempt to auto-sit into seat 0 using our name
+            try {
+              if (ack2?.state?.seats?.every((s:any)=>s.isCPU)) {
+                socket?.emit('sit', { tableId, seatIndex: 0, name })
+              }
+            } catch {}
+          })
+        })
+      } catch (e) {
+        // Fallback join without identity
+        socket?.emit('join', { tableId }, (ack2: any) => {
+          console.log('[wsAdapter] join ack', ack2)
+          if (ack2?.state) cb.onState(ack2.state)
+          if (typeof ack2?.auto === 'boolean') cb.onAutoplay?.(ack2.auto)
+        })
+      }
     })
     socket.on('connect_error', (err) => {
       console.error('[client] connect_error', err?.message || err)
@@ -64,7 +87,7 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
     socket.on('action', (m: any) => cb.onAction?.(m.handId, m.seat, m.action, m.toCall, m.street))
     socket.on('seat_update', (m: any) => {
       try {
-        const myId = socket?.id
+        const myId = playerToken || socket?.id
         if (myId && (m.playerId === myId)) { mySeatIndexLocal = m.seatIndex; cb.onYouSeatChange?.(m.seatIndex) }
         else if (myId && m.playerId == null && mySeatIndexLocal === m.seatIndex) { mySeatIndexLocal = null; cb.onYouSeatChange?.(null) }
       } catch {}
@@ -74,34 +97,34 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
 
   function beginHand() {
     console.log('[wsAdapter] begin')
-    socket?.emit('begin', { tableId: 'table-1' })
+    socket?.emit('begin', { tableId })
   }
 
   function act(action: BettingAction) {
     console.log('[wsAdapter] act', action)
-    socket?.emit('act', { tableId: 'table-1', action })
+    socket?.emit('act', { tableId, action })
   }
 
   function setAutoPlay(v: boolean) {
     console.log('[wsAdapter] setAuto', v)
-    socket?.emit('setAuto', { tableId: 'table-1', auto: v }, (ack: any) => {
+    socket?.emit('setAuto', { tableId, auto: v }, (ack: any) => {
       try { if (typeof ack?.auto === 'boolean') cb.onAutoplay?.(ack.auto) } catch {}
     })
   }
 
   function sit(seatIndex: number, name: string) {
     console.log('[wsAdapter] sit', { seatIndex, name })
-    socket?.emit('sit', { tableId: 'table-1', seatIndex, name })
+    socket?.emit('sit', { tableId, seatIndex, name })
   }
 
   function leave() {
     console.log('[wsAdapter] leave')
-    socket?.emit('leave', { tableId: 'table-1' })
+    socket?.emit('leave', { tableId })
   }
 
   function reset() {
     console.log('[wsAdapter] reset')
-    socket?.emit('reset', { tableId: 'table-1' })
+    socket?.emit('reset', { tableId })
   }
 
   function dispose() {

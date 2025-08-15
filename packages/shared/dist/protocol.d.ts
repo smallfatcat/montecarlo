@@ -96,6 +96,31 @@ export declare const C2S: {
     }, {
         tableId?: string | undefined;
     }>;
+    identify: z.ZodDefault<z.ZodObject<{
+        token: z.ZodOptional<z.ZodString>;
+        name: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        name?: string | undefined;
+        token?: string | undefined;
+    }, {
+        name?: string | undefined;
+        token?: string | undefined;
+    }>>;
+    joinLobby: z.ZodDefault<z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>>;
+    listTables: z.ZodDefault<z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>>;
+    createTable: z.ZodDefault<z.ZodObject<{
+        tableId: z.ZodOptional<z.ZodString>;
+        seats: z.ZodOptional<z.ZodNumber>;
+        startingStack: z.ZodOptional<z.ZodNumber>;
+    }, "strip", z.ZodTypeAny, {
+        tableId?: string | undefined;
+        seats?: number | undefined;
+        startingStack?: number | undefined;
+    }, {
+        tableId?: string | undefined;
+        seats?: number | undefined;
+        startingStack?: number | undefined;
+    }>>;
 };
 export declare const S2C: {
     ready: z.ZodObject<{
@@ -134,6 +159,95 @@ export declare const S2C: {
         isCPU: boolean;
         playerId: string | null;
         playerName: string | null;
+    }>;
+    identity: z.ZodObject<{
+        token: z.ZodString;
+        name: z.ZodNullable<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        name: string | null;
+        token: string;
+    }, {
+        name: string | null;
+        token: string;
+    }>;
+    tableList: z.ZodObject<{
+        tables: z.ZodArray<z.ZodObject<{
+            tableId: z.ZodString;
+            seats: z.ZodNumber;
+            humans: z.ZodNumber;
+            cpus: z.ZodNumber;
+            status: z.ZodString;
+            handId: z.ZodNullable<z.ZodNumber>;
+            updatedAt: z.ZodNumber;
+        }, "strip", z.ZodTypeAny, {
+            status: string;
+            tableId: string;
+            seats: number;
+            humans: number;
+            cpus: number;
+            handId: number | null;
+            updatedAt: number;
+        }, {
+            status: string;
+            tableId: string;
+            seats: number;
+            humans: number;
+            cpus: number;
+            handId: number | null;
+            updatedAt: number;
+        }>, "many">;
+    }, "strip", z.ZodTypeAny, {
+        tables: {
+            status: string;
+            tableId: string;
+            seats: number;
+            humans: number;
+            cpus: number;
+            handId: number | null;
+            updatedAt: number;
+        }[];
+    }, {
+        tables: {
+            status: string;
+            tableId: string;
+            seats: number;
+            humans: number;
+            cpus: number;
+            handId: number | null;
+            updatedAt: number;
+        }[];
+    }>;
+    tableUpdate: z.ZodObject<{
+        tableId: z.ZodString;
+        seats: z.ZodNumber;
+        humans: z.ZodNumber;
+        cpus: z.ZodNumber;
+        status: z.ZodString;
+        handId: z.ZodNullable<z.ZodNumber>;
+        updatedAt: z.ZodNumber;
+    }, "strip", z.ZodTypeAny, {
+        status: string;
+        tableId: string;
+        seats: number;
+        humans: number;
+        cpus: number;
+        handId: number | null;
+        updatedAt: number;
+    }, {
+        status: string;
+        tableId: string;
+        seats: number;
+        humans: number;
+        cpus: number;
+        handId: number | null;
+        updatedAt: number;
+    }>;
+    tableRemoved: z.ZodObject<{
+        tableId: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        tableId: string;
+    }, {
+        tableId: string;
     }>;
 };
 //# sourceMappingURL=protocol.d.ts.map

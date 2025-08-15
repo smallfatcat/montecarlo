@@ -102,7 +102,12 @@ export function usePokerRuntime(
     const cb = createRuntimeCallbacks()
     const wsUrl = (import.meta as any).env?.VITE_WS_URL as string | undefined
     if (wsUrl) {
-      runtimeRef.current = createRealtimeRuntimeAdapter(wsUrl, cb)
+      let tableId: string | undefined
+      try {
+        const h = typeof window !== 'undefined' ? window.location.hash : ''
+        if (h.startsWith('#poker/')) tableId = h.slice('#poker/'.length)
+      } catch {}
+      runtimeRef.current = createRealtimeRuntimeAdapter(wsUrl, cb as any, tableId)
     } else {
       const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
       const rt = new PokerRuntime({ seats: numPlayers, cpuSeats, startingStack }, cb as any)

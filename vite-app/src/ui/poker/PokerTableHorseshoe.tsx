@@ -150,6 +150,7 @@ export function PokerTableHorseshoe() {
         editLayoutMode={editLayoutMode}
         onToggleEditLayout={setEditLayoutMode}
         onOpenHistory={() => { window.location.hash = '#poker-history' }}
+        onOpenLobby={() => { window.location.hash = '#lobby' }}
         reviewInfo={review ? { handId: review.handId, step: review.step, total: review.actions.length } : null}
         onReviewPrev={reviewPrevStep}
         onReviewNext={reviewNextStep}

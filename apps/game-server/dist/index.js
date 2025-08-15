@@ -4,6 +4,7 @@ import cors from '@fastify/cors';
 import { Server as SocketIOServer } from 'socket.io';
 import { C2S, S2C } from './protocol.js';
 import { createServerRuntimeTable } from './tables/serverRuntimeTable.js';
+import crypto from 'crypto';
 function parseAllowedOrigins() {
     const raw = process.env.FRONTEND_ORIGINS || '';
     const items = raw
@@ -56,22 +57,83 @@ async function buildServer() {
         },
         path: '/socket.io'
     });
+    // Identity management (simple in-memory token store)
+    const tokenToName = new Map();
+    function issueToken(name) {
+        const token = crypto.randomBytes(16).toString('hex');
+        tokenToName.set(token, name ?? null);
+        return token;
+    }
+    function resolveIdentity(token, name) {
+        if (token && tokenToName.has(token)) {
+            if (name && !tokenToName.get(token))
+                tokenToName.set(token, name);
+            return { token, name: tokenToName.get(token) ?? null };
+        }
+        const t = issueToken(name);
+        return { token: t, name: tokenToName.get(t) ?? null };
+    }
     // Single runtime per table id across all connections
     const tables = new Map();
     function getTable(tableId) {
         let t = tables.get(tableId);
         if (!t) {
-            t = createServerRuntimeTable(io, tableId);
+            t = createServerRuntimeTable(io, tableId, { onSummaryChange: (s) => io.emit('table_update', s) });
             tables.set(tableId, t);
         }
         return t;
+    }
+    function listTableSummaries() {
+        return Array.from(tables.values()).map((t) => t.getSummary());
     }
     io.on('connection', (socket) => {
         const origin = socket.request?.headers?.origin || 'unknown';
         app.log.info({ id: socket.id, origin }, 'socket connected');
         socket.emit('ready', S2C.ready.parse({ serverTime: Date.now() }));
         // Ensure default table exists
-        const table = getTable('table-1');
+        getTable('table-1');
+        // Identity handshake
+        socket.on('identify', (payload, ack) => {
+            const p = C2S.identify.safeParse(payload);
+            if (!p.success)
+                return ack?.(S2C.error.parse({ message: 'invalid identify' }));
+            const id = resolveIdentity(p.data.token, p.data.name);
+            try {
+                socket.data = socket.data || {};
+                socket.data.playerId = id.token;
+            }
+            catch { }
+            ack?.(S2C.identity.parse(id));
+        });
+        // Lobby mechanics
+        socket.on('joinLobby', (_payload, ack) => {
+            const p = C2S.joinLobby.safeParse({});
+            if (!p.success)
+                return ack?.(S2C.error.parse({ message: 'invalid lobby' }));
+            socket.join('lobby');
+            const list = listTableSummaries();
+            ack?.(S2C.tableList.parse({ tables: list }));
+        });
+        socket.on('listTables', (_payload, ack) => {
+            const p = C2S.listTables.safeParse({});
+            if (!p.success)
+                return ack?.(S2C.error.parse({ message: 'invalid list' }));
+            const list = listTableSummaries();
+            ack?.(S2C.tableList.parse({ tables: list }));
+        });
+        socket.on('createTable', (payload, ack) => {
+            const p = C2S.createTable.safeParse(payload);
+            if (!p.success)
+                return ack?.(S2C.error.parse({ message: 'invalid createTable' }));
+            const id = (p.data.tableId && p.data.tableId.length > 0) ? p.data.tableId : `table-${Math.floor(Math.random() * 10000)}`;
+            if (!tables.has(id)) {
+                const t = createServerRuntimeTable(io, id, { seats: p.data.seats ?? 6, startingStack: p.data.startingStack ?? 5000, onSummaryChange: (s) => io.emit('table_update', s) });
+                tables.set(id, t);
+            }
+            const list = listTableSummaries();
+            io.to('lobby').emit('table_update', list.find((x) => x.tableId === id));
+            ack?.(S2C.tableList.parse({ tables: list }));
+        });
         socket.on('join', (payload, ack) => {
             const p = C2S.joinTable.safeParse(payload);
             if (!p.success)
@@ -94,7 +156,8 @@ async function buildServer() {
             if (!p.success)
                 return ack?.(S2C.error.parse({ message: 'invalid action' }));
             const t = getTable(p.data.tableId);
-            const result = t.actFrom(socket, p.data.action);
+            const pid = socket.data?.playerId || socket.id;
+            const result = t.actFromId(pid, p.data.action);
             if (!result.ok)
                 return ack?.(S2C.error.parse({ message: result.error }));
             ack?.({ ok: true, state: t.getState() });
@@ -104,7 +167,8 @@ async function buildServer() {
             if (!p.success)
                 return ack?.(S2C.error.parse({ message: 'invalid sit' }));
             const t = getTable(p.data.tableId);
-            const result = t.sit(socket, p.data.seatIndex, p.data.name);
+            const pid = socket.data?.playerId || socket.id;
+            const result = t.sitId(pid, p.data.seatIndex, p.data.name);
             if (!result.ok)
                 return ack?.(S2C.error.parse({ message: result.error }));
             ack?.({ ok: true, state: t.getState() });
@@ -114,7 +178,8 @@ async function buildServer() {
             if (!p.success)
                 return ack?.(S2C.error.parse({ message: 'invalid leave' }));
             const t = getTable(p.data.tableId);
-            const result = t.leave(socket);
+            const pid = socket.data?.playerId || socket.id;
+            const result = t.leaveId(pid);
             if (!result.ok)
                 return ack?.(S2C.error.parse({ message: result.error }));
             ack?.({ ok: true, state: t.getState() });
@@ -143,9 +208,14 @@ async function buildServer() {
         });
         socket.on('disconnect', (reason) => {
             app.log.info({ id: socket.id, reason }, 'socket disconnected');
+            const pid = socket.data?.playerId || socket.id;
             for (const t of tables.values()) {
                 try {
                     t.removeClient(socket);
+                }
+                catch { }
+                try {
+                    t.handleDisconnect(pid);
                 }
                 catch { }
             }

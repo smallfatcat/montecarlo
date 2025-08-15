@@ -3,6 +3,7 @@ import { Table } from './Table'
 import { CONFIG } from '../config'
 import { DeckGallery } from './DeckGallery'
 import { PokerTableHorseshoe } from './poker/PokerTableHorseshoe'
+import { PokerLobby } from './poker/PokerLobby'
 import { PokerGameProvider } from './poker/PokerGameContext'
 import { PokerTestDashboard } from './poker/PokerTestDashboard'
 import { PokerHistoryPage } from './poker/PokerHistoryPage'
@@ -22,11 +23,13 @@ export function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
   const showDeck = hash === '#cards'
-  const showPoker = hash === '#poker'
+  const showPoker = hash === '#poker' || hash.startsWith('#poker/')
   const showPokerTest = hash === '#poker-test'
   const showPokerHistory = hash === '#poker-history'
   const showPokerLayoutEditor = hash === '#poker-layout-editor'
   const showBlackjack = hash === '#blackjack'
+  const showPokerLobby = hash === '#lobby' || hash === '#poker-lobby'
+  const pokerTableId = showPoker && hash.startsWith('#poker/') ? hash.slice('#poker/'.length) : 'table-1'
 
   let content: ReactNode
   if (showDeck) content = <DeckGallery />
@@ -41,8 +44,13 @@ export function App() {
       <PokerLayoutEditorPage />
     </PokerGameProvider>
   )
-  else if (showPoker) content = (
+  else if (showPokerLobby) content = (
     <PokerGameProvider>
+      <PokerLobby />
+    </PokerGameProvider>
+  )
+  else if (showPoker) content = (
+    <PokerGameProvider key={pokerTableId}>
       <PokerTableHorseshoe />
     </PokerGameProvider>
   )

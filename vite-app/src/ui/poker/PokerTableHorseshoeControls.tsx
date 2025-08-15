@@ -24,6 +24,7 @@ export function PokerTableHorseshoeControls(props: {
   onReviewNext?: () => void
   onEndReview?: () => void
   onOpenHistory?: () => void
+  onOpenLobby?: () => void
   mySeatIndex?: number | null
   playerNames?: Array<string | null>
   onRenameMe?: (newName: string) => void
@@ -192,6 +193,7 @@ export function PokerTableHorseshoeControls(props: {
       {onResetLayout && <button onClick={onResetLayout}>Reset Layout</button>}
       {layoutVariant === 'toolbar' && <span className="sep" />}
       {onOpenHistory && <button onClick={onOpenHistory}>Open History</button>}
+      {props.onOpenLobby && <button onClick={props.onOpenLobby}>Back to Lobby</button>}
       {reviewInfo && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: layoutVariant === 'toolbar' ? 16 : 0 }}>
           <span style={{ opacity: 0.85 }}>Review Hand #{reviewInfo.handId} • Step {reviewInfo.step}/{reviewInfo.total}</span>

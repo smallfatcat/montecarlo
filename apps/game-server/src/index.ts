@@ -6,6 +6,7 @@ import { C2S, S2C } from './protocol.js'
 import { createInMemoryTable } from './tables/inMemoryTable.js'
 import { createServerRuntimeTable } from './tables/serverRuntimeTable.js'
 import type { TableId } from './tables/serverRuntimeTable.js'
+import crypto from 'crypto'
 
 function parseAllowedOrigins(): string[] {
   const raw = process.env.FRONTEND_ORIGINS || ''
@@ -61,12 +62,35 @@ async function buildServer() {
     path: '/socket.io'
   })
 
+  // Identity management (simple in-memory token store)
+  const tokenToName = new Map<string, string | null>()
+  function issueToken(name?: string) {
+    const token = crypto.randomBytes(16).toString('hex')
+    tokenToName.set(token, name ?? null)
+    return token
+  }
+  function resolveIdentity(token?: string, name?: string) {
+    if (token && tokenToName.has(token)) {
+      if (name && !tokenToName.get(token)) tokenToName.set(token, name)
+      return { token, name: tokenToName.get(token) ?? null }
+    }
+    const t = issueToken(name)
+    return { token: t, name: tokenToName.get(t) ?? null }
+  }
+
   // Single runtime per table id across all connections
   const tables: Map<TableId, ReturnType<typeof createServerRuntimeTable>> = new Map()
   function getTable(tableId: TableId) {
     let t = tables.get(tableId)
-    if (!t) { t = createServerRuntimeTable(io, tableId); tables.set(tableId, t) }
+    if (!t) {
+      t = createServerRuntimeTable(io, tableId, { onSummaryChange: (s) => io.emit('table_update', s) })
+      tables.set(tableId, t)
+    }
     return t
+  }
+
+  function listTableSummaries() {
+    return Array.from(tables.values()).map((t) => t.getSummary())
   }
 
   io.on('connection', (socket) => {
@@ -75,7 +99,42 @@ async function buildServer() {
     socket.emit('ready', S2C.ready.parse({ serverTime: Date.now() }))
 
     // Ensure default table exists
-    const table = getTable('table-1')
+    getTable('table-1')
+    // Identity handshake
+    socket.on('identify', (payload: unknown, ack?: (resp: unknown) => void) => {
+      const p = C2S.identify.safeParse(payload)
+      if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid identify' }))
+      const id = resolveIdentity(p.data.token, p.data.name)
+      try { (socket as any).data = (socket as any).data || {}; (socket as any).data.playerId = id.token } catch {}
+      ack?.(S2C.identity.parse(id))
+    })
+
+    // Lobby mechanics
+    socket.on('joinLobby', (_payload: unknown, ack?: (resp: unknown) => void) => {
+      const p = C2S.joinLobby.safeParse({})
+      if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid lobby' }))
+      socket.join('lobby')
+      const list = listTableSummaries()
+      ack?.(S2C.tableList.parse({ tables: list }))
+    })
+    socket.on('listTables', (_payload: unknown, ack?: (resp: unknown) => void) => {
+      const p = C2S.listTables.safeParse({})
+      if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid list' }))
+      const list = listTableSummaries()
+      ack?.(S2C.tableList.parse({ tables: list }))
+    })
+    socket.on('createTable', (payload: unknown, ack?: (resp: unknown) => void) => {
+      const p = C2S.createTable.safeParse(payload)
+      if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid createTable' }))
+      const id = (p.data.tableId && p.data.tableId.length > 0) ? p.data.tableId : `table-${Math.floor(Math.random()*10000)}`
+      if (!tables.has(id as TableId)) {
+        const t = createServerRuntimeTable(io, id as TableId, { seats: p.data.seats ?? 6, startingStack: p.data.startingStack ?? 5000, onSummaryChange: (s) => io.emit('table_update', s) })
+        tables.set(id as TableId, t)
+      }
+      const list = listTableSummaries()
+      io.to('lobby').emit('table_update', list.find((x) => x.tableId === id))
+      ack?.(S2C.tableList.parse({ tables: list }))
+    })
 
     socket.on('join', (payload: unknown, ack?: (resp: unknown) => void) => {
       const p = C2S.joinTable.safeParse(payload)
@@ -98,7 +157,8 @@ async function buildServer() {
       const p = C2S.act.safeParse(payload)
       if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid action' }))
       const t = getTable(p.data.tableId as any)
-      const result = t.actFrom(socket, p.data.action)
+      const pid = ((socket as any).data?.playerId as string | undefined) || socket.id
+      const result = t.actFromId(pid, p.data.action)
       if (!result.ok) return ack?.(S2C.error.parse({ message: result.error }))
       ack?.({ ok: true, state: t.getState() })
     })
@@ -107,7 +167,8 @@ async function buildServer() {
       const p = C2S.sit.safeParse(payload)
       if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid sit' }))
       const t = getTable(p.data.tableId as any)
-      const result = t.sit(socket, p.data.seatIndex, p.data.name)
+      const pid = ((socket as any).data?.playerId as string | undefined) || socket.id
+      const result = t.sitId(pid, p.data.seatIndex, p.data.name)
       if (!result.ok) return ack?.(S2C.error.parse({ message: result.error }))
       ack?.({ ok: true, state: t.getState() })
     })
@@ -116,7 +177,8 @@ async function buildServer() {
       const p = C2S.leave.safeParse(payload)
       if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid leave' }))
       const t = getTable(p.data.tableId as any)
-      const result = t.leave(socket)
+      const pid = ((socket as any).data?.playerId as string | undefined) || socket.id
+      const result = t.leaveId(pid)
       if (!result.ok) return ack?.(S2C.error.parse({ message: result.error }))
       ack?.({ ok: true, state: t.getState() })
     })
@@ -145,7 +207,11 @@ async function buildServer() {
 
     socket.on('disconnect', (reason) => {
       app.log.info({ id: socket.id, reason }, 'socket disconnected')
-      for (const t of tables.values()) { try { t.removeClient(socket) } catch {} }
+      const pid = ((socket as any).data?.playerId as string | undefined) || socket.id
+      for (const t of tables.values()) {
+        try { t.removeClient(socket) } catch {}
+        try { t.handleDisconnect(pid) } catch {}
+      }
     })
   })
 

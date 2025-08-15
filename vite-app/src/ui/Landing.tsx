@@ -5,7 +5,7 @@ export function Landing() {
       <p style={{ marginTop: 0, opacity: 0.8 }}>Choose a game</p>
       <div style={{ display: 'flex', gap: 12 }}>
         <button onClick={() => { window.location.hash = '#blackjack' }}>Blackjack</button>
-        <button onClick={() => { window.location.hash = '#poker' }}>Poker</button>
+        <button onClick={() => { window.location.hash = '#lobby' }}>Poker Lobby</button>
       </div>
       <div style={{ marginTop: 16, display: 'flex', gap: 8, opacity: 0.8, fontSize: 14 }}>
         <a href="#cards">Card Gallery</a>
