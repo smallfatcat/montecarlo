@@ -34,16 +34,29 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
             controlsBox: (data as any).controlsBox ?? {},
           }
 
-
           defaultFromFileRef.current = next
           setLayoutOverrides(next)
           onLayoutChange(next)
           applied = true
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (!applied) {
-          console.warn('Failed to load layout from file, using defaults')
+          console.warn('Failed to load layout from file, using defaults:', error)
+          // Set a minimal default layout to ensure seats are visible
+          const defaultLayout: LayoutOverrides = {
+            seats: {},
+            board: null,
+            pot: null,
+            showdown: null,
+            bets: {},
+            stacks: {},
+            controls: null,
+            controlsChildren: {},
+            controlsBox: null,
+          }
+          setLayoutOverrides(defaultLayout)
+          onLayoutChange(defaultLayout)
         }
       })
   }, [onLayoutChange])

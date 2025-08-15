@@ -26,50 +26,68 @@ export function PokerTableSeats({
   layoutOverrides,
 }: PokerTableSeatsProps) {
   const renderSeats = () => {
-    return table.seats.map((seat, seatIndex) => {
-      if (seat.isCPU && !seat.hole.length) return null
-
+    // Always render all seats, regardless of their state
+    const seatsToRender = table.seats.map((seat, seatIndex) => {
       const isHighlighted = highlightSet && Array.from(highlightSet).some(h => h.startsWith(`S${seatIndex}-`))
 
       const layoutOverride = layoutOverrides.seats[seatIndex]
+      
+      // Provide fallback positioning if layout override is not yet loaded
+      const position = layoutOverride || {
+        left: `${100 + (seatIndex * 180)}px`,
+        top: `${50 + (seatIndex * 100)}px`,
+        width: '160px',
+        height: '120px'
+      }
+      
       return (
         <motion.div
           key={seatIndex}
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={{ opacity: 1, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, delay: seatIndex * 0.1 }}
+          transition={{ duration: 0.2, delay: seatIndex * 0.05 }}
           style={{
             position: 'absolute',
-            left: layoutOverride?.left,
-            top: layoutOverride?.top,
-            width: layoutOverride?.width,
-            height: layoutOverride?.height,
+            left: position.left,
+            top: position.top,
+            width: position.width,
+            height: position.height,
+            zIndex: 10,
           }}
         >
-                      <PokerSeat
-              idPrefix="poker-seat"
-              seat={seat}
-              seatIndex={seatIndex}
-              buttonIndex={0}
-              currentToAct={null}
-              highlightSet={isHighlighted ? highlightSet || new Set() : new Set()}
-              displayName={playerNames?.[seatIndex] ?? undefined}
-              visibleHoleCount={revealed.holeCounts[seatIndex]}
-              forceFaceDown={hideHoleCardsUntilShowdown && seatIndex !== mySeatIndex}
-              canControlSeat={true}
-              onSitHere={onSitHere}
-              onLeaveSeat={onLeaveSeat}
-              mySeatIndex={mySeatIndex}
-              containerStyle={{}}
-              hideStackRow={true}
-            />
+          <PokerSeat
+            idPrefix="poker-seat"
+            seat={seat}
+            seatIndex={seatIndex}
+            buttonIndex={0}
+            currentToAct={null}
+            highlightSet={isHighlighted ? highlightSet || new Set() : new Set()}
+            displayName={playerNames?.[seatIndex] ?? undefined}
+            visibleHoleCount={revealed.holeCounts[seatIndex]}
+            forceFaceDown={hideHoleCardsUntilShowdown && seatIndex !== mySeatIndex}
+            canControlSeat={true}
+            onSitHere={onSitHere}
+            onLeaveSeat={onLeaveSeat}
+            mySeatIndex={mySeatIndex}
+            containerStyle={{}}
+            hideStackRow={true}
+          />
         </motion.div>
       )
     })
+    
+    return seatsToRender
   }
 
   return (
-    <div className="poker-table-seats" style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div 
+      className="poker-table-seats" 
+      style={{ 
+        position: 'relative', 
+        width: '100%', 
+        height: '100%'
+      }}
+    >
       {renderSeats()}
     </div>
   )

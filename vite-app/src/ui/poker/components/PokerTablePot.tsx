@@ -1,17 +1,26 @@
 import { motion } from 'framer-motion'
-import type { PokerTableState } from '../../../poker/types'
 import { ChipStack } from '../../components/ChipStack'
 import { CONFIG } from '../../../config'
+import type { PokerTableState } from '../../../poker/types'
 
 export interface PokerTablePotProps {
   table: PokerTableState
   showdownText?: string
   layoutOverride?: any
+  layoutOverrides?: any // Add this to access betting spot positions
 }
 
-export function PokerTablePot({ table, showdownText, layoutOverride }: PokerTablePotProps) {
+export function PokerTablePot({ table, showdownText, layoutOverride, layoutOverrides }: PokerTablePotProps) {
   const { horseshoe } = CONFIG.poker
   const { potOffsetY, showdownOffsetY } = horseshoe
+
+  // Calculate the pot position for animation calculations
+  const potPosition = layoutOverride || {
+    left: '50%',
+    top: '50%',
+    transform: 'translate(-50%, -50%)',
+    marginTop: potOffsetY
+  }
 
   return (
     <div 
@@ -35,15 +44,49 @@ export function PokerTablePot({ table, showdownText, layoutOverride }: PokerTabl
         className="pot-display"
       >
         <div className="pot-label">Pot</div>
-        <ChipStack
-          amount={table.pot.main}
-          size={CONFIG.poker.chipIconSizePx}
-          maxChipsPerRow={CONFIG.poker.maxChipsPerRow}
-          overlap={CONFIG.poker.chipOverlap}
-        />
+        <motion.div
+          key={`pot-${table.pot.main}`}
+          initial={{ scale: 1.2, rotate: 5 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ 
+            duration: CONFIG.poker.animations?.chipFlyDurationMs ? CONFIG.poker.animations.chipFlyDurationMs / 1000 : 0.15,
+            ease: "easeOut"
+          }}
+          whileHover={{ scale: 1.05 }}
+          style={{
+            cursor: 'pointer',
+            padding: '8px',
+            borderRadius: '12px',
+            background: 'rgba(0,0,0,0.1)',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}
+        >
+          <ChipStack
+            amount={table.pot.main}
+            size={CONFIG.poker.chipIconSizePx}
+            maxChipsPerRow={CONFIG.poker.maxChipsPerRow}
+            overlap={CONFIG.poker.chipOverlap}
+          />
+        </motion.div>
+        <motion.div
+          key={`pot-amount-${table.pot.main}`}
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ 
+            duration: 0.2,
+            delay: 0.1
+          }}
+          style={{
+            fontSize: '12px',
+            color: 'rgba(255,255,255,0.9)',
+            fontWeight: 600,
+            marginTop: '4px',
+            textShadow: '0 1px 2px rgba(0,0,0,0.8)'
+          }}
+        >
+          {table.pot.main}
+        </motion.div>
       </motion.div>
-
-
 
       {/* Showdown Text */}
       {showdownText && (

@@ -58,6 +58,7 @@ export function createInitialPokerTable(numSeats: number, cpuSeats: number[], st
     hasFolded: false,
     isAllIn: false,
   }));
+  
   return {
     handId: 0,
     deck: shoe ? [...shoe] : shuffleInPlace(createStandardDeck()),

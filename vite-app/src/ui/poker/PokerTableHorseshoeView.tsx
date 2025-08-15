@@ -8,6 +8,7 @@ import {
   PokerTableControls,
   PokerTablePot,
   PokerTableStacks,
+  PokerTableBettingSpots,
   type LayoutOverrides,
   type PokerTableViewHandle
 } from './components'
@@ -118,6 +119,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             table={table}
             showdownText={showdownTextProp}
             layoutOverride={layoutOverrides.pot}
+            layoutOverrides={layoutOverrides}
           />
 
                         {/* Seats */}
@@ -135,6 +137,12 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
 
               {/* Stacks */}
               <PokerTableStacks
+                table={table}
+                layoutOverrides={layoutOverrides}
+              />
+
+              {/* Betting Spots */}
+              <PokerTableBettingSpots
                 table={table}
                 layoutOverrides={layoutOverrides}
               />

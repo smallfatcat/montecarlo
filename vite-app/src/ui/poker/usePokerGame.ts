@@ -281,7 +281,9 @@ export function usePokerGame() {
   useEffect(() => {
     if (runtimeRef.current) return
     const cb = {
-      onState: (s: PokerTableState) => setTable(s),
+      onState: (s: PokerTableState) => {
+        setTable(s)
+      },
       onAction: (handId: number, seat: number, action: BettingAction, toCall: number, street: PokerTableState['street']) => {
         appendEvent(handId, { ts: Date.now(), type: 'action', seat, action: action.type, amount: (action as any).amount ?? null, toCall, street })
       },
