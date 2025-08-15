@@ -1,47 +1,98 @@
-## Montecarlo
+# Montecarlo
 
-A small Vite + React app for running Monte Carlo style simulations and visualizations (currently focused on poker gameplay/simulation UI).
+A casino game application built with React, TypeScript, and Node.js, featuring real-time multiplayer poker and high-speed blackjack simulations.
 
-### Tech stack
-- React 19, TypeScript
-- Vite 7
+## 🎯 Current Features
 
-### Repository layout
-- `vite-app/` — the web app source (React + Vite)
+- **Poker**: Texas Hold'em with real-time multiplayer via WebSocket server
+- **Blackjack**: Single-player with configurable rules and strategies
+- **High-Speed Simulations**: Monte Carlo analysis using Web Workers
+- **Real-time Multiplayer**: Authoritative game server with Socket.IO
+- **Modern UI**: React-based interface with responsive design
 
-### Development
-```sh
-cd vite-app
+## 🏗️ Architecture
+
+- **Frontend**: React 19 + Vite + TypeScript
+- **Backend**: Node.js + Fastify + Socket.IO
+- **Game Engine**: Extracted poker engine with deterministic logic
+- **Simulation**: Pure function runners for maximum performance
+- **Monorepo**: npm workspaces for package management
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies
 npm install
-npm run dev
-```
-The app runs on a local dev server. Vite Hot Module Reload is enabled.
 
-### Build
-```sh
-cd vite-app
-npm run build
-```
-Outputs static assets to `vite-app/dist/`.
+# Start development servers
+npm run dev:all
 
-### Tests
-```sh
-cd vite-app
-npm test
+# Or start individually
+npm run dev:frontend    # Frontend only
+npm run dev:backend     # Backend only
 ```
 
-### Deployment (GitHub Pages)
-This project is configured to deploy to GitHub Pages using `gh-pages`.
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8080
 
-- The app is built with Vite `base` set to `/montecarlo/` in `vite-app/vite.config.js` so it serves correctly under the project path.
-- Deploy with:
-```sh
-cd vite-app
-npm run deploy
+## 📚 Documentation
+
+- [Getting Started](./docs/getting-started.md) - Development setup and workflow
+- [Architecture](./docs/architecture.md) - System design and components
+- [System Overview](./docs/system-overview.md) - High-level project overview
+- [Poker Realtime Usage](./docs/poker-realtime-usage.md) - Multiplayer setup
+
+## ⚠️ Development Status
+
+**This project is in very early development stages.** Features are actively being developed and the API may change frequently. The current focus is on:
+
+- Core game logic and multiplayer infrastructure
+- UI component architecture and design
+- Performance optimization and simulation capabilities
+- Documentation and developer experience
+
+## 🎮 Game Types
+
+### Poker (Multiplayer)
+- Real-time Texas Hold'em
+- WebSocket-based communication
+- CPU players for single-player games
+- Configurable table layouts
+
+### Blackjack (Single-player)
+- Standard rules with house rule options
+- Multi-deck shoe management
+- Basic strategy implementation
+- High-volume Monte Carlo simulations
+
+## 🔧 Development
+
+```bash
+# Build all packages
+npm run build:all
+
+# Run tests
+npm run test:all
+
+# Type checking
+npm run typecheck
+
+# Clean rebuild
+npm run rebuild
 ```
-This builds the app and publishes `dist/` to the `gh-pages` branch. In your repository settings, set Pages to deploy from the `gh-pages` branch.
 
-### License
-MIT — see `LICENSE`.
+## 📦 Project Structure
+
+```
+montecarlo/
+├── vite-app/          # React frontend application
+├── apps/game-server/  # WebSocket multiplayer server
+├── packages/          # Shared packages and game engine
+└── docs/             # Project documentation
+```
+
+## 📄 License
+
+MIT — see [LICENSE](./LICENSE)
 
 

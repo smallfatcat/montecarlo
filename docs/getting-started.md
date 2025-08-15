@@ -40,7 +40,7 @@
 When working on poker table components:
 
 ```typescript
-// Import from the new component structure
+// Import from the component structure
 import { 
   PokerTableLayout,
   PokerTableSeats,
@@ -57,7 +57,7 @@ import {
 
 ### 2. Configuration Changes
 
-Configuration is now split by domain:
+Configuration is split by domain:
 
 ```typescript
 // Game rules and logic
@@ -124,33 +124,49 @@ npm run typecheck
 
 ```
 src/
-├── ui/                    # UI components
+├── ui/                    # UI components and hooks
 │   ├── poker/            # Poker-specific UI
 │   │   ├── components/   # Reusable poker components
 │   │   ├── hooks/        # Custom poker hooks
 │   │   └── ...
-│   └── components/       # Shared UI components
+│   ├── components/       # Shared UI components
+│   ├── hooks/            # Shared UI hooks
+│   ├── controls/         # Game control components
+│   └── handLayouts/      # Hand layout components
 ├── config/               # Configuration files
 ├── poker/                # Poker game logic
 ├── blackjack/            # Blackjack game logic
-└── workers/              # Web Workers
+└── workers/              # Web Workers for simulations
 ```
 
 ### Backend (apps/game-server/)
 
+The game server provides authoritative multiplayer functionality for poker games:
+
 ```
 src/
-├── index.ts              # Main server file
-├── tables/               # Table management
-├── protocol.ts           # Message schemas
-└── ...
+├── index.ts              # Main server file with Socket.IO setup
+├── tables/               # Table management and runtime
+│   ├── serverRuntimeTable.ts  # Core table logic and state management
+│   └── inMemoryTable.ts       # Table instance creation
+├── protocol.ts           # Message schemas (imported from shared package)
+└── dev/                  # Development utilities
 ```
+
+**Key Features:**
+- **Real-time Communication**: WebSocket-based multiplayer
+- **Authoritative State**: Single source of truth for game state
+- **Message Validation**: Zod-based protocol validation
+- **Table Management**: Dynamic table creation and management
+- **CPU Integration**: AI players for single-player games
 
 ### Shared (packages/)
 
 ```
 packages/
 ├── shared/               # Common types and protocols
+│   └── src/
+│       └── protocol.ts   # Zod schemas for client-server communication
 └── poker-engine/         # Poker game engine
 ```
 
@@ -176,6 +192,20 @@ packages/
 - **Type Safety**: Full TypeScript support
 - **Environment Support**: Development vs production configs
 - **Validation**: Runtime configuration validation
+
+### Simulation Architecture
+
+- **High-Speed Runner**: Pure function simulation for maximum performance
+- **Web Worker Integration**: Background thread processing
+- **Progress Tracking**: Real-time simulation updates
+- **Configurable Parameters**: Adjustable simulation settings
+
+### Multiplayer Architecture
+
+- **Authoritative Server**: Game server enforces all rules
+- **Real-time Protocol**: WebSocket communication with validation
+- **State Synchronization**: Automatic client state updates
+- **Connection Management**: Robust connection handling
 
 ## Common Patterns
 
@@ -207,33 +237,78 @@ export function useCustomHook(initialValue: string) {
 }
 ```
 
-### 3. Error Boundary
+### 3. Simulation Runner
 
 ```typescript
-import { PokerErrorBoundary } from '../components/ErrorBoundary'
+import { useSimulationRunner } from '../ui/useSimulationRunner'
 
-function App() {
+function SimulationComponent() {
+  const { run, progress, isRunning } = useSimulationRunner()
+  
+  const handleRunSimulation = () => {
+    run({
+      numHands: 10000,
+      numPlayers: 4,
+      deckCount: 6,
+      initialBankrolls: [1000, 1000, 1000, 1000],
+      casinoInitial: 10000,
+      betsBySeat: [10, 10, 10, 10]
+    }, (result) => {
+      console.log('Simulation complete:', result)
+    })
+  }
+  
   return (
-    <PokerErrorBoundary>
-      <PokerGame />
-    </PokerErrorBoundary>
+    <div>
+      <button onClick={handleRunSimulation} disabled={isRunning}>
+        Run Simulation
+      </button>
+      {progress && (
+        <div>Progress: {progress.done}/{progress.total}</div>
+      )}
+    </div>
   )
 }
 ```
 
-### 4. Performance Monitoring
+### 4. Game Server Integration
 
 ```typescript
-import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor'
+import { usePokerGame } from '../ui/poker/usePokerGame'
 
-function Component() {
-  const { metrics, measureRenderTime } = usePerformanceMonitor()
+function PokerGameComponent() {
+  const { 
+    connect, 
+    joinTable, 
+    sit, 
+    act, 
+    state, 
+    isConnected 
+  } = usePokerGame()
   
-  useEffect(() => {
-    const startTime = performance.now()
-    // Component logic
-    measureRenderTime(startTime)
-  }, [measureRenderTime])
+  const handleJoinGame = () => {
+    connect('ws://localhost:8080')
+    joinTable('table-1')
+    sit(0, 'Player1')
+  }
+  
+  const handleAction = (action: 'fold' | 'call' | 'raise', amount?: number) => {
+    act(action, amount)
+  }
+  
+  return (
+    <div>
+      {!isConnected ? (
+        <button onClick={handleJoinGame}>Join Game</button>
+      ) : (
+        <div>
+          <button onClick={() => handleAction('fold')}>Fold</button>
+          <button onClick={() => handleAction('call')}>Call</button>
+          <button onClick={() => handleAction('raise', 100)}>Raise $100</button>
+        </div>
+      )}
+    </div>
+  )
 }
 ```
 
@@ -267,9 +342,23 @@ curl http://localhost:8080/healthz
 ### Performance Issues
 
 - Use React DevTools Profiler
-- Check performance monitoring metrics
+- Check Web Worker performance
 - Verify WebSocket connection stability
 - Monitor memory usage
+
+### Game Server Issues
+
+```bash
+# Check server logs
+cd apps/game-server
+npm run dev
+
+# Verify environment configuration
+cat .env
+
+# Test WebSocket connection
+curl http://localhost:8080/healthz
+```
 
 ## Contributing
 
@@ -291,6 +380,6 @@ curl http://localhost:8080/healthz
 ## Next Steps
 
 - Read the [Architecture Guide](./architecture.md)
-- Explore the [API Reference](./api-reference.md)
-- Check out the [Contributing Guidelines](./contributing.md)
+- Explore the [System Overview](./system-overview.md)
+- Check out the [Poker Realtime Usage](./poker-realtime-usage.md)
 - Join the development discussions

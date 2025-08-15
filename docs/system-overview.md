@@ -1,6 +1,6 @@
 ### System Overview
 
-This project delivers a poker UI backed by an authoritative realtime server. The frontend renders the table and user interactions; the backend enforces game rules and streams state over WebSockets.
+This project delivers a casino game application with poker UI backed by an authoritative realtime server, plus high-speed simulation capabilities for both poker and blackjack. The frontend renders game tables and user interactions; the backend enforces game rules and streams state over WebSockets.
 
 ---
 
@@ -8,17 +8,80 @@ This project delivers a poker UI backed by an authoritative realtime server. The
 
 - Frontend (`vite-app/`)
   - React + Vite SPA.
-  - Renders poker tables, captures user actions (deal, bet, fold).
+  - Renders poker and blackjack tables, captures user actions (deal, bet, fold).
+  - High-speed simulation runner for Monte Carlo analysis.
   - Connects to the backend via Socket.IO using `VITE_WS_URL` (ws/wss).
 
 - Backend (`apps/game-server/`)
   - Node.js (Fastify HTTP + Socket.IO for realtime).
+  - **Authoritative Game Server**: Single source of truth for multiplayer poker games.
+  - **Real-time Protocol**: WebSocket-based communication with Zod validation.
+  - **Table Management**: Dynamic table creation and multi-table support.
+  - **State Enforcement**: Enforces game rules and validates all player actions.
+  - **CPU Integration**: Seamless AI player integration for single-player games.
   - Hosts table instances and applies validated actions to the engine.
   - Broadcasts authoritative table state to connected clients.
 
 - Shared packages (`packages/`)
   - `packages/shared`: Shared types and message contracts (Zod-ready).
   - `packages/poker-engine`: Extracted engine with deterministic state transitions.
+
+---
+
+## Game Types
+
+### Poker
+- Texas Hold'em with configurable rules
+- Real-time multiplayer gameplay via game-server
+- Hand evaluation and equity calculations
+- Game history and replay functionality
+- Layout editor for custom table configurations
+- CPU players for single-player games
+
+### Blackjack
+- Standard blackjack rules with configurable house rules
+- Multi-deck shoe management
+- Basic strategy implementation
+- High-speed Monte Carlo simulations
+- Bankroll tracking and analysis
+- **Note**: Currently single-player only (no multiplayer server support)
+
+---
+
+## Simulation Features
+
+The application includes a high-performance simulation runner:
+
+- **Pure Function Architecture**: Maximum simulation speed
+- **Web Worker Integration**: Background thread processing
+- **Configurable Parameters**: Adjustable rules, deck counts, and betting
+- **Progress Tracking**: Real-time simulation updates
+- **Performance Optimized**: Designed for high-volume analysis
+
+### Simulation Use Cases
+
+- **Strategy Analysis**: Test different playing strategies
+- **Rule Impact**: Analyze house rule effects on player advantage
+- **Bankroll Management**: Study long-term bankroll behavior
+- **Performance Testing**: Benchmark game engine performance
+
+---
+
+## Architecture Flow
+
+### Multiplayer Poker (via Game Server)
+1. Client connects to game-server via WebSocket
+2. Client joins table and takes a seat
+3. Game server manages authoritative state
+4. All actions validated and processed server-side
+5. State updates broadcast to all connected clients
+6. Real-time synchronization maintained
+
+### Single-player & Simulations
+1. Local game logic execution
+2. Web Worker-based simulations
+3. No server communication required
+4. Maximum performance for analysis
 
 ---
 
@@ -57,8 +120,8 @@ Ensure backend CORS/Socket.IO `origin` allowlist includes your frontend origin(s
 
 ## Directory map
 
-- `vite-app/` — React SPA (UI)
-- `apps/game-server/` — Fastify + Socket.IO (authoritative server)
+- `vite-app/` — React SPA (UI + simulations)
+- `apps/game-server/` — Fastify + Socket.IO (authoritative multiplayer server)
 - `packages/shared/` — shared types/contracts
 - `packages/poker-engine/` — engine logic used by server
 - `docs/` — guides (usage, hosting, sequences)
@@ -68,7 +131,8 @@ Ensure backend CORS/Socket.IO `origin` allowlist includes your frontend origin(s
 ## References
 
 - Usage and hosting: `docs/poker-realtime-usage.md`
+- Getting started: `docs/getting-started.md`
+- Architecture: `docs/architecture.md`
 - Server quick start: `apps/game-server/README.md`
-- Poker sequence: `docs/poker-hand-sequence.md`
 
 
