@@ -54,23 +54,21 @@ get_git_info() {
     fi
 }
 
-# Generate semantic version
+# Generate simple version with build number
 generate_semver() {
-    local base_version="${LATEST_TAG#v}"
-    local major=$(echo "$base_version" | cut -d. -f1)
-    local minor=$(echo "$base_version" | cut -d. -f2)
-    local patch=$(echo "$base_version" | cut -d. -f3)
+    # Read version from root package.json
+    local package_version="0.0.0"
+    if [[ -f "package.json" ]]; then
+        package_version=$(node -e "console.log(require('./package.json').version)")
+    fi
     
-    # Increment patch version for each commit
-    local new_patch=$((patch + BUILD_NUMBER))
-    
-    # Generate build metadata
-    local build_metadata="build.$BUILD_NUMBER+$COMMIT_HASH"
+    # Add build number
+    local build_metadata="build.$BUILD_NUMBER"
     if [[ "$DIRTY_STATUS" == "dirty" ]]; then
         build_metadata="$build_metadata.dirty"
     fi
     
-    echo "$major.$minor.$new_patch-$build_metadata"
+    echo "$package_version-$build_metadata"
 }
 
 # Generate version files for each component
@@ -85,14 +83,12 @@ generate_component_versions() {
     for pkg in packages/*/; do
         if [[ -f "$pkg/package.json" ]]; then
             local pkg_name=$(basename "$pkg")
-            local pkg_version=$(generate_semver)
+            local pkg_version=$(node -e "console.log(require('$pkg/package.json').version)")
+            local pkg_build_version="$pkg_version-build.$BUILD_NUMBER"
             
             # Create version file
-            echo "$pkg_version" > "$pkg/VERSION"
-            echo "Generated VERSION file for $pkg_name: $pkg_version"
-            
-            # Update package.json version (optional - uncomment if you want automatic updates)
-            # npm --prefix "$pkg" version "$pkg_version" --no-git-tag-version
+            echo "$pkg_build_version" > "$pkg/VERSION"
+            echo "Generated VERSION file for $pkg_name: $pkg_build_version"
         fi
     done
     
@@ -100,19 +96,21 @@ generate_component_versions() {
     for app in apps/*/; do
         if [[ -f "$app/package.json" ]]; then
             local app_name=$(basename "$app")
-            local app_version=$(generate_semver)
+            local app_version=$(node -e "console.log(require('$app/package.json').version)")
+            local app_build_version="$app_version-build.$BUILD_NUMBER"
             
             # Create version file
-            echo "$app_version" > "$app/VERSION"
-            echo "Generated VERSION file for $app_name: $app_version"
+            echo "$app_build_version" > "$app/VERSION"
+            echo "Generated VERSION file for $app_name: $app_build_version"
         fi
     done
     
     # Generate version file for vite-app
     if [[ -f "vite-app/package.json" ]]; then
-        local vite_version=$(generate_semver)
-        echo "$vite_version" > "vite-app/VERSION"
-        echo "Generated VERSION file for vite-app: $vite_version"
+        local vite_version=$(node -e "console.log(require('./vite-app/package.json').version)")
+        local vite_build_version="$vite_version-build.$BUILD_NUMBER"
+        echo "$vite_build_version" > "vite-app/VERSION"
+        echo "Generated VERSION file for vite-app: $vite_build_version"
     fi
 }
 
