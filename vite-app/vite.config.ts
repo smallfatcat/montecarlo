@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import path from 'node:path'
 import fs from 'node:fs'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 function readVersion(): string {
   // Try to read from generated VERSION file first
@@ -28,7 +29,7 @@ function readVersion(): string {
   }
 }
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ mode }) => ({
   base: '/montecarlo/',
   server: {
     watch: {
@@ -37,6 +38,7 @@ export default defineConfig(({ command }) => ({
     },
   },
   build: {
+    treeshake: true,
     rollupOptions: {
       onwarn(warning, warn) {
         // Suppress framer-motion "use client" warnings
@@ -76,6 +78,17 @@ export default defineConfig(({ command }) => ({
         }
       }
     },
+    ...(mode === 'analyze'
+      ? [
+          visualizer({
+            filename: 'dist/stats.html',
+            gzipSize: true,
+            brotliSize: true,
+            template: 'treemap',
+            open: false,
+          }),
+        ]
+      : []),
   ],
   define: {
     __APP_VERSION__: JSON.stringify(readVersion()),
