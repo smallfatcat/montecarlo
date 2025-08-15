@@ -11,6 +11,8 @@ export function Landing() {
         <a href="#cards">Card Gallery</a>
         <span>·</span>
         <a href="#poker-test">Poker Test</a>
+        <span>·</span>
+        <a href="#poker-layout-editor">Layout Editor</a>
       </div>
     </div>
   )

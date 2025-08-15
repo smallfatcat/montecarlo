@@ -1,19 +1,54 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
 import type { PokerTableState } from '../../../poker/types'
 import { Card3D } from '../../components/Card3D'
 import { CONFIG } from '../../../config'
+import { useDragSystem } from './PokerTableLayout'
 
 export interface PokerTableBoardProps {
   table: PokerTableState
   revealed: { holeCounts: number[]; boardCount: number }
   highlightSet?: Set<string>
   layoutOverride?: any
+  // Edit layout props
+  editLayout?: boolean
 }
 
-export function PokerTableBoard({ table, revealed, highlightSet, layoutOverride }: PokerTableBoardProps) {
+export function PokerTableBoard({ table, revealed, highlightSet, layoutOverride, editLayout }: PokerTableBoardProps) {
   const { horseshoe } = CONFIG.poker
   const { boardOffsetY } = horseshoe
   const boardGapPx = 8 // Tighter spacing between board cards
+  const boardRef = useRef<HTMLDivElement>(null)
+  const dragSystem = useDragSystem()
+  const [currentPosition, setCurrentPosition] = useState(layoutOverride || {})
+
+  // Update position when prop changes
+  useEffect(() => {
+    setCurrentPosition(layoutOverride || {})
+  }, [layoutOverride])
+
+  // Register with drag system
+  useEffect(() => {
+    if (dragSystem && boardRef.current && editLayout) {
+      const draggable = {
+        id: 'board',
+        type: 'board' as const,
+        element: boardRef.current,
+        priority: 8, // High priority for board
+        getLayout: () => currentPosition,
+        setLayout: (newLayout: any) => {
+          // Update visual position in real-time during drag
+          setCurrentPosition(newLayout)
+        }
+      }
+      
+      dragSystem.registerDraggable(draggable)
+      
+      return () => {
+        dragSystem.unregisterDraggable('board')
+      }
+    }
+  }, [dragSystem, editLayout, currentPosition])
 
   const renderBoardCards = () => {
     if (!table.community || table.community.length === 0) return null
@@ -34,12 +69,12 @@ export function PokerTableBoard({ table, revealed, highlightSet, layoutOverride 
             top: boardOffsetY,
           }}
         >
-                      <Card3D
-              card={card}
-              faceDown={!isRevealed}
-              index={cardIndex}
-              highlight={isHighlighted}
-            />
+          <Card3D
+            card={card}
+            faceDown={!isRevealed}
+            index={cardIndex}
+            highlight={isHighlighted}
+          />
         </motion.div>
       )
     })
@@ -47,18 +82,24 @@ export function PokerTableBoard({ table, revealed, highlightSet, layoutOverride 
 
   return (
     <div 
+      ref={boardRef}
       className="poker-table-board"
       style={{
         position: 'absolute',
-        left: layoutOverride?.left ?? '50%',
-        top: layoutOverride?.top ?? '50%',
-        transform: layoutOverride?.left ? 'none' : 'translate(-50%, -50%)',
+        left: currentPosition.left ?? '50%',
+        top: currentPosition.top ?? '50%',
+        transform: currentPosition.left ? 'none' : 'translate(-50%, -50%)',
         display: 'flex',
         gap: boardGapPx,
         alignItems: 'center',
         justifyContent: 'center',
-        width: layoutOverride?.width,
-        height: layoutOverride?.height,
+        width: currentPosition.width,
+        height: currentPosition.height,
+        cursor: editLayout ? 'move' : 'default',
+        border: editLayout ? '2px dashed rgba(255,255,255,0.3)' : 'none',
+        borderRadius: editLayout ? '8px' : '0',
+        padding: editLayout ? '8px' : '0',
+        zIndex: 15, // High z-index for board
       }}
     >
       <AnimatePresence>

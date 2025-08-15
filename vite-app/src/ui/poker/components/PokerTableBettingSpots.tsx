@@ -1,160 +1,220 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
 import { ChipStack } from '../../components/ChipStack'
 import { CONFIG } from '../../../config'
 import type { PokerTableState } from '../../../poker/types'
+import { useDragSystem } from './PokerTableLayout'
 
 export interface PokerTableBettingSpotsProps {
   table: PokerTableState
   layoutOverrides: any
+  // Edit layout props
+  editLayout?: boolean
 }
 
-export function PokerTableBettingSpots({ table, layoutOverrides }: PokerTableBettingSpotsProps) {
+export function PokerTableBettingSpots({ table, layoutOverrides, editLayout }: PokerTableBettingSpotsProps) {
+  const dragSystem = useDragSystem()
+
   const renderBettingSpots = () => {
-    // Only render betting spots for seats that have committed chips this street
-    const spotsToRender = table.seats
-      .map((seat, seatIndex) => ({ seat, seatIndex }))
-      .filter(({ seat }) => seat.committedThisStreet > 0)
-      .map(({ seat, seatIndex }) => {
+    if (!table.seats) return []
+
+    return table.seats
+      .filter(seat => seat.committedThisStreet > 0)
+      .map((seat) => {
+        const seatIndex = seat.seatIndex
         const spotLayout = layoutOverrides.bets?.[seatIndex]
         const stackLayout = layoutOverrides.stacks?.[seatIndex]
         const potLayout = layoutOverrides.pot
-        
-        // Position betting spots using the layout override
-        // Provide fallback positioning if layout override is not yet loaded
-        const position = spotLayout || {
-          left: `${150 + (seatIndex * 180)}px`,
-          top: `${200 + (seatIndex * 100)}px`,
-          width: '100px',
-          height: '40px'
+
+        if (!spotLayout && !stackLayout && !potLayout) {
+          console.warn(`No layout found for betting spot at seat ${seatIndex}`)
+          return null
         }
-        
-        // Calculate the path from stack to betting spot for animation
-        const stackPosition = stackLayout || {
-          left: `${150 + (seatIndex * 180)}px`,
-          top: `${120 + (seatIndex * 100)}px`
+
+        // Use betting spot layout if available, otherwise derive from stack position
+        let left: string | number
+        let top: string | number
+
+        if (spotLayout?.left !== undefined && spotLayout?.top !== undefined) {
+          left = spotLayout.left
+          top = spotLayout.top
+        } else if (stackLayout?.left !== undefined && stackLayout?.top !== undefined) {
+          // Position betting spot above the stack
+          const stackLeft = typeof stackLayout.left === 'string' ? parseInt(stackLayout.left) : stackLayout.left
+          const stackTop = typeof stackLayout.top === 'string' ? parseInt(stackLayout.top) : stackLayout.top
+          left = stackLeft
+          top = stackTop - 60 // 60px above the stack
+        } else if (potLayout?.left !== undefined && potLayout?.top !== undefined) {
+          // Fallback to pot position
+          const potLeft = typeof potLayout.left === 'string' ? parseInt(potLayout.left) : potLayout.left
+          const potTop = typeof potLayout.top === 'string' ? parseInt(potLayout.top) : potLayout.top
+          left = potLeft + (seatIndex * 40) // Spread out horizontally
+          top = potTop - 80 // Above the pot
+        } else {
+          // Ultimate fallback
+          left = 150 + (seatIndex * 180)
+          top = 120 + (seatIndex * 100) - 60
         }
-        
-        // Calculate the path from betting spot to pot for exit animation
-        // potLayout is already defined above
-        
-        // Calculate the offset from stack to betting spot
-        const deltaX = position.left - stackPosition.left
-        const deltaY = position.top - stackPosition.top
-        
-        // Calculate the path from betting spot to pot
-        const potX = potLayout?.left === '50%' ? 600 : parseInt(potLayout.left) + (parseInt(potLayout.width) / 2)
-        const potY = potLayout?.top === '50%' ? 360 : parseInt(potLayout.top) + (parseInt(potLayout.height) / 2)
-        const betX = parseInt(position.left) + (parseInt(position.width) / 2)
-        const betY = parseInt(position.top) + (parseInt(position.height) / 2)
-        const potDeltaX = potX - betX
-        const potDeltaY = potY - betY
-        
+
         return (
-          <motion.div
-            key={`betting-spot-${seatIndex}`}
-            initial={{ 
-              opacity: 0, 
-              scale: 0.8, 
-              x: -deltaX, 
-              y: -deltaY 
-            }}
-            animate={{ 
-              opacity: 1, 
-              scale: 1, 
-              x: 0, 
-              y: 0 
-            }}
-            exit={{ 
-              opacity: 0, 
-              scale: 0.8, 
-              x: potDeltaX, 
-              y: potDeltaY 
-            }}
-            transition={{ 
-              duration: CONFIG.poker.animations?.chipFlyDurationMs ? CONFIG.poker.animations.chipFlyDurationMs / 1000 : 0.15,
-              ease: "easeOut"
-            }}
-            style={{
-              position: 'absolute',
-              left: position.left,
-              top: position.top,
-              width: position.width,
-              height: position.height,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 6, // Above stacks but below pot
-            }}
-          >
-            <motion.div 
-              style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                gap: 2,
-                padding: '4px 8px',
-                borderRadius: '8px',
-                background: 'rgba(0,0,0,0.3)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                backdropFilter: 'blur(4px)',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3), 0 0 20px rgba(255,215,0,0.2)'
-              }}
-              animate={{
-                boxShadow: [
-                  '0 4px 12px rgba(0,0,0,0.3), 0 0 20px rgba(255,215,0,0.2)',
-                  '0 4px 12px rgba(0,0,0,0.3), 0 0 30px rgba(255,215,0,0.4)',
-                  '0 4px 12px rgba(0,0,0,0.3), 0 0 20px rgba(255,215,0,0.2)'
-                ]
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            >
-              <motion.div
-                initial={{ scale: 0.5 }}
-                animate={{ scale: 1 }}
-                transition={{ 
-                  duration: 0.3,
-                  ease: "easeOut",
-                  delay: 0.1
-                }}
-              >
-                <ChipStack
-                  amount={seat.committedThisStreet}
-                  size={CONFIG.poker.chipIconSizePx}
-                  overlap={CONFIG.poker.chipOverlap}
-                  maxChipsPerRow={CONFIG.poker.maxChipsPerRow}
-                />
-              </motion.div>
-              <motion.span 
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ 
-                  duration: 0.2,
-                  delay: 0.2
-                }}
-                style={{ 
-                  fontSize: '11px', 
-                  color: 'rgba(255,255,255,0.8)', 
-                  fontWeight: 500,
-                  textShadow: '0 1px 2px rgba(0,0,0,0.8)'
-                }}
-              >
-                ${seat.committedThisStreet}
-              </motion.span>
-            </motion.div>
-          </motion.div>
+          <BettingSpot
+            key={`bet-${seatIndex}`}
+            seatIndex={seatIndex}
+            amount={seat.committedThisStreet}
+            position={{ left, top }}
+            editLayout={editLayout}
+            dragSystem={dragSystem}
+          />
         )
       })
-    
-    return spotsToRender
+      .filter(Boolean)
   }
 
   return (
     <AnimatePresence mode="popLayout">
       {renderBettingSpots()}
     </AnimatePresence>
+  )
+}
+
+// Individual betting spot component
+function BettingSpot({ 
+  seatIndex, 
+  amount, 
+  position, 
+  editLayout, 
+  dragSystem 
+}: {
+  seatIndex: number
+  amount: number
+  position: { left: string | number; top: string | number }
+  editLayout?: boolean
+  dragSystem: any
+}) {
+  const spotRef = useRef<HTMLDivElement>(null)
+  const [currentPosition, setCurrentPosition] = useState(position)
+
+  // Update position when prop changes
+  useEffect(() => {
+    setCurrentPosition(position)
+  }, [position])
+
+  // Register with drag system
+  useEffect(() => {
+    if (dragSystem && spotRef.current && editLayout) {
+      const draggable = {
+        id: `bet-${seatIndex}`,
+        type: 'bet' as const,
+        element: spotRef.current,
+        priority: 4, // Lower priority than other components
+        getLayout: () => {
+          // Get the current layout from the drag system, fallback to local state
+          const currentLayout = dragSystem.getCurrentLayout?.() || {}
+          return currentLayout.bets?.[seatIndex] || currentPosition
+        },
+        setLayout: (newLayout: any) => {
+          // Update visual position in real-time during drag
+          setCurrentPosition(newLayout)
+        }
+      }
+      
+      dragSystem.registerDraggable(draggable)
+      
+      return () => {
+        dragSystem.unregisterDraggable(`bet-${seatIndex}`)
+      }
+    }
+  }, [dragSystem, editLayout, seatIndex, currentPosition])
+
+  // Sync with drag system layout updates
+  useEffect(() => {
+    if (dragSystem && editLayout) {
+      const currentLayout = dragSystem.getCurrentLayout?.()
+      if (currentLayout?.bets?.[seatIndex]) {
+        setCurrentPosition(currentLayout.bets[seatIndex])
+      }
+    }
+  }, [dragSystem, editLayout, seatIndex])
+
+  return (
+    <motion.div
+      ref={spotRef}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.2, delay: seatIndex * 0.05 }}
+      style={{
+        position: 'absolute',
+        left: currentPosition.left,
+        top: currentPosition.top,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 6, // Above stacks but below pot
+        cursor: editLayout ? 'move' : 'default',
+        border: editLayout ? '2px dashed rgba(255,255,255,0.3)' : 'none',
+        borderRadius: editLayout ? '8px' : '0',
+        padding: editLayout ? '4px' : '0',
+      }}
+    >
+      <motion.div 
+        style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          gap: 2,
+          padding: '4px 8px',
+          borderRadius: '8px',
+          background: 'rgba(0,0,0,0.3)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          backdropFilter: 'blur(4px)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3), 0 0 20px rgba(255,215,0,0.2)'
+        }}
+        animate={{
+          boxShadow: [
+            '0 4px 12px rgba(0,0,0,0.3), 0 0 20px rgba(255,215,0,0.2)',
+            '0 4px 12px rgba(0,0,0,0.3), 0 0 30px rgba(255,215,0,0.4)',
+            '0 4px 12px rgba(0,0,0,0.3), 0 0 20px rgba(255,215,0,0.2)'
+          ]
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      >
+        <motion.div
+          initial={{ scale: 0.5 }}
+          animate={{ scale: 1 }}
+          transition={{ 
+            duration: 0.3,
+            ease: "easeOut",
+            delay: 0.1
+          }}
+        >
+          <ChipStack
+            amount={amount}
+            size={CONFIG.poker.chipIconSizePx}
+            overlap={CONFIG.poker.chipOverlap}
+            maxChipsPerRow={CONFIG.poker.maxChipsPerRow}
+          />
+        </motion.div>
+        <motion.span 
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ 
+            duration: 0.2,
+            delay: 0.2
+          }}
+          style={{ 
+            fontSize: '11px', 
+            color: 'rgba(255,255,255,0.8)', 
+            fontWeight: 500,
+            textShadow: '0 1px 2px rgba(0,0,0,0.8)'
+          }}
+        >
+          ${amount}
+        </motion.span>
+      </motion.div>
+    </motion.div>
   )
 }

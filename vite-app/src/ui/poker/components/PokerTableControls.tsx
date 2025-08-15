@@ -15,6 +15,10 @@ export interface PokerTableControlsProps {
   controlsBox?: any // Add controlsBox layout
   table?: any // Add table prop to access pot and stack
   mySeatIndex?: number | null // Add player seat index
+  editLayout?: boolean // Add edit layout mode
+  onLayoutChange?: (layout: any) => void // Add layout change callback
+  // Drag system
+  dragSystem?: any
 }
 
 export function PokerTableControls({
@@ -29,6 +33,8 @@ export function PokerTableControls({
   controlsBox,
   table,
   mySeatIndex,
+  editLayout,
+  onLayoutChange,
 }: PokerTableControlsProps) {
   const { horseshoe } = CONFIG.poker
   const { potOffsetY } = horseshoe
@@ -65,6 +71,8 @@ export function PokerTableControls({
           layout={controlsChildren}
           boxWidth={controlsBox?.width || 200}
           boxHeight={controlsBox?.height || 200}
+          editLayout={editLayout}
+          onLayoutChange={onLayoutChange}
         />
     </motion.div>
   )

@@ -1,30 +1,71 @@
 import { motion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
 import { ChipStack } from '../../components/ChipStack'
 import { CONFIG } from '../../../config'
 import type { PokerTableState } from '../../../poker/types'
+import { useDragSystem } from './PokerTableLayout'
 
 export interface PokerTablePotProps {
   table: PokerTableState
   showdownText?: string
   layoutOverride?: any
+  // Edit layout props
+  editLayout?: boolean
 }
 
-export function PokerTablePot({ table, showdownText, layoutOverride }: PokerTablePotProps) {
+export function PokerTablePot({ table, showdownText, layoutOverride, editLayout }: PokerTablePotProps) {
   const { horseshoe } = CONFIG.poker
   const { potOffsetY, showdownOffsetY } = horseshoe
+  const potRef = useRef<HTMLDivElement>(null)
+  const dragSystem = useDragSystem()
+  const [currentPosition, setCurrentPosition] = useState(layoutOverride || {})
+
+  // Update position when prop changes
+  useEffect(() => {
+    setCurrentPosition(layoutOverride || {})
+  }, [layoutOverride])
+
+  // Register with drag system
+  useEffect(() => {
+    if (dragSystem && potRef.current && editLayout) {
+      const draggable = {
+        id: 'pot',
+        type: 'pot' as const,
+        element: potRef.current,
+        priority: 9, // Very high priority for pot
+        getLayout: () => currentPosition,
+        setLayout: (newLayout: any) => {
+          // Update visual position in real-time during drag
+          setCurrentPosition(newLayout)
+        }
+      }
+      
+      dragSystem.registerDraggable(draggable)
+      
+      return () => {
+        dragSystem.unregisterDraggable('pot')
+      }
+    }
+  }, [dragSystem, editLayout, currentPosition])
 
   return (
     <div 
+      ref={potRef}
       className="poker-table-pot"
       style={{
         position: 'absolute',
-        left: layoutOverride?.left ?? '50%',
-        top: layoutOverride?.top ?? '50%',
-        transform: layoutOverride?.left ? 'none' : 'translate(-50%, -50%)',
-        marginTop: layoutOverride?.top ? 0 : potOffsetY,
+        left: currentPosition.left ?? '50%',
+        top: currentPosition.top ?? '50%',
+        transform: currentPosition.left ? 'none' : 'translate(-50%, -50%)',
+        marginTop: currentPosition.top ? 0 : potOffsetY,
         textAlign: 'center',
-        width: layoutOverride?.width,
-        height: layoutOverride?.height,
+        width: currentPosition.width,
+        height: currentPosition.height,
+        cursor: editLayout ? 'move' : 'default',
+        border: editLayout ? '2px dashed rgba(255,255,255,0.3)' : 'none',
+        borderRadius: editLayout ? '8px' : '0',
+        padding: editLayout ? '8px' : '0',
+        zIndex: 20, // Very high z-index for pot
       }}
     >
       {/* Main Pot */}

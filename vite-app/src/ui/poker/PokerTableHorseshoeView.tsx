@@ -110,6 +110,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             revealed={revealed}
             highlightSet={highlightSetProp}
             layoutOverride={layoutOverrides.board}
+            editLayout={editLayoutMode}
           />
 
           {/* Pot and Showdown */}
@@ -117,6 +118,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             table={table}
             showdownText={showdownTextProp}
             layoutOverride={layoutOverrides.pot}
+            editLayout={editLayoutMode}
           />
 
                         {/* Seats */}
@@ -132,18 +134,21 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
                 equity={equity}
                 winnersSet={winnersSet}
                 showdownText={showdownTextProp}
+                editLayout={editLayoutMode}
               />
 
               {/* Stacks */}
               <PokerTableStacks
                 table={table}
                 layoutOverrides={layoutOverrides}
+                editLayout={editLayoutMode}
               />
 
               {/* Betting Spots */}
               <PokerTableBettingSpots
                 table={table}
                 layoutOverrides={layoutOverrides}
+                editLayout={editLayoutMode}
               />
 
               {/* Controls */}
@@ -159,6 +164,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
                 controlsBox={layoutOverrides.controlsBox}
                 table={table}
                 mySeatIndex={mySeatIndex}
+                editLayout={editLayoutMode}
               />
         </div>
       </div>

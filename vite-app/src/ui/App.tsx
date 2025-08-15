@@ -6,6 +6,7 @@ import { PokerTableHorseshoe } from './poker/PokerTableHorseshoe'
 import { PokerGameProvider } from './poker/PokerGameContext'
 import { PokerTestDashboard } from './poker/PokerTestDashboard'
 import { PokerHistoryPage } from './poker/PokerHistoryPage'
+import { PokerLayoutEditorPage } from './poker/PokerLayoutEditorPage'
 import { Landing } from './Landing'
 import VersionDisplay from '../components/VersionDisplay'
 
@@ -24,6 +25,7 @@ export function App() {
   const showPoker = hash === '#poker'
   const showPokerTest = hash === '#poker-test'
   const showPokerHistory = hash === '#poker-history'
+  const showPokerLayoutEditor = hash === '#poker-layout-editor'
   const showBlackjack = hash === '#blackjack'
 
   let content: ReactNode
@@ -32,6 +34,11 @@ export function App() {
   else if (showPokerHistory) content = (
     <PokerGameProvider>
       <PokerHistoryPage />
+    </PokerGameProvider>
+  )
+  else if (showPokerLayoutEditor) content = (
+    <PokerGameProvider>
+      <PokerLayoutEditorPage />
     </PokerGameProvider>
   )
   else if (showPoker) content = (

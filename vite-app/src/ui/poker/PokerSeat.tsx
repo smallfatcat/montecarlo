@@ -43,6 +43,8 @@ export interface PokerSeatProps {
   equity?: { winPct: number[]; tiePct: number[]; running: boolean } | null
   winnersSet?: Set<number>
   showdownText?: string
+  // Drag system
+  dragSystem?: any
 }
 
 export function PokerSeat(props: PokerSeatProps) {
