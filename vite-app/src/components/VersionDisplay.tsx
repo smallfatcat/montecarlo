@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './VersionDisplay.css';
 
-// Declare the global variable injected by Vite
-declare global {
-  const __APP_VERSION__: string | undefined;
-}
-
 interface VersionInfo {
   version: string;
   buildNumber: string;

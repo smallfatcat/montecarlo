@@ -1,6 +1,13 @@
 # Cursor rules
 .cursorrules
 
+# Version and build information files (auto-generated)
+VERSION
+BUILD_INFO
+**/VERSION
+**/BUILD_INFO
+src/version.h
+
 # Dependencies
 node_modules/
 **/node_modules/
