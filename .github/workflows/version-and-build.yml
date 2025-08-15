@@ -1,0 +1,189 @@
+name: Version and Build
+
+on:
+  push:
+    branches: [ main, develop, multiplay ]
+  pull_request:
+    branches: [ main, develop, multiplay ]
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version type to increment'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - major
+        - minor
+        - patch
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      build_number: ${{ steps.version.outputs.build_number }}
+      commit_hash: ${{ steps.version.outputs.commit_hash }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for version calculation
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate version information
+        id: version
+        run: |
+          # Make scripts executable
+          chmod +x scripts/version.sh scripts/build-number.sh
+          
+          # Generate version info
+          ./scripts/version.sh generate
+          
+          # Get build number
+          BUILD_NUMBER=$(./scripts/build-number.sh number)
+          COMMIT_HASH=$(./scripts/build-number.sh hash)
+          
+          # Read generated version
+          VERSION=$(cat VERSION 2>/dev/null || echo "0.0.0")
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "commit_hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+          
+          echo "Generated version: $VERSION"
+          echo "Build number: $BUILD_NUMBER"
+          echo "Commit hash: $COMMIT_HASH"
+      
+      - name: Upload version artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: version-info
+          path: |
+            VERSION
+            BUILD_INFO
+            packages/*/VERSION
+            apps/*/VERSION
+            vite-app/VERSION
+
+  build:
+    needs: version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Download version artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: version-info
+      
+      - name: Build project
+        run: |
+          chmod +x rebuild.sh
+          ./rebuild.sh
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-outputs-${{ matrix.node-version }}
+          path: |
+            packages/*/dist/
+            apps/*/dist/
+            vite-app/dist/
+      
+      - name: Build info
+        run: |
+          echo "Build completed successfully!"
+          echo "Version: ${{ needs.version.outputs.version }}"
+          echo "Build number: ${{ needs.version.outputs.build_number }}"
+          echo "Commit: ${{ needs.version.outputs.commit_hash }}"
+          echo "Node version: ${{ matrix.node-version }}"
+
+  test:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Download version artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: version-info
+      
+      - name: Run tests
+        run: npm run test:all
+      
+      - name: Type check
+        run: npm run typecheck
+
+  release:
+    needs: [version, build, test]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.ref == 'refs/heads/main' && github.event_name == 'push')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Download version artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: version-info
+      
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.version.outputs.version }}
+          release_name: Release v${{ needs.version.outputs.version }}
+          body: |
+            ## Release v${{ needs.version.outputs.version }}
+            
+            **Build Number:** ${{ needs.version.outputs.build_number }}
+            **Commit:** ${{ needs.version.outputs.commit_hash }}
+            **Branch:** ${{ github.ref_name }}
+            
+            ### Changes
+            - Automated release from ${{ github.ref_name }} branch
+            - Build number: ${{ needs.version.outputs.build_number }}
+            
+            ### Components
+            - Game Server: $(cat apps/game-server/VERSION 2>/dev/null || echo "unknown")
+            - Poker Engine: $(cat packages/poker-engine/VERSION 2>/dev/null || echo "unknown")
+            - Shared: $(cat packages/shared/VERSION 2>/dev/null || echo "unknown")
+            - Frontend: $(cat vite-app/VERSION 2>/dev/null || echo "unknown")
+          draft: false
+          prerelease: false
