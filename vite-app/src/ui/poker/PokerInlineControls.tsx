@@ -37,18 +37,18 @@ export function PokerInlineControls(props: {
     const stackCapped = Math.max(0, Math.floor(stack || 0))
     const callNeeded = Math.max(0, Math.floor(toCall || 0))
     if (callNeeded > 0) return Math.min(stackCapped, callNeeded)
-    const minOpenLocal = Math.max(1, Math.floor(minOpen || 1))
-    return Math.min(stackCapped, minOpenLocal)
+    // No bet to call: allow default 0 (check) as the starting value in UI
+    return 0
   })()
   const maxVal = Math.max(0, Math.floor(stack || 0))
 
-  // Compute legal raise min total when facing a bet
-  const minRaiseTotal = (() => {
+  // Compute legal raise minimums when facing a bet
+  const { minRaiseExtra, minRaiseTotal } = (() => {
     const callNeeded = Math.max(0, Math.floor(toCall || 0))
-    if (callNeeded <= 0) return null
-    const extraMin = Math.max(Math.floor(minRaiseExtraHint || 0), Math.max(1, Math.floor(minOpen || 1)))
-    const total = callNeeded + extraMin
-    return Math.min(total, maxVal)
+    if (callNeeded <= 0) return { minRaiseExtra: null as number | null, minRaiseTotal: null as number | null }
+    const extra = Math.max(Math.floor(minRaiseExtraHint || 0), Math.max(1, Math.floor(minOpen || 1)))
+    const total = Math.min(callNeeded + extra, maxVal)
+    return { minRaiseExtra: extra, minRaiseTotal: total }
   })()
 
   useEffect(() => {
@@ -62,19 +62,8 @@ export function PokerInlineControls(props: {
     }
     
     let init: number
-    if (callNeeded > 0) {
-      // When facing a bet, default to calling
-      init = Math.min(callNeeded, stackCapped)
-    } else {
-      // When betting first, default to half pot or minimum bet
-      const potAmount = Math.max(0, Math.floor(pot || 0))
-      if (potAmount > 0) {
-        init = Math.min(Math.floor(potAmount * 0.5), stackCapped)
-      } else {
-        // No pot yet, use minimum bet
-        init = Math.min(Math.max(1, Math.floor(minOpen || 1)), stackCapped)
-      }
-    }
+    // Always default to the toCall amount when action passes
+    init = Math.min(callNeeded, stackCapped)
     
     // Ensure the initial value is within bounds
     init = Math.max(minVal, Math.min(maxVal, init))
@@ -99,6 +88,11 @@ export function PokerInlineControls(props: {
   const setBetAmountSafe = (value: number) => {
     let desired = Math.max(minVal, Math.min(maxVal, Math.floor(value)))
     const callNeeded = Math.max(0, Math.floor(toCall || 0))
+    const minOpenLocal = Math.max(1, Math.floor(minOpen || 1))
+    // If check and bet are available (no bet to call), clamp any positive bet to at least the minimum open
+    if (callNeeded === 0 && desired > 0 && available.includes('bet')) {
+      desired = Math.max(desired, Math.min(maxVal, minOpenLocal))
+    }
     // If facing a bet and exceeding call, ensure at least min-raise total
     if (callNeeded > 0 && desired > callNeeded && minRaiseTotal != null) {
       desired = Math.max(desired, minRaiseTotal)
@@ -143,7 +137,7 @@ export function PokerInlineControls(props: {
         disabled={disabled}
         betAmount={betAmount}
         toCall={toCall}
-        minRaiseExtra={minRaiseTotal ?? undefined}
+        minRaiseExtra={minRaiseExtra ?? undefined}
         onCheck={onCheck}
         onCall={onCall}
         onFold={onFold}

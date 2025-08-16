@@ -43,6 +43,9 @@ export function PokerTableControls({
   const playerStack = mySeatIndex != null && table?.seats?.[mySeatIndex] ? table.seats[mySeatIndex].stack : 0
   const toCall = mySeatIndex != null && table ? Math.max(0, (table.betToCall || 0) - (table.seats?.[mySeatIndex]?.committedThisStreet || 0)) : 0
   const minOpen = table?.rules?.bigBlind ?? 1
+  const minRaiseExtra = Math.max(table?.lastRaiseAmount ?? minOpen, minOpen)
+  const seat = mySeatIndex != null ? table?.seats?.[mySeatIndex] : null
+  const canAct = !!(table && table.status === 'in_hand' && table.currentToAct === mySeatIndex && seat && !seat.hasFolded && !seat.isAllIn)
 
   return (
     <motion.div
@@ -61,12 +64,14 @@ export function PokerTableControls({
       }}
     >
               <PokerInlineControls
+          key={`${table?.handId ?? 'h'}-${table?.street ?? 'none'}-${table?.currentToAct ?? 'na'}`}
           available={available || []}
-          disabled={false}
+          disabled={!canAct}
           pot={table?.pot?.main || 0}
           stack={playerStack}
           toCall={toCall}
           minOpen={minOpen}
+          minRaiseExtraHint={minRaiseExtra}
           onFold={onFold}
           onCheck={onCheck}
           onCall={onCall}

@@ -40,14 +40,25 @@ export function PokerBettingButtons({
     textAlign: 'center',
   }
 
-  function styleFor(action: BettingActionType): React.CSSProperties {
-    const isActive = !disabled && available.includes(action)
-    if (!isActive) return buttonStyle
+  function styleOk(): React.CSSProperties {
     return {
       ...buttonStyle,
       boxShadow: '0 0 5px rgba(0,255,180,0.85), 0 0 20px rgba(0,255,180,0.55)',
       border: '1px solid rgba(31, 206, 54, 0.9)'
     }
+  }
+
+  function styleError(): React.CSSProperties {
+    return {
+      ...buttonStyle,
+      boxShadow: '0 0 6px rgba(255,0,0,0.9), 0 0 18px rgba(255,0,0,0.5)',
+      border: '1px solid rgba(255,0,0,0.9)'
+    }
+  }
+
+  function styleForStatus({ availableAction, disabledGlobal, legal }: { availableAction: boolean; disabledGlobal: boolean; legal: boolean }): React.CSSProperties {
+    if (!availableAction || disabledGlobal) return buttonStyle
+    return legal ? styleOk() : styleError()
   }
 
   function makeDragHandlers(key: string) {
@@ -86,33 +97,40 @@ export function PokerBettingButtons({
   return (
     <>
       <div id="control-check" style={{ position: 'absolute', left: layout.check?.left, top: layout.check?.top, transform: 'translate(-50%, -50%)', ...sized(layout.check) }} {...makeDragHandlers('check')}>
-        <button onClick={() => onCheck?.()} disabled={disabled || !available.includes('check')} style={styleFor('check')}>CHECK</button>
+        <button onClick={() => onCheck?.()} disabled={disabled || !available.includes('check')} style={styleForStatus({ availableAction: available.includes('check'), disabledGlobal: disabled, legal: true })}>CHECK</button>
       </div>
       <div id="control-call" style={{ position: 'absolute', left: layout.call?.left, top: layout.call?.top, transform: 'translate(-50%, -50%)', ...sized(layout.call) }} {...makeDragHandlers('call')}>
-        <button onClick={() => onCall?.()} disabled={disabled || !available.includes('call') || Math.max(0, Math.floor(toCall || 0)) !== Math.max(0, Math.floor(betAmount))} style={styleFor('call')}>CALL</button>
+        {(() => {
+          const availableCall = available.includes('call')
+          const callNeeded = Math.max(0, Math.floor(toCall || 0))
+          const equal = callNeeded === Math.max(0, Math.floor(betAmount))
+          const isDisabled = disabled || !availableCall || !equal
+          return (
+            <button onClick={() => onCall?.()} disabled={isDisabled} style={styleForStatus({ availableAction: availableCall, disabledGlobal: disabled, legal: equal })}>CALL</button>
+          )
+        })()}
       </div>
       <div id="control-fold" style={{ position: 'absolute', left: layout.fold?.left, top: layout.fold?.top, transform: 'translate(-50%, -50%)', ...sized(layout.fold) }} {...makeDragHandlers('fold')}>
-        <button onClick={() => onFold?.()} disabled={disabled || !available.includes('fold')} style={styleFor('fold')}>FOLD</button>
+        <button onClick={() => onFold?.()} disabled={disabled || !available.includes('fold')} style={styleForStatus({ availableAction: available.includes('fold'), disabledGlobal: disabled, legal: true })}>FOLD</button>
       </div>
       <div id="control-betBtn" style={{ position: 'absolute', left: layout.betBtn?.left, top: layout.betBtn?.top, transform: 'translate(-50%, -50%)', ...sized(layout.betBtn) }} {...makeDragHandlers('betBtn')}>
-        <button onClick={() => onBet?.(betAmount)} disabled={disabled || !available.includes('bet')} style={styleFor('bet')}>BET</button>
+        <button onClick={() => onBet?.(betAmount)} disabled={disabled || !available.includes('bet')} style={styleForStatus({ availableAction: available.includes('bet'), disabledGlobal: disabled, legal: true })}>BET</button>
       </div>
       <div id="control-raise" style={{ position: 'absolute', left: layout.raise?.left, top: layout.raise?.top, transform: 'translate(-50%, -50%)', ...sized(layout.raise) }} {...makeDragHandlers('raise')}>
-        <button onClick={() => {
+        {(() => {
+          const availableRaise = available.includes('raise')
           const callNeeded = Math.max(0, Math.floor(toCall || 0))
           const minExtra = Math.max(0, Math.floor(minRaiseExtra || 0))
           const desiredExtra = Math.max(0, Math.floor(betAmount - callNeeded))
-          const extra = Math.max(desiredExtra, callNeeded > 0 ? minExtra : 0)
-          onRaise?.(extra)
-        }} disabled={(() => {
-          const callNeeded = Math.max(0, Math.floor(toCall || 0))
-          const minExtra = Math.max(0, Math.floor(minRaiseExtra || 0))
-          // Only enable when we face a bet and exceed call by at least min raise
-          if (disabled || !available.includes('raise')) return true
-          if (callNeeded <= 0) return true
-          const desiredExtra = Math.max(0, Math.floor(betAmount - callNeeded))
-          return desiredExtra < minExtra
-        })()} style={styleFor('raise')}>RAISE</button>
+          const legal = callNeeded > 0 && desiredExtra >= minExtra
+          const isDisabled = disabled || !availableRaise || !legal
+          return (
+            <button onClick={() => {
+              const extra = Math.max(desiredExtra, callNeeded > 0 ? minExtra : 0)
+              onRaise?.(extra)
+            }} disabled={isDisabled} style={styleForStatus({ availableAction: availableRaise, disabledGlobal: disabled, legal })}>RAISE</button>
+          )
+        })()}
       </div>
     </>
   )
