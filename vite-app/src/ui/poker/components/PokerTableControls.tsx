@@ -41,6 +41,8 @@ export function PokerTableControls({
 
   // Calculate the player's stack from the table
   const playerStack = mySeatIndex != null && table?.seats?.[mySeatIndex] ? table.seats[mySeatIndex].stack : 0
+  const toCall = mySeatIndex != null && table ? Math.max(0, (table.betToCall || 0) - (table.seats?.[mySeatIndex]?.committedThisStreet || 0)) : 0
+  const minOpen = table?.rules?.bigBlind ?? 1
 
   return (
     <motion.div
@@ -63,6 +65,8 @@ export function PokerTableControls({
           disabled={false}
           pot={table?.pot?.main || 0}
           stack={playerStack}
+          toCall={toCall}
+          minOpen={minOpen}
           onFold={onFold}
           onCheck={onCheck}
           onCall={onCall}

@@ -1,12 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { BettingActionType } from '../../poker/types'
-import {
-  PokerBettingButtons,
-  PokerBetInput,
-  PokerPotSlider,
-  PokerStackSlider,
-  PokerStackLabel
-} from './components'
+import { PokerBettingButtons, PokerBetInput, PokerStackLabel } from './components'
+import { PokerPotSlider } from './components/PokerPotSlider'
+import { PokerStackSlider } from './components/PokerStackSlider'
 
 type Rect = { left?: number; top?: number; width?: number; height?: number }
 type ControlsLayout = Record<string, Rect>
@@ -18,6 +14,8 @@ export function PokerInlineControls(props: {
   stack: number
   toCall?: number
   minOpen?: number
+  // optional: min raise extra hint (defaults to last raise or minOpen)
+  minRaiseExtraHint?: number
   onCheck?: () => void
   onCall?: () => void
   onFold?: () => void
@@ -31,7 +29,7 @@ export function PokerInlineControls(props: {
   layout?: ControlsLayout
   onLayoutChange?: (next: ControlsLayout) => void
 }) {
-  const { available, disabled, pot, stack, toCall, minOpen, onCheck, onCall, onFold, onBet, onRaise, scale = 1, boxWidth = 320, boxHeight = 220, editLayout = false, layout, onLayoutChange } = props
+  const { available, disabled, pot, stack, toCall, minOpen, minRaiseExtraHint, onCheck, onCall, onFold, onBet, onRaise, scale = 1, boxWidth = 320, boxHeight = 220, editLayout = false, layout, onLayoutChange } = props
 
   const [betAmount, setBetAmount] = useState<number>(0)
   const prevDisabledRef = useRef<boolean>(true)
@@ -43,6 +41,15 @@ export function PokerInlineControls(props: {
     return Math.min(stackCapped, minOpenLocal)
   })()
   const maxVal = Math.max(0, Math.floor(stack || 0))
+
+  // Compute legal raise min total when facing a bet
+  const minRaiseTotal = (() => {
+    const callNeeded = Math.max(0, Math.floor(toCall || 0))
+    if (callNeeded <= 0) return null
+    const extraMin = Math.max(Math.floor(minRaiseExtraHint || 0), Math.max(1, Math.floor(minOpen || 1)))
+    const total = callNeeded + extraMin
+    return Math.min(total, maxVal)
+  })()
 
   useEffect(() => {
     const callNeeded = Math.max(0, Math.floor(toCall || 0))
@@ -90,8 +97,13 @@ export function PokerInlineControls(props: {
 
   // Helper function to safely set bet amount with validation
   const setBetAmountSafe = (value: number) => {
-    const clamped = Math.max(minVal, Math.min(maxVal, Math.floor(value)))
-    setBetAmount(clamped)
+    let desired = Math.max(minVal, Math.min(maxVal, Math.floor(value)))
+    const callNeeded = Math.max(0, Math.floor(toCall || 0))
+    // If facing a bet and exceeding call, ensure at least min-raise total
+    if (callNeeded > 0 && desired > callNeeded && minRaiseTotal != null) {
+      desired = Math.max(desired, minRaiseTotal)
+    }
+    setBetAmount(desired)
   }
 
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -131,6 +143,7 @@ export function PokerInlineControls(props: {
         disabled={disabled}
         betAmount={betAmount}
         toCall={toCall}
+        minRaiseExtra={minRaiseTotal ?? undefined}
         onCheck={onCheck}
         onCall={onCall}
         onFold={onFold}
@@ -148,6 +161,7 @@ export function PokerInlineControls(props: {
         toCall={toCall}
         setBetAmountSafe={setBetAmountSafe}
         layout={currentLayout.betLabel || {}}
+        inputLayout={currentLayout.betInput || currentLayout.betLabel || {}}
         editLayout={editLayout}
         onLayoutChange={onLayoutChange}
       />
@@ -155,9 +169,9 @@ export function PokerInlineControls(props: {
       <PokerPotSlider
         pot={pot}
         betAmount={betAmount}
-        toCall={toCall}
         setBetAmountSafe={setBetAmountSafe}
         layout={currentLayout.potSlider || {}}
+        labelLayout={currentLayout.potSliderLabel}
         editLayout={editLayout}
         onLayoutChange={onLayoutChange}
       />
@@ -165,9 +179,9 @@ export function PokerInlineControls(props: {
       <PokerStackSlider
         stack={stack}
         betAmount={betAmount}
-        toCall={toCall}
         setBetAmountSafe={setBetAmountSafe}
         layout={currentLayout.stackSlider || {}}
+        labelLayout={currentLayout.stackSliderLabel}
         editLayout={editLayout}
         onLayoutChange={onLayoutChange}
       />

@@ -88,11 +88,26 @@ export function createServerRuntimeTable(io, tableId, opts) {
                     ;
                     pendingReleases.delete(pid);
                 }
+                // If this player had a reservation, clear it for everyone
+                for (const [seatIdx, res] of reservedBySeat.entries()) {
+                    if (res.playerId === pid) {
+                        reservedBySeat.delete(seatIdx);
+                        try {
+                            io.in(room).emit('seat_reservation_cleared', { seatIndex: seatIdx });
+                        }
+                        catch { }
+                    }
+                }
             }
             // Send current seating map (all occupied seats) to this client
             for (const [ownerId, seatIdx] of seatOwners.entries()) {
                 const pname = playerNames.get(ownerId) ?? null;
                 socket.emit('seat_update', { seatIndex: seatIdx, isCPU: false, playerId: ownerId, playerName: pname });
+            }
+            // Send current reserved seats to this client so they see countdowns immediately
+            for (const [seatIdx, res] of reservedBySeat.entries()) {
+                const pname = playerNames.get(res.playerId) ?? null;
+                socket.emit('seat_reserved', { seatIndex: seatIdx, playerName: pname, expiresAt: res.expiresAt });
             }
         }
         catch { }
@@ -221,8 +236,17 @@ export function createServerRuntimeTable(io, tableId, opts) {
             if (reservedFor && reservedFor.playerId !== playerId)
                 return { ok: false, error: 'seat_reserved' };
             // If reserved for this player, clear reservation
-            if (reservedFor && reservedFor.playerId === playerId)
+            if (reservedFor && reservedFor.playerId === playerId) {
                 reservedBySeat.delete(seatIndex);
+                try {
+                    io.in(room).emit('seat_reservation_cleared', { seatIndex });
+                }
+                catch { }
+                try {
+                    opts?.onSummaryChange?.(getSummary());
+                }
+                catch { }
+            }
             // Assign seat to this player and flip to human
             seatOwners.set(playerId, seatIndex);
             playerNames.set(playerId, name);
@@ -347,6 +371,12 @@ export function createServerRuntimeTable(io, tableId, opts) {
             const seatIdx = seatOwners.get(playerId);
             // Mark seat as reserved for this player during grace
             reservedBySeat.set(seatIdx, { playerId, expiresAt: Date.now() + disconnectGraceMs });
+            // Broadcast reservation to everyone at the table
+            try {
+                const pname = playerNames.get(playerId) ?? null;
+                io.in(room).emit('seat_reserved', { seatIndex: seatIdx, playerName: pname, expiresAt: Date.now() + disconnectGraceMs });
+            }
+            catch { }
             try {
                 opts?.onSummaryChange?.(getSummary());
             }
@@ -361,6 +391,10 @@ export function createServerRuntimeTable(io, tableId, opts) {
                 playerNames.delete(playerId);
                 reservedBySeat.delete(seatIdx);
                 io.to(room).emit('seat_update', { seatIndex: seatIdx, isCPU: true, playerId: null, playerName: null });
+                try {
+                    io.in(room).emit('seat_reservation_cleared', { seatIndex: seatIdx });
+                }
+                catch { }
                 try {
                     opts?.onSummaryChange?.(getSummary());
                 }

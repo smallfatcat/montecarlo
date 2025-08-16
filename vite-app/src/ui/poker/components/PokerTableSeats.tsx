@@ -13,7 +13,6 @@ export interface PokerTableSeatsProps {
   playerNames?: Array<string | null>
   highlightSet?: Set<string>
   layoutOverrides: any
-  nowMs?: number
   // Equity and results data
   equity?: { winPct: number[]; tiePct: number[]; running: boolean } | null
   winnersSet?: Set<number>
@@ -35,7 +34,6 @@ export function PokerTableSeats({
   winnersSet,
   showdownText,
   editLayout,
-  nowMs,
 }: PokerTableSeatsProps) {
   const renderSeats = () => {
     // Always render all seats, regardless of their state
@@ -109,7 +107,6 @@ function DraggableSeat({
   editLayout,
   buttonIndex,
   currentToAct,
-  nowMs,
 }: {
   seat: any
   seatIndex: number
@@ -126,7 +123,6 @@ function DraggableSeat({
   editLayout?: boolean
   buttonIndex: number
   currentToAct: number | null
-  nowMs?: number
 }) {
   const seatRef = useRef<HTMLDivElement>(null)
   const dragSystem = useDragSystem()
@@ -202,7 +198,6 @@ function DraggableSeat({
         forceFaceDown={hideHoleCardsUntilShowdown && seatIndex !== mySeatIndex}
         hideStackRow={true} // Hide stack row since we have separate stack components
         reservedExpiresAtMs={reservedExpiresAtMs}
-        reservedNowMs={nowMs}
       />
     </motion.div>
   )

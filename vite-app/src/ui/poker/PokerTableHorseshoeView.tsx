@@ -24,7 +24,6 @@ export interface PokerTableHorseshoeViewProps {
   onSitHere?: (seatIndex: number) => void
   mySeatIndex?: number | null
   playerNames?: Array<string | null>
-  nowMs?: number
   // Derived display
   winnersSet?: Set<number>
   highlightSet?: Set<string>
@@ -49,7 +48,6 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
     onSitHere,
     mySeatIndex,
     playerNames,
-    nowMs,
     highlightSet: highlightSetProp,
     showdownText: showdownTextProp,
     equity,
@@ -64,6 +62,50 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [layoutOverrides, setLayoutOverrides] = useState<LayoutOverrides>({ seats: {} })
+  const [potStacks, setPotStacks] = useState<Array<{ id: string; amount: number; x: number; y: number; r: number }>>([])
+  const prevStateRef = useRef<PokerTableState | null>(null)
+
+  // Detect pot increases and add scattered pot stacks (client-visual only)
+  useEffect(() => {
+    const prev = prevStateRef.current
+    const curr = table
+    if (prev) {
+      const prevPot = (prev as any)?.pot?.main ?? 0
+      const currPot = (curr as any)?.pot?.main ?? 0
+      const delta = Math.max(0, Math.floor(currPot - prevPot))
+      if (delta > 0) {
+        const num = (v: any, fb: number = 0): number => {
+          if (typeof v === 'number') return v
+          if (typeof v === 'string') { const n = parseInt(v, 10); return Number.isFinite(n) ? n : fb }
+          return fb
+        }
+        const pot = (layoutOverrides as any)?.pot || {}
+        const potLeft = num(pot.left, 0)
+        const potTop = num(pot.top, 0)
+        const potW = num(pot.width, 0)
+        const potH = num(pot.height, 0)
+        const cx = potLeft + (potW ? potW/2 : 0)
+        const cy = potTop + (potH ? potH/2 : 0)
+        const radiusMin = 8
+        const radiusMax = 18
+        const ang = Math.random() * Math.PI * 2
+        const rad = radiusMin + Math.random() * (radiusMax - radiusMin)
+        const jitterX = Math.cos(ang) * rad
+        const jitterY = Math.sin(ang) * rad
+        const rot = (Math.random() * 10) - 5
+        setPotStacks((prevStacks) => [
+          ...prevStacks,
+          { id: `pot-${curr.handId}-${Date.now()}`, amount: delta, x: cx + jitterX, y: cy + jitterY, r: rot },
+        ])
+      }
+    }
+    prevStateRef.current = curr
+  }, [table.pot?.main, table.handId, layoutOverrides])
+
+  // Reset pot stacks on new hand
+  useEffect(() => {
+    setPotStacks([])
+  }, [table.handId])
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
@@ -125,10 +167,20 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             editLayout={editLayoutMode}
           />
 
+          {/* Scattered pot stacks */}
+          <div style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 21 }}>
+            {potStacks.map((p) => (
+              <div key={p.id} style={{ position: 'absolute', left: p.x, top: p.y, transform: `translate(-12px, -12px) rotate(${p.r}deg)` }}>
+                <ChipStack amount={p.amount} size={30} overlap={0.75} maxChipsPerRow={12} />
+              </div>
+            ))}
+          </div>
+
           {/* Pot payout overlay (fly pot -> stacks on hand over) */}
           <PotPayoutOverlay
             table={table}
             layoutOverrides={layoutOverrides}
+            clearPotStacks={() => setPotStacks([])}
           />
 
                         {/* Seats */}
@@ -141,7 +193,6 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
                 playerNames={playerNames}
                 highlightSet={highlightSetProp}
                 layoutOverrides={layoutOverrides}
-                nowMs={nowMs}
                 equity={equity}
                 winnersSet={winnersSet}
                 showdownText={showdownTextProp}
@@ -176,6 +227,12 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
                 table={table}
                 mySeatIndex={mySeatIndex}
                 editLayout={editLayoutMode}
+                onLayoutChange={(next: any) => {
+                  setLayoutOverrides((prev) => ({
+                    ...prev,
+                    controlsChildren: { ...(prev.controlsChildren || {}), ...(next || {}) },
+                  }))
+                }}
               />
         </div>
       </div>
@@ -183,7 +240,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
   )
 })
 
-function PotPayoutOverlay({ table, layoutOverrides }: { table: PokerTableState; layoutOverrides: any }) {
+function PotPayoutOverlay({ table, layoutOverrides, clearPotStacks }: { table: PokerTableState; layoutOverrides: any; clearPotStacks: () => void }) {
   const prevRef = useRef<PokerTableState | null>(null)
   const [flights, setFlights] = useState<Array<{ key: string; from: { x: number; y: number }; to: { x: number; y: number }; amount: number }>>([])
 
@@ -214,6 +271,7 @@ function PotPayoutOverlay({ table, layoutOverrides }: { table: PokerTableState; 
         const st = layoutOverrides.stacks?.[i] || {}
         const sx = num(st.left, 150 + (i * 180)) + num(st.width, 100)/2
         const sy = num(st.top, 120 + (i * 100))
+        // Optionally split from existing potStacks to multiple flights; for now, single flight per winner
         nextFlights.push({ key: `payout-${curr.handId}-${i}`, from: potCenter, to: { x: sx, y: sy }, amount: delta })
       })
       if (nextFlights.length > 0) setFlights(nextFlights)
@@ -224,7 +282,7 @@ function PotPayoutOverlay({ table, layoutOverrides }: { table: PokerTableState; 
   // Auto-clear flights after animation duration
   useEffect(() => {
     if (flights.length === 0) return
-    const id = setTimeout(() => setFlights([]), (CONFIG.poker.animations?.chipFlyDurationMs ?? 150) + 50)
+    const id = setTimeout(() => { setFlights([]); clearPotStacks() }, (CONFIG.poker.animations?.chipFlyDurationMs ?? 150) + 50)
     return () => clearTimeout(id)
   }, [flights])
 

@@ -5,6 +5,7 @@ export interface PokerBettingButtonsProps {
   disabled: boolean
   betAmount: number
   toCall?: number
+  minRaiseExtra?: number
   onCheck?: () => void
   onCall?: () => void
   onFold?: () => void
@@ -20,6 +21,7 @@ export function PokerBettingButtons({
   disabled,
   betAmount,
   toCall,
+  minRaiseExtra,
   onCheck,
   onCall,
   onFold,
@@ -87,7 +89,7 @@ export function PokerBettingButtons({
         <button onClick={() => onCheck?.()} disabled={disabled || !available.includes('check')} style={styleFor('check')}>CHECK</button>
       </div>
       <div id="control-call" style={{ position: 'absolute', left: layout.call?.left, top: layout.call?.top, transform: 'translate(-50%, -50%)', ...sized(layout.call) }} {...makeDragHandlers('call')}>
-        <button onClick={() => onCall?.()} disabled={disabled || !available.includes('call')} style={styleFor('call')}>CALL</button>
+        <button onClick={() => onCall?.()} disabled={disabled || !available.includes('call') || Math.max(0, Math.floor(toCall || 0)) !== Math.max(0, Math.floor(betAmount))} style={styleFor('call')}>CALL</button>
       </div>
       <div id="control-fold" style={{ position: 'absolute', left: layout.fold?.left, top: layout.fold?.top, transform: 'translate(-50%, -50%)', ...sized(layout.fold) }} {...makeDragHandlers('fold')}>
         <button onClick={() => onFold?.()} disabled={disabled || !available.includes('fold')} style={styleFor('fold')}>FOLD</button>
@@ -98,9 +100,19 @@ export function PokerBettingButtons({
       <div id="control-raise" style={{ position: 'absolute', left: layout.raise?.left, top: layout.raise?.top, transform: 'translate(-50%, -50%)', ...sized(layout.raise) }} {...makeDragHandlers('raise')}>
         <button onClick={() => {
           const callNeeded = Math.max(0, Math.floor(toCall || 0))
-          const extra = Math.max(0, betAmount - callNeeded)
+          const minExtra = Math.max(0, Math.floor(minRaiseExtra || 0))
+          const desiredExtra = Math.max(0, Math.floor(betAmount - callNeeded))
+          const extra = Math.max(desiredExtra, callNeeded > 0 ? minExtra : 0)
           onRaise?.(extra)
-        }} disabled={disabled || !available.includes('raise')} style={styleFor('raise')}>RAISE</button>
+        }} disabled={(() => {
+          const callNeeded = Math.max(0, Math.floor(toCall || 0))
+          const minExtra = Math.max(0, Math.floor(minRaiseExtra || 0))
+          // Only enable when we face a bet and exceed call by at least min raise
+          if (disabled || !available.includes('raise')) return true
+          if (callNeeded <= 0) return true
+          const desiredExtra = Math.max(0, Math.floor(betAmount - callNeeded))
+          return desiredExtra < minExtra
+        })()} style={styleFor('raise')}>RAISE</button>
       </div>
     </>
   )

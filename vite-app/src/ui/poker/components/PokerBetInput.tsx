@@ -5,6 +5,7 @@ export interface PokerBetInputProps {
   toCall?: number
   setBetAmountSafe: (value: number) => void
   layout: { left?: number; top?: number; width?: number; height?: number }
+  inputLayout?: { left?: number; top?: number; width?: number; height?: number }
   editLayout: boolean
   onLayoutChange?: (layout: Record<string, { left?: number; top?: number; width?: number; height?: number }>) => void
 }
@@ -16,17 +17,22 @@ export function PokerBetInput({
   toCall,
   setBetAmountSafe,
   layout,
+  inputLayout,
   editLayout,
   onLayoutChange
 }: PokerBetInputProps) {
-  function makeDragHandlers(key: string) {
+  function makeDragHandlers(key: string, rect?: { left?: number; top?: number; width?: number; height?: number }) {
     if (!editLayout) return {}
     return {
       onMouseDown: (e: React.MouseEvent) => {
+        const target = e.target as HTMLElement
+        if (target && (target.tagName === 'INPUT' || target.closest('input,button,select,textarea'))) {
+          return
+        }
         e.preventDefault(); e.stopPropagation()
         const startX = e.clientX
         const startY = e.clientY
-        const start = layout || {}
+        const start = rect || {}
         const startLeft = (start.left ?? 0)
         const startTop = (start.top ?? 0)
         const onMove = (ev: MouseEvent) => {
@@ -35,7 +41,7 @@ export function PokerBetInput({
           const snap = (v: number) => Math.round(v / 2) * 2
           const nextLeft = snap(startLeft + dx)
           const nextTop = snap(startTop + dy)
-          const next = { [key]: { ...(layout || {}), left: nextLeft, top: nextTop } }
+          const next = { [key]: { ...(rect || {}), left: nextLeft, top: nextTop } }
           onLayoutChange?.(next)
         }
         const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
@@ -54,12 +60,12 @@ export function PokerBetInput({
 
   return (
     <>
-      <div id="control-betLabel" style={{ position: 'absolute', left: layout.left, top: layout.top, transform: 'translate(-50%, -50%)', ...sized(layout) }} {...makeDragHandlers('betLabel')}>
+      <div id="control-betLabel" style={{ position: 'absolute', left: layout.left, top: layout.top, transform: 'translate(-50%, -50%)', ...sized(layout) }} {...makeDragHandlers('betLabel', layout)}>
         <span style={{ opacity: 0.9, display: 'inline-block', width: '100%' }}>
           Bet: {betAmount > 0 ? `$${betAmount}` : ''}
         </span>
       </div>
-      <div id="control-betInput" style={{ position: 'absolute', left: layout.left, top: (layout.top || 0) + 30, transform: 'translate(-50%, -50%)', ...sized(layout) }} {...makeDragHandlers('betInput')}>
+      <div id="control-betInput" style={{ position: 'absolute', left: (inputLayout?.left ?? layout.left), top: (inputLayout?.top ?? ((layout.top || 0) + 30)), transform: 'translate(-50%, -50%)', ...sized(inputLayout || layout) }} {...makeDragHandlers('betInput', inputLayout || layout)}>
         <input
           type="number"
           value={betAmount}
@@ -89,7 +95,7 @@ export function PokerBetInput({
             }
           }}
           style={{ 
-            width: layout.width ?? 100, 
+            width: (inputLayout?.width ?? layout.width ?? 100), 
             padding: '4px 6px', 
             borderRadius: 8, 
             border: `1px solid ${betAmount === minVal || betAmount === maxVal ? 'rgba(255,255,0,0.5)' : 'rgba(255,255,255,0.25)'}`, 
