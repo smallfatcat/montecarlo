@@ -45,7 +45,9 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
   const seatOwners = new Map<string, number>()
   const playerNames = new Map<string, string>()
   const disconnectGraceMs = Math.max(0, opts?.disconnectGraceMs ?? 15000)
-  const pendingReleases = new Map<string, any>()
+  const pendingReleases = new Map<string, NodeJS.Timeout>()
+  const playersInRoom = new Set<string>()
+  const reservedBySeat = new Map<number, { playerId: string; expiresAt: number }>() // seatIndex -> reservation
 
   let runtime = new PokerRuntime({ seats, cpuSeats, startingStack }, {
     onState: (s) => {
@@ -86,10 +88,36 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
     // If this socket has an identified playerId and that player already owns a seat, inform them
     try {
       const pid = ((socket as any).data?.playerId as string | undefined) || null
-      if (pid && seatOwners.has(pid)) {
-        const seatIdx = seatOwners.get(pid)!
-        const name = playerNames.get(pid) ?? null
-        socket.emit('seat_update', { seatIndex: seatIdx, isCPU: false, playerId: pid, playerName: name })
+      if (pid) {
+        playersInRoom.add(pid)
+        // Cancel pending release on reconnect into table room
+        const pending = pendingReleases.get(pid)
+        if (pending) { try { clearTimeout(pending) } catch {}; pendingReleases.delete(pid) }
+        // If this player had a reservation, clear it for everyone
+        for (const [seatIdx, res] of reservedBySeat.entries()) {
+          if (res.playerId === pid) {
+            reservedBySeat.delete(seatIdx)
+            try { io.in(room).emit('seat_reservation_cleared', { seatIndex: seatIdx }) } catch {}
+          }
+        }
+      }
+      // Send current seating map (all occupied seats) to this client
+      for (const [ownerId, seatIdx] of seatOwners.entries()) {
+        const pname = playerNames.get(ownerId) ?? null
+        socket.emit('seat_update', { seatIndex: seatIdx, isCPU: false, playerId: ownerId, playerName: pname })
+      }
+      // Send current reserved seats to this client so they see countdowns immediately
+      for (const [seatIdx, res] of reservedBySeat.entries()) {
+        const pname = playerNames.get(res.playerId) ?? null
+        socket.emit('seat_reserved', { seatIndex: seatIdx, playerName: pname, expiresAt: res.expiresAt })
+      }
+    } catch {}
+    try { opts?.onSummaryChange?.(getSummary()) } catch {}
+    // Broadcast reserved seats when applicable
+    try {
+      for (const [seatIdx, res] of reservedBySeat.entries()) {
+        const pname = playerNames.get(res.playerId) ?? null
+        socket.emit('seat_reserved', { seatIndex: seatIdx, playerName: pname, expiresAt: res.expiresAt })
       }
     } catch {}
     try { console.log('[server-runtime] join', { socketId: socket.id }) } catch {}
@@ -97,14 +125,12 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
 
   function removeClient(socket: Socket) {
     socket.leave(room)
-    const seatIdx = seatOwners.get(socket.id)
-    if (seatIdx != null) {
-      // Vacate seat: flip back to CPU
-      seatOwners.delete(socket.id)
-      playerNames.delete(socket.id)
-      try { (runtime as any).setSeatCpu?.(seatIdx, true) } catch {}
-      // Do not auto-vacate seat on raw client removal; reconnection grace is handled separately
-    }
+    try {
+      const pid = ((socket as any).data?.playerId as string | undefined) || null
+      if (pid) playersInRoom.delete(pid)
+    } catch {}
+    // Do not auto-vacate seat on raw client removal; reconnection grace is handled separately
+    try { opts?.onSummaryChange?.(getSummary()) } catch {}
   }
 
   return {
@@ -154,9 +180,20 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
         io.to(room).emit('seat_update', { seatIndex: existing, isCPU: true, playerId: null, playerName: null })
         seatOwners.delete(playerId)
         playerNames.delete(playerId)
+        // Clear any reservation held on the old seat
+        try { reservedBySeat.delete(existing) } catch {}
       }
       // Reject if seat is already taken by another user
       for (const [pid, idx] of seatOwners.entries()) { if (idx === seatIndex && pid !== playerId) return { ok: false, error: 'seat_taken' } }
+      // If seat is reserved for someone else, block
+      const reservedFor = reservedBySeat.get(seatIndex)
+      if (reservedFor && reservedFor.playerId !== playerId) return { ok: false, error: 'seat_reserved' }
+      // If reserved for this player, clear reservation
+      if (reservedFor && reservedFor.playerId === playerId) {
+        reservedBySeat.delete(seatIndex)
+        try { io.in(room).emit('seat_reservation_cleared', { seatIndex }) } catch {}
+        try { opts?.onSummaryChange?.(getSummary()) } catch {}
+      }
       // Assign seat to this player and flip to human
       seatOwners.set(playerId, seatIndex)
       playerNames.set(playerId, name)
@@ -227,12 +264,22 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
       if (pendingReleases.has(playerId)) return
       if (disconnectGraceMs <= 0) return
       const seatIdx = seatOwners.get(playerId)!
+      // Mark seat as reserved for this player during grace
+      reservedBySeat.set(seatIdx, { playerId, expiresAt: Date.now() + disconnectGraceMs })
+      // Broadcast reservation to everyone at the table
+      try {
+        const pname = playerNames.get(playerId) ?? null
+        io.in(room).emit('seat_reserved', { seatIndex: seatIdx, playerName: pname, expiresAt: Date.now() + disconnectGraceMs })
+      } catch {}
+      try { opts?.onSummaryChange?.(getSummary()) } catch {}
       const handle = setTimeout(() => {
         pendingReleases.delete(playerId)
         try { (runtime as any).setSeatCpu?.(seatIdx, true) } catch {}
         seatOwners.delete(playerId)
         playerNames.delete(playerId)
+        reservedBySeat.delete(seatIdx)
         io.to(room).emit('seat_update', { seatIndex: seatIdx, isCPU: true, playerId: null, playerName: null })
+        try { io.in(room).emit('seat_reservation_cleared', { seatIndex: seatIdx }) } catch {}
         try { opts?.onSummaryChange?.(getSummary()) } catch {}
       }, disconnectGraceMs)
       pendingReleases.set(playerId, handle)
@@ -242,11 +289,17 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
   function getSummary() {
     const s = lastState as any
     const totalSeats = s?.seats?.length ?? seats
-    let humans = seatOwners.size
+    // Humans = seated owners who are currently present in the table room
+    let humans = 0
+    for (const [pid] of seatOwners) { if (playersInRoom.has(pid)) humans += 1 }
     humans = Math.min(humans, totalSeats)
     const cpus = Math.max(0, totalSeats - humans)
     const status = s?.status || 'unknown'
     const handId = typeof s?.handId === 'number' ? s.handId : null
+    const reserved = [] as Array<{ seatIndex: number; playerName: string | null; expiresAt: number }>
+    for (const [seatIndex, res] of reservedBySeat.entries()) {
+      reserved.push({ seatIndex, playerName: playerNames.get(res.playerId) ?? null, expiresAt: res.expiresAt })
+    }
     return {
       tableId,
       seats: totalSeats,
@@ -255,6 +308,7 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
       status,
       handId,
       updatedAt: Date.now(),
+      reserved,
     }
   }
 }

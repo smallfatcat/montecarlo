@@ -127,11 +127,18 @@ function DraggableSeat({
   const seatRef = useRef<HTMLDivElement>(null)
   const dragSystem = useDragSystem()
   const [currentPosition, setCurrentPosition] = useState(position)
+  const [tick, setTick] = useState(0)
 
   // Update position when prop changes
   useEffect(() => {
     setCurrentPosition(position)
   }, [position])
+
+  // Force periodic re-render to update reservation countdowns
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
 
   // Register with drag system
   useEffect(() => {
@@ -158,6 +165,8 @@ function DraggableSeat({
 
   const isHighlighted = highlightSet && Array.from(highlightSet).some(h => h.startsWith(`S${seatIndex}-`))
   const displayName = playerNames?.[seatIndex] || `Seat ${seatIndex + 1}`
+  // Pull reserved expiry injected on window by runtime
+  const reservedExpiresAtMs = (window as any)?.__pokerReserved?.[seatIndex] ?? null
 
   return (
     <motion.div
@@ -177,6 +186,7 @@ function DraggableSeat({
         padding: editLayout ? '4px' : '0',
         zIndex: 10, // High z-index for seats
       }}
+      data-tick={tick}
     >
       <PokerSeat
         idPrefix="seat"
@@ -195,6 +205,7 @@ function DraggableSeat({
         visibleHoleCount={revealed.holeCounts[seatIndex] || 0}
         forceFaceDown={hideHoleCardsUntilShowdown && seatIndex !== mySeatIndex}
         hideStackRow={true} // Hide stack row since we have separate stack components
+        reservedExpiresAtMs={reservedExpiresAtMs}
       />
     </motion.div>
   )

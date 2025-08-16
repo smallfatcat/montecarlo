@@ -11,6 +11,8 @@ export function createServerRuntimeTable(io, tableId, opts) {
     const playerNames = new Map();
     const disconnectGraceMs = Math.max(0, opts?.disconnectGraceMs ?? 15000);
     const pendingReleases = new Map();
+    const playersInRoom = new Set();
+    const reservedBySeat = new Map(); // seatIndex -> reservation
     let runtime = new PokerRuntime({ seats, cpuSeats, startingStack }, {
         onState: (s) => {
             lastState = s;
@@ -74,10 +76,35 @@ export function createServerRuntimeTable(io, tableId, opts) {
         // If this socket has an identified playerId and that player already owns a seat, inform them
         try {
             const pid = socket.data?.playerId || null;
-            if (pid && seatOwners.has(pid)) {
-                const seatIdx = seatOwners.get(pid);
-                const name = playerNames.get(pid) ?? null;
-                socket.emit('seat_update', { seatIndex: seatIdx, isCPU: false, playerId: pid, playerName: name });
+            if (pid) {
+                playersInRoom.add(pid);
+                // Cancel pending release on reconnect into table room
+                const pending = pendingReleases.get(pid);
+                if (pending) {
+                    try {
+                        clearTimeout(pending);
+                    }
+                    catch { }
+                    ;
+                    pendingReleases.delete(pid);
+                }
+            }
+            // Send current seating map (all occupied seats) to this client
+            for (const [ownerId, seatIdx] of seatOwners.entries()) {
+                const pname = playerNames.get(ownerId) ?? null;
+                socket.emit('seat_update', { seatIndex: seatIdx, isCPU: false, playerId: ownerId, playerName: pname });
+            }
+        }
+        catch { }
+        try {
+            opts?.onSummaryChange?.(getSummary());
+        }
+        catch { }
+        // Broadcast reserved seats when applicable
+        try {
+            for (const [seatIdx, res] of reservedBySeat.entries()) {
+                const pname = playerNames.get(res.playerId) ?? null;
+                socket.emit('seat_reserved', { seatIndex: seatIdx, playerName: pname, expiresAt: res.expiresAt });
             }
         }
         catch { }
@@ -88,17 +115,17 @@ export function createServerRuntimeTable(io, tableId, opts) {
     }
     function removeClient(socket) {
         socket.leave(room);
-        const seatIdx = seatOwners.get(socket.id);
-        if (seatIdx != null) {
-            // Vacate seat: flip back to CPU
-            seatOwners.delete(socket.id);
-            playerNames.delete(socket.id);
-            try {
-                runtime.setSeatCpu?.(seatIdx, true);
-            }
-            catch { }
-            // Do not auto-vacate seat on raw client removal; reconnection grace is handled separately
+        try {
+            const pid = socket.data?.playerId || null;
+            if (pid)
+                playersInRoom.delete(pid);
         }
+        catch { }
+        // Do not auto-vacate seat on raw client removal; reconnection grace is handled separately
+        try {
+            opts?.onSummaryChange?.(getSummary());
+        }
+        catch { }
     }
     return {
         tableId,
@@ -178,12 +205,24 @@ export function createServerRuntimeTable(io, tableId, opts) {
                 io.to(room).emit('seat_update', { seatIndex: existing, isCPU: true, playerId: null, playerName: null });
                 seatOwners.delete(playerId);
                 playerNames.delete(playerId);
+                // Clear any reservation held on the old seat
+                try {
+                    reservedBySeat.delete(existing);
+                }
+                catch { }
             }
             // Reject if seat is already taken by another user
             for (const [pid, idx] of seatOwners.entries()) {
                 if (idx === seatIndex && pid !== playerId)
                     return { ok: false, error: 'seat_taken' };
             }
+            // If seat is reserved for someone else, block
+            const reservedFor = reservedBySeat.get(seatIndex);
+            if (reservedFor && reservedFor.playerId !== playerId)
+                return { ok: false, error: 'seat_reserved' };
+            // If reserved for this player, clear reservation
+            if (reservedFor && reservedFor.playerId === playerId)
+                reservedBySeat.delete(seatIndex);
             // Assign seat to this player and flip to human
             seatOwners.set(playerId, seatIndex);
             playerNames.set(playerId, name);
@@ -306,6 +345,12 @@ export function createServerRuntimeTable(io, tableId, opts) {
             if (disconnectGraceMs <= 0)
                 return;
             const seatIdx = seatOwners.get(playerId);
+            // Mark seat as reserved for this player during grace
+            reservedBySeat.set(seatIdx, { playerId, expiresAt: Date.now() + disconnectGraceMs });
+            try {
+                opts?.onSummaryChange?.(getSummary());
+            }
+            catch { }
             const handle = setTimeout(() => {
                 pendingReleases.delete(playerId);
                 try {
@@ -314,6 +359,7 @@ export function createServerRuntimeTable(io, tableId, opts) {
                 catch { }
                 seatOwners.delete(playerId);
                 playerNames.delete(playerId);
+                reservedBySeat.delete(seatIdx);
                 io.to(room).emit('seat_update', { seatIndex: seatIdx, isCPU: true, playerId: null, playerName: null });
                 try {
                     opts?.onSummaryChange?.(getSummary());
@@ -326,11 +372,20 @@ export function createServerRuntimeTable(io, tableId, opts) {
     function getSummary() {
         const s = lastState;
         const totalSeats = s?.seats?.length ?? seats;
-        let humans = seatOwners.size;
+        // Humans = seated owners who are currently present in the table room
+        let humans = 0;
+        for (const [pid] of seatOwners) {
+            if (playersInRoom.has(pid))
+                humans += 1;
+        }
         humans = Math.min(humans, totalSeats);
         const cpus = Math.max(0, totalSeats - humans);
         const status = s?.status || 'unknown';
         const handId = typeof s?.handId === 'number' ? s.handId : null;
+        const reserved = [];
+        for (const [seatIndex, res] of reservedBySeat.entries()) {
+            reserved.push({ seatIndex, playerName: playerNames.get(res.playerId) ?? null, expiresAt: res.expiresAt });
+        }
         return {
             tableId,
             seats: totalSeats,
@@ -339,6 +394,7 @@ export function createServerRuntimeTable(io, tableId, opts) {
             status,
             handId,
             updatedAt: Date.now(),
+            reserved,
         };
     }
 }

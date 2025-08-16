@@ -74,6 +74,26 @@ export function usePokerRuntime(
         return next
       })
     },
+    onSeatReserved: (m: { seatIndex: number; playerName: string | null; expiresAt: number }) => {
+      // Render countdown inline by appending to the display name temporarily
+      callbacksRef.current.setPlayerNames((prev) => {
+        const next = [...prev]
+        // Keep base name; we show countdown separately, so don't mutate the name label here
+        if (!next[m.seatIndex] && m.playerName) next[m.seatIndex] = m.playerName
+        return next
+      })
+      // Store expiresAt into runtime state for per-seat overlay; optional lightweight approach could be enhanced later
+      ;(window as any).__pokerReserved = (window as any).__pokerReserved || {}
+      ;(window as any).__pokerReserved[m.seatIndex] = m.expiresAt
+    },
+    onSeatReservationCleared: (m: { seatIndex: number }) => {
+      callbacksRef.current.setPlayerNames((prev) => {
+        const next = [...prev]
+        // No need to modify the name here; state updates will reflect the current player name
+        return next
+      })
+      if ((window as any)?.__pokerReserved) delete (window as any).__pokerReserved[m.seatIndex]
+    },
     onYouSeatChange: (seatIndex: number | null) => callbacksRef.current.setMySeatIndex(seatIndex),
     onAutoplay: (auto: boolean) => { lastRemoteAutoRef.current = auto; callbacksRef.current.setAutoPlay(auto) },
   }), [])

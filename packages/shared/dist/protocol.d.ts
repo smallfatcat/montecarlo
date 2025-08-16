@@ -179,6 +179,19 @@ export declare const S2C: {
             status: z.ZodString;
             handId: z.ZodNullable<z.ZodNumber>;
             updatedAt: z.ZodNumber;
+            reserved: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                seatIndex: z.ZodNumber;
+                playerName: z.ZodNullable<z.ZodString>;
+                expiresAt: z.ZodNumber;
+            }, "strip", z.ZodTypeAny, {
+                seatIndex: number;
+                playerName: string | null;
+                expiresAt: number;
+            }, {
+                seatIndex: number;
+                playerName: string | null;
+                expiresAt: number;
+            }>, "many">>;
         }, "strip", z.ZodTypeAny, {
             status: string;
             tableId: string;
@@ -187,6 +200,11 @@ export declare const S2C: {
             cpus: number;
             handId: number | null;
             updatedAt: number;
+            reserved: {
+                seatIndex: number;
+                playerName: string | null;
+                expiresAt: number;
+            }[];
         }, {
             status: string;
             tableId: string;
@@ -195,6 +213,11 @@ export declare const S2C: {
             cpus: number;
             handId: number | null;
             updatedAt: number;
+            reserved?: {
+                seatIndex: number;
+                playerName: string | null;
+                expiresAt: number;
+            }[] | undefined;
         }>, "many">;
     }, "strip", z.ZodTypeAny, {
         tables: {
@@ -205,6 +228,11 @@ export declare const S2C: {
             cpus: number;
             handId: number | null;
             updatedAt: number;
+            reserved: {
+                seatIndex: number;
+                playerName: string | null;
+                expiresAt: number;
+            }[];
         }[];
     }, {
         tables: {
@@ -215,6 +243,11 @@ export declare const S2C: {
             cpus: number;
             handId: number | null;
             updatedAt: number;
+            reserved?: {
+                seatIndex: number;
+                playerName: string | null;
+                expiresAt: number;
+            }[] | undefined;
         }[];
     }>;
     tableUpdate: z.ZodObject<{
@@ -225,6 +258,19 @@ export declare const S2C: {
         status: z.ZodString;
         handId: z.ZodNullable<z.ZodNumber>;
         updatedAt: z.ZodNumber;
+        reserved: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            seatIndex: z.ZodNumber;
+            playerName: z.ZodNullable<z.ZodString>;
+            expiresAt: z.ZodNumber;
+        }, "strip", z.ZodTypeAny, {
+            seatIndex: number;
+            playerName: string | null;
+            expiresAt: number;
+        }, {
+            seatIndex: number;
+            playerName: string | null;
+            expiresAt: number;
+        }>, "many">>;
     }, "strip", z.ZodTypeAny, {
         status: string;
         tableId: string;
@@ -233,6 +279,11 @@ export declare const S2C: {
         cpus: number;
         handId: number | null;
         updatedAt: number;
+        reserved: {
+            seatIndex: number;
+            playerName: string | null;
+            expiresAt: number;
+        }[];
     }, {
         status: string;
         tableId: string;
@@ -241,6 +292,11 @@ export declare const S2C: {
         cpus: number;
         handId: number | null;
         updatedAt: number;
+        reserved?: {
+            seatIndex: number;
+            playerName: string | null;
+            expiresAt: number;
+        }[] | undefined;
     }>;
     tableRemoved: z.ZodObject<{
         tableId: z.ZodString;

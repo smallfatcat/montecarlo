@@ -45,6 +45,7 @@ export interface PokerSeatProps {
   showdownText?: string
   // Drag system
   dragSystem?: any
+  reservedExpiresAtMs?: number | null
 }
 
 export function PokerSeat(props: PokerSeatProps) {
@@ -72,6 +73,7 @@ export function PokerSeat(props: PokerSeatProps) {
     equity,
     winnersSet,
     showdownText,
+    reservedExpiresAtMs = null,
   } = props
 
   const outline = seatIndex === currentToAct ? '2px solid #ffd54f' : undefined
@@ -128,6 +130,7 @@ export function PokerSeat(props: PokerSeatProps) {
         displayName={props.displayName}
         mySeatIndex={mySeatIndex}
         idPrefix={idPrefix}
+        reservedExpiresAtMs={reservedExpiresAtMs}
       />
       
       <PokerSeatStack

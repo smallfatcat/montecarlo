@@ -8,6 +8,7 @@ export interface PokerSeatInfoProps {
   displayName?: string
   mySeatIndex?: number | null
   idPrefix: string
+  reservedExpiresAtMs?: number | null
 }
 
 export function PokerSeatInfo({ 
@@ -19,8 +20,15 @@ export function PokerSeatInfo({
   isCPU, 
   displayName, 
   mySeatIndex, 
-  idPrefix 
+  idPrefix,
+  reservedExpiresAtMs = null,
 }: PokerSeatInfoProps) {
+  let reservedText: string | null = null
+  if (typeof reservedExpiresAtMs === 'number' && isFinite(reservedExpiresAtMs)) {
+    const now = Date.now()
+    const secs = Math.max(0, Math.ceil((reservedExpiresAtMs - now) / 1000))
+    reservedText = secs > 0 ? ` · Rejoining in ${secs}s` : null
+  }
   return (
     <div id={`${idPrefix}-label-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>
       {displayName ?? (isCPU ? `CPU ${seatIndex}` : `Player ${seatIndex}`)}
@@ -29,6 +37,7 @@ export function PokerSeatInfo({
       {hasFolded ? ' · Folded' : ''}
       {isAllIn ? ' · All-in' : ''}
       {mySeatIndex === seatIndex ? ' · You' : ''}
+      {reservedText ?? ''}
     </div>
   )
 }

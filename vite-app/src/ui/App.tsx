@@ -45,9 +45,7 @@ export function App() {
     </PokerGameProvider>
   )
   else if (showPokerLobby) content = (
-    <PokerGameProvider>
-      <PokerLobby />
-    </PokerGameProvider>
+    <PokerLobby />
   )
   else if (showPoker) content = (
     <PokerGameProvider key={pokerTableId}>

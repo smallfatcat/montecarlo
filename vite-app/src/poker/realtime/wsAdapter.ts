@@ -11,6 +11,8 @@ export type RuntimeCallbacks = {
   onSeatUpdate?: (m: { seatIndex: number; isCPU: boolean; playerId: string | null; playerName: string | null }) => void
   onYouSeatChange?: (seatIndex: number | null) => void
   onAutoplay?: (auto: boolean) => void
+  onSeatReserved?: (m: { seatIndex: number; playerName: string | null; expiresAt: number }) => void
+  onSeatReservationCleared?: (m: { seatIndex: number }) => void
 }
 
 export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks, tableIdParam?: string) {
@@ -40,23 +42,17 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
       console.log('[wsAdapter] connected', socket?.id)
       // Identity first
       try {
-        const existing = localStorage?.getItem('playerToken') || null
+        const existing = sessionStorage?.getItem('playerToken') || null
         const suggested = `Player-${Math.floor(Math.random()*1000)}`
         const name = sessionStorage?.getItem('playerName') || suggested
         sessionStorage?.setItem('playerName', name)
         socket?.emit('identify', { token: existing || undefined, name }, (ack: any) => {
-          try { if (ack?.token) { playerToken = String(ack.token); localStorage?.setItem('playerToken', playerToken) } } catch {}
+          try { if (ack?.token) { playerToken = String(ack.token); sessionStorage?.setItem('playerToken', playerToken) } } catch {}
           // Join table after identity
           socket?.emit('join', { tableId }, (ack2: any) => {
             console.log('[wsAdapter] join ack', ack2)
             if (ack2?.state) cb.onState(ack2.state)
             if (typeof ack2?.auto === 'boolean') cb.onAutoplay?.(ack2.auto)
-            // If no one is seated yet, attempt to auto-sit into seat 0 using our name
-            try {
-              if (ack2?.state?.seats?.every((s:any)=>s.isCPU)) {
-                socket?.emit('sit', { tableId, seatIndex: 0, name })
-              }
-            } catch {}
           })
         })
       } catch (e) {
@@ -93,6 +89,8 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
       } catch {}
       cb.onSeatUpdate?.(m)
     })
+    socket.on('seat_reserved', (m: any) => { try { if (m && typeof m.seatIndex === 'number') cb.onSeatReserved?.(m) } catch {} })
+    socket.on('seat_reservation_cleared', (m: any) => { try { if (m && typeof m.seatIndex === 'number') cb.onSeatReservationCleared?.(m) } catch {} })
   }
 
   function beginHand() {

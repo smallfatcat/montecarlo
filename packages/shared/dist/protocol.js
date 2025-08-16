@@ -35,6 +35,7 @@ export const S2C = {
             status: z.string(),
             handId: z.number().int().nonnegative().nullable(),
             updatedAt: z.number().int().nonnegative(),
+            reserved: z.array(z.object({ seatIndex: z.number().int().nonnegative(), playerName: z.string().nullable(), expiresAt: z.number().int().nonnegative() })).default([]),
         })) }),
     tableUpdate: z.object({
         tableId: z.string(),
@@ -44,6 +45,7 @@ export const S2C = {
         status: z.string(),
         handId: z.number().int().nonnegative().nullable(),
         updatedAt: z.number().int().nonnegative(),
+        reserved: z.array(z.object({ seatIndex: z.number().int().nonnegative(), playerName: z.string().nullable(), expiresAt: z.number().int().nonnegative() })).default([]),
     }),
     tableRemoved: z.object({ tableId: z.string() }),
 };
