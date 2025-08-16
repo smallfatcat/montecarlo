@@ -29,7 +29,7 @@ export interface PokerTableLayoutProps {
 // Interface for draggable objects
 interface DraggableObject {
   id: string
-  type: 'seat' | 'board' | 'pot' | 'stack' | 'bet' | 'control'
+  type: 'seat' | 'board' | 'pot' | 'stack' | 'bet' | 'control' | 'showdown'
   element: HTMLElement
   getLayout: () => any
   setLayout: (layout: any) => void
@@ -95,6 +95,9 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
               break
             case 'control':
               updated.controls = newLayout
+              break
+            case 'showdown':
+              updated.showdown = newLayout
               break
           }
           

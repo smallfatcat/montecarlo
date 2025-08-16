@@ -163,7 +163,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
           <PokerTablePot
             table={table}
             showdownText={showdownTextProp}
-            layoutOverride={layoutOverrides.pot}
+            layoutOverride={{ ...layoutOverrides.pot, showdown: layoutOverrides.showdown }}
             editLayout={editLayoutMode}
           />
 

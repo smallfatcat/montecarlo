@@ -17,15 +17,18 @@ export function PokerTablePot({ table, showdownText, layoutOverride, editLayout 
   const { horseshoe } = CONFIG.poker
   const { potOffsetY, showdownOffsetY } = horseshoe
   const potRef = useRef<HTMLDivElement>(null)
+  const showdownRef = useRef<HTMLDivElement>(null)
   const dragSystem = useDragSystem()
   const [currentPosition, setCurrentPosition] = useState(layoutOverride || {})
+  const [showdownPosition, setShowdownPosition] = useState((layoutOverride as any)?.showdown || {})
 
   // Update position when prop changes
   useEffect(() => {
     setCurrentPosition(layoutOverride || {})
+    setShowdownPosition((layoutOverride as any)?.showdown || {})
   }, [layoutOverride])
 
-  // Register with drag system
+  // Register with drag system (pot)
   useEffect(() => {
     if (dragSystem && potRef.current && editLayout) {
       const draggable = {
@@ -47,6 +50,22 @@ export function PokerTablePot({ table, showdownText, layoutOverride, editLayout 
       }
     }
   }, [dragSystem, editLayout, currentPosition])
+
+  // Register showdown text with drag system
+  useEffect(() => {
+    if (dragSystem && showdownRef.current && editLayout) {
+      const draggable = {
+        id: 'showdown',
+        type: 'showdown' as const,
+        element: showdownRef.current,
+        priority: 5,
+        getLayout: () => showdownPosition,
+        setLayout: (newLayout: any) => { setShowdownPosition(newLayout) }
+      }
+      dragSystem.registerDraggable(draggable)
+      return () => { dragSystem.unregisterDraggable('showdown') }
+    }
+  }, [dragSystem, editLayout, showdownPosition])
 
   return (
     <div 
@@ -127,15 +146,18 @@ export function PokerTablePot({ table, showdownText, layoutOverride, editLayout 
       {/* Showdown Text */}
       {showdownText && (
         <motion.div
+          ref={showdownRef}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.4 }}
           className="showdown-text"
           style={{
             position: 'absolute',
-            top: showdownOffsetY,
-            left: '50%',
-            transform: 'translateX(-50%)',
+            top: (showdownPosition?.top ?? showdownOffsetY),
+            left: (showdownPosition?.left ?? '50%'),
+            transform: showdownPosition?.left != null || showdownPosition?.top != null ? 'translate(-50%, -50%)' : 'translateX(-50%)',
+            width: showdownPosition?.width,
+            height: showdownPosition?.height,
             whiteSpace: 'nowrap',
             fontSize: '14px',
             fontWeight: 'bold',
