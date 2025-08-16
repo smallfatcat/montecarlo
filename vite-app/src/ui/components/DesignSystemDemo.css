@@ -1,0 +1,441 @@
+/* Design System Demo Styles */
+.design-system-demo {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-6);
+  font-family: var(--font-family-sans);
+  line-height: var(--line-height-normal);
+  background: linear-gradient(135deg, #0f1a0f 0%, #1a2e1a 100%);
+  min-height: 100vh;
+  color: var(--color-neutral-100);
+}
+
+/* Demo Header */
+.demo-header {
+  text-align: center;
+  margin-bottom: var(--space-12);
+  padding: var(--space-8) var(--space-6);
+  background: linear-gradient(135deg, #1a3d1a 0%, #2d5a2d 100%);
+  border-radius: var(--radius-2xl);
+  border: 2px solid var(--color-poker-cyan);
+  box-shadow: var(--shadow-xl), 0 0 20px rgba(0, 255, 136, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.demo-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="poker-pattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.5" fill="rgba(255,255,255,0.15)"/></pattern></defs><rect width="100" height="100" fill="url(%23poker-pattern)"/></svg>');
+  opacity: 0.4;
+}
+
+.demo-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse at center, rgba(255, 140, 0, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.demo-header h1 {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-poker-orange);
+  margin: 0 0 var(--space-4) 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 140, 0, 0.3);
+  position: relative;
+  z-index: 1;
+  letter-spacing: 0.02em;
+}
+
+.demo-header p {
+  font-size: var(--font-size-lg);
+  color: var(--color-poker-lavender);
+  margin: 0;
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  line-height: 1.6;
+}
+
+/* Demo Sections */
+.demo-section {
+  margin-bottom: var(--space-12);
+  background: rgba(26, 46, 26, 0.8);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  border: 1px solid var(--color-neutral-700);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+}
+
+.demo-section h2 {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-poker-orange);
+  margin: 0 0 var(--space-6) 0;
+  padding-bottom: var(--space-4);
+  border-bottom: 2px solid var(--color-poker-cyan);
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7), 0 0 15px rgba(255, 140, 0, 0.2);
+}
+
+.demo-section h3 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-200);
+  margin: 0 0 var(--space-4) 0;
+  text-align: center;
+}
+
+.demo-section h4 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-200);
+  margin: 0 0 var(--space-2) 0;
+}
+
+/* Demo Grid */
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: var(--space-8);
+  margin-top: var(--space-6);
+}
+
+.demo-item {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, var(--color-poker-felt) 0%, var(--color-poker-table) 100%);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  border: 1px solid var(--color-poker-table-border);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-normal);
+}
+
+/* Ensure poker table cards maintain their dark theme */
+.demo-item .poker-table-card {
+  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
+  border-color: var(--color-poker-table-border) !important;
+}
+
+.demo-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--color-poker-green);
+}
+
+/* Color Palette */
+.color-palette {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.color-swatch {
+  height: 100px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  border: 2px solid var(--color-neutral-600);
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.color-swatch::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.color-swatch:hover::before {
+  transform: translateX(100%);
+}
+
+.color-swatch span {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Spacing Demo */
+.spacing-demo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.spacing-item {
+  background: linear-gradient(135deg, var(--color-poker-green) 0%, var(--color-primary-600) 100%);
+  color: white;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+  border: 1px solid var(--color-neutral-600);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.spacing-item:hover {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-md);
+}
+
+/* Button Groups */
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+}
+
+/* Badge Groups */
+.badge-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive Demo */
+.responsive-demo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+
+.responsive-item {
+  background: linear-gradient(135deg, rgba(26, 61, 26, 0.8) 0%, rgba(45, 90, 45, 0.8) 100%);
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--color-poker-green);
+  box-shadow: var(--shadow-lg);
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+.responsive-item::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  transform: rotate(45deg);
+  transition: all 0.6s;
+}
+
+.responsive-item:hover::before {
+  transform: rotate(45deg) scale(1.2);
+}
+
+.responsive-item h4 {
+  color: var(--color-poker-orange);
+  margin-bottom: var(--space-3);
+  text-align: center;
+  font-size: var(--font-size-xl);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.responsive-item p {
+  color: var(--color-neutral-300);
+  margin: 0;
+  font-size: var(--font-size-base);
+  text-align: center;
+  line-height: var(--line-height-relaxed);
+}
+
+/* Demo Item Enhancements */
+.demo-item > * {
+  margin-bottom: var(--space-4);
+}
+
+.demo-item > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Special Poker Section */
+.demo-section:has(.poker-table-card) {
+  background: linear-gradient(135deg, rgba(15, 26, 15, 0.95) 0%, rgba(26, 46, 26, 0.95) 100%);
+  border: 2px solid var(--color-poker-gold);
+}
+
+.demo-section:has(.poker-table-card) h2 {
+  color: var(--color-poker-gold);
+  border-color: var(--color-poker-gold);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .design-system-demo {
+    padding: var(--space-4);
+  }
+  
+  .demo-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-6);
+  }
+  
+  .responsive-demo {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-6);
+  }
+}
+
+@media (max-width: 768px) {
+  .design-system-demo {
+    padding: var(--space-3);
+  }
+  
+  .demo-header {
+    margin-bottom: var(--space-8);
+    padding: var(--space-6) var(--space-4);
+  }
+  
+  .demo-header h1 {
+    font-size: var(--font-size-3xl);
+  }
+  
+  .demo-header p {
+    font-size: var(--font-size-base);
+  }
+  
+  .demo-section {
+    margin-bottom: var(--space-8);
+    padding: var(--space-6);
+  }
+  
+  .demo-section h2 {
+    font-size: var(--font-size-2xl);
+  }
+  
+  .demo-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+  
+  .color-palette {
+    grid-template-columns: 1fr;
+  }
+  
+  .responsive-demo {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+  
+  .demo-item {
+    padding: var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .design-system-demo {
+    padding: var(--space-2);
+  }
+  
+  .button-group,
+  .badge-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .button-group > *,
+  .badge-group > * {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .demo-item {
+    padding: var(--space-3);
+  }
+  
+  .color-swatch {
+    height: 80px;
+  }
+}
+
+/* Enhanced Dark theme (already dark by default) */
+.design-system-demo {
+  background: linear-gradient(135deg, var(--color-poker-felt) 0%, var(--color-poker-wood) 100%);
+  color: var(--color-neutral-100);
+}
+
+/* Ensure consistent dark theme for text elements */
+.design-system-demo p,
+.design-system-demo span,
+.design-system-demo div {
+  color: var(--color-neutral-50);
+}
+
+/* Force all text in poker table cards to be light */
+.design-system-demo .poker-table-card,
+.design-system-demo .poker-table-card * {
+  color: var(--color-neutral-50) !important;
+}
+
+/* Specific overrides for important elements */
+.design-system-demo .poker-table-card .poker-table-card__name {
+  color: var(--color-poker-orange) !important;
+}
+
+.design-system-demo .poker-table-card .poker-table-card__stat-value {
+  color: var(--color-poker-cyan) !important;
+}
+
+/* Utility classes */
+.ml-2 {
+  margin-left: var(--space-2);
+}
+
+/* Custom scrollbar for the demo */
+.design-system-demo::-webkit-scrollbar {
+  width: 12px;
+}
+
+.design-system-demo::-webkit-scrollbar-track {
+  background: var(--color-neutral-800);
+  border-radius: var(--radius-full);
+}
+
+.design-system-demo::-webkit-scrollbar-thumb {
+  background: var(--color-poker-green);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-neutral-800);
+}
+
+.design-system-demo::-webkit-scrollbar-thumb:hover {
+  background: var(--color-poker-gold);
+}

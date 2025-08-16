@@ -9,7 +9,9 @@ import { PokerTestDashboard } from './poker/PokerTestDashboard'
 import { PokerHistoryPage } from './poker/PokerHistoryPage'
 import { PokerLayoutEditorPage } from './poker/PokerLayoutEditorPage'
 import { Landing } from './Landing'
+import { DesignSystemDemo } from './components/DesignSystemDemo'
 import VersionDisplay from '../components/VersionDisplay'
+import '../styles/design-tokens.css'
 
 export function App() {
   const [hash, setHash] = useState<string>(typeof window !== 'undefined' ? window.location.hash : '')
@@ -29,6 +31,7 @@ export function App() {
   const showPokerLayoutEditor = hash === '#poker-layout-editor'
   const showBlackjack = hash === '#blackjack'
   const showPokerLobby = hash === '#lobby' || hash === '#poker-lobby'
+  const showDesignSystem = hash === '#design-system'
   const pokerTableId = showPoker && hash.startsWith('#poker/') ? hash.slice('#poker/'.length) : 'table-1'
 
   let content: ReactNode
@@ -47,6 +50,7 @@ export function App() {
   else if (showPokerLobby) content = (
     <PokerLobby />
   )
+  else if (showDesignSystem) content = <DesignSystemDemo />
   else if (showPoker) content = (
     <PokerGameProvider key={pokerTableId}>
       <PokerTableHorseshoe />

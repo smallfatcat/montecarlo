@@ -1,0 +1,211 @@
+/* Input Wrapper */
+.input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Input Label */
+.input__label {
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-neutral-700);
+  line-height: var(--line-height-tight);
+}
+
+/* Input Container */
+.input__container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Input Base Styles */
+.input {
+  width: 100%;
+  border: 1px solid var(--color-neutral-300);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-neutral-100);
+  background-color: var(--color-neutral-800);
+  transition: all var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input:disabled {
+  background-color: var(--color-neutral-700);
+  color: var(--color-neutral-500);
+  cursor: not-allowed;
+}
+
+/* Input Sizes */
+.input--sm {
+  padding: var(--space-2) var(--space-3);
+  min-height: 32px;
+  font-size: var(--font-size-sm);
+}
+
+.input--md {
+  padding: var(--space-3) var(--space-4);
+  min-height: 40px;
+  font-size: var(--font-size-base);
+}
+
+.input--lg {
+  padding: var(--space-4) var(--space-5);
+  min-height: 48px;
+  font-size: var(--font-size-lg);
+}
+
+/* Input Variants */
+.input--default {
+  background-color: var(--color-neutral-800);
+  border-color: var(--color-neutral-500);
+}
+
+.input--outlined {
+  background-color: transparent;
+  border-width: 2px;
+  border-color: var(--color-neutral-500);
+}
+
+.input--outlined:focus {
+  border-color: var(--color-primary-500);
+}
+
+.input--filled {
+  background-color: var(--color-neutral-700);
+  border-color: var(--color-neutral-600);
+}
+
+.input--filled:focus {
+  background-color: var(--color-neutral-800);
+  border-color: var(--color-primary-500);
+}
+
+/* Input with Icons */
+.input__icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-neutral-500);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.input__icon--left {
+  left: var(--space-3);
+}
+
+.input__icon--right {
+  right: var(--space-3);
+}
+
+.input--sm + .input__icon--left {
+  left: var(--space-2);
+}
+
+.input--sm + .input__icon--right {
+  right: var(--space-2);
+}
+
+.input--lg + .input__icon--left {
+  left: var(--space-4);
+}
+
+.input--lg + .input__icon--right {
+  right: var(--space-4);
+}
+
+/* Input with left icon padding */
+.input__icon--left ~ .input {
+  padding-left: calc(var(--space-4) + 20px);
+}
+
+.input--sm.input__icon--left ~ .input {
+  padding-left: calc(var(--space-3) + 20px);
+}
+
+.input--lg.input__icon--left ~ .input {
+  padding-left: calc(var(--space-5) + 20px);
+}
+
+/* Input with right icon padding */
+.input__icon--right ~ .input {
+  padding-right: calc(var(--space-4) + 20px);
+}
+
+.input--sm.input__icon--right ~ .input {
+  padding-right: calc(var(--space-3) + 20px);
+}
+
+.input--lg.input__icon--right ~ .input {
+  padding-right: calc(var(--space-5) + 20px);
+}
+
+/* Input States */
+.input--error {
+  border-color: var(--color-error-500);
+}
+
+.input--error:focus {
+  border-color: var(--color-error-500);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Input Messages */
+.input__message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.input__error {
+  font-size: var(--font-size-sm);
+  color: var(--color-error-600);
+  line-height: var(--line-height-tight);
+}
+
+.input__helper {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-400);
+  line-height: var(--line-height-tight);
+}
+
+/* Full Width Input */
+.input--full-width {
+  width: 100%;
+}
+
+/* Placeholder Styles */
+.input::placeholder {
+  color: var(--color-neutral-400);
+  opacity: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .input--lg {
+    padding: var(--space-3) var(--space-4);
+    min-height: 44px;
+    font-size: var(--font-size-base);
+  }
+  
+  .input--md {
+    padding: var(--space-2) var(--space-3);
+    min-height: 36px;
+    font-size: var(--font-size-sm);
+  }
+}
+
+/* Dark theme is now default */

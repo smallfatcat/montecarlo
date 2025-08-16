@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import type { BettingActionType, PokerTableState } from '../../poker/types'
+import { motion } from 'framer-motion'
+import type { PokerTableState } from '../../poker/types'
+import type { BettingActionType } from '../../poker/types'
+import { Button, Input, Badge, Card } from '../components'
+import './PokerTableHorseshoeControls.css'
 
 export function PokerTableHorseshoeControls(props: {
   table: PokerTableState
@@ -68,91 +72,73 @@ export function PokerTableHorseshoeControls(props: {
     ? {
         display: 'flex',
         flexDirection: 'column',
-        gap: 8,
+        gap: 'var(--space-2)',
         alignItems: 'stretch',
         width: sidebarWidth,
-        padding: 10,
+        padding: 'var(--space-3)',
         position: 'fixed',
         left: 0,
         top: 0,
         height: '100vh',
         overflowY: 'auto',
-        background: 'rgba(0,0,0,0.12)',
-        borderRight: '1px solid rgba(255,255,255,0.12)',
         zIndex: 1100,
       }
-    : { display: 'flex', gap: 12, alignItems: 'center' }
+    : { display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }
 
   return (
-    <div id="poker-controlbar" style={baseStyle}>
-      <button onClick={() => onDealNext()} disabled={table.status === 'in_hand' || table.gameOver}>Deal</button>
-      {onResetGame && <button onClick={() => onResetGame()} style={{ marginLeft: 4 }}>Reset Game</button>}
-      <label><input type="checkbox" checked={autoPlay} onChange={(e) => onToggleAutoPlay(e.target.checked)} /> Autoplay</label>
-      {layoutVariant === 'toolbar' && <span className="sep" />}
-      <label title="Your display name shown on your seat">
-        Name: <input
-          type="text"
+    <Card
+      variant="elevated"
+      padding="sm"
+      className={`poker-controlbar poker-controlbar--${layoutVariant}`}
+      style={baseStyle}
+    >
+      <Button variant="primary" size="sm" onClick={() => onDealNext()} disabled={table.status === 'in_hand' || table.gameOver}>
+        Deal
+      </Button>
+      
+      {onResetGame && (
+        <Button variant="secondary" size="sm" onClick={() => onResetGame()}>
+          Reset Game
+        </Button>
+      )}
+      
+      <label className="control-label">
+        <input type="checkbox" checked={autoPlay} onChange={(e) => onToggleAutoPlay(e.target.checked)} /> 
+        Autoplay
+      </label>
+      
+      {layoutVariant === 'toolbar' && <span className="control-separator" />}
+      
+      <div className="name-input-container">
+        <Input
+          label="Name"
           value={(mySeatIndex != null ? (playerNames?.[mySeatIndex] || '') : '')}
           placeholder={mySeatIndex != null ? `Player ${mySeatIndex}` : 'Spectator'}
           onChange={(e) => onRenameMe?.(e.target.value)}
           disabled={mySeatIndex == null || table.status === 'in_hand'}
-          style={{ width: 140 }}
+          helperText="Your display name shown on your seat"
+          size="sm"
         />
-      </label>
+      </div>
+      
       {mySeatIndex != null ? (
-        <div style={{ 
-          fontSize: '12px', 
-          opacity: 0.8, 
-          padding: '4px 8px',
-          background: 'rgba(76, 175, 80, 0.2)',
-          border: '1px solid rgba(76, 175, 80, 0.3)',
-          borderRadius: '6px',
-          color: '#4caf50'
-        }}>
+        <Badge variant="success" size="lg">
           🪑 Seated at Seat {mySeatIndex}
-        </div>
+        </Badge>
       ) : (
-        <div style={{ 
-          fontSize: '12px', 
-          opacity: 0.8, 
-          padding: '4px 8px',
-          background: 'rgba(158, 158, 158, 0.2)',
-          border: '1px solid rgba(158, 158, 158, 0.3)',
-          borderRadius: '6px',
-          color: '#9e9e9e'
-        }}>
+        <Badge variant="outline" size="lg">
           👁️ Spectating
-        </div>
+        </Badge>
       )}
+      
       {onLeaveSeat && mySeatIndex != null && (
-        <button 
+        <Button 
+          variant="danger"
+          size="sm"
           onClick={onLeaveSeat}
-          style={{ 
-            padding: '8px 16px',
-            background: 'rgba(244, 67, 54, 0.9)',
-            border: '1px solid rgba(244, 67, 54, 0.7)',
-            borderRadius: '8px',
-            color: 'white',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: '600',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(244, 67, 54, 1)'
-            e.currentTarget.style.transform = 'translateY(-1px)'
-            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(244, 67, 54, 0.9)'
-            e.currentTarget.style.transform = 'translateY(0)'
-            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)'
-          }}
-          title="Leave your current seat and become a spectator"
         >
-          🪑 Leave Seat
-        </button>
+          Leave Seat
+        </Button>
       )}
       <label title="Hide all hole cards until showdown (except your own)">
         <input type="checkbox" checked={hideHoleCardsUntilShowdown} onChange={(e) => onToggleHideHoleCards(e.target.checked)} />
@@ -165,15 +151,15 @@ export function PokerTableHorseshoeControls(props: {
         <option value="pot">Pot</option>
         <option value="shove">Shove</option>
       </select>
-      <button onClick={() => {
+      <Button onClick={() => {
         const pot = table.pot.main
         let amt = 0
         if (betSize === 'shove') amt = Number.MAX_SAFE_INTEGER
         else if (betSize === 'pot') amt = Math.floor(pot)
         else amt = Math.floor(pot * (parseInt(betSize,10)/100))
         onBet(amt)
-      }} disabled={!available.includes('bet')}>Bet</button>
-      <button onClick={() => {
+      }} disabled={!available.includes('bet')}>Bet</Button>
+      <Button onClick={() => {
         const toCall = Math.max(0, table.betToCall - (table.seats[0]?.committedThisStreet||0))
         const pot = table.pot.main
         let extra = 0
@@ -181,19 +167,19 @@ export function PokerTableHorseshoeControls(props: {
         else if (betSize === 'pot') extra = Math.floor(pot + toCall)
         else extra = Math.floor((pot + toCall) * (parseInt(betSize,10)/100))
         onRaise?.(extra)
-      }} disabled={!available.includes('raise')}>Raise</button>
-      <button onClick={onFold} disabled={!available.includes('fold')}>Fold</button>
-      <button onClick={onCheck} disabled={!available.includes('check')}>Check</button>
-      <button onClick={onCall} disabled={!available.includes('call')}>Call</button>
-      {layoutVariant === 'toolbar' && <span className="sep" />}
+      }} disabled={!available.includes('raise')}>Raise</Button>
+      <Button onClick={onFold} disabled={!available.includes('fold')}>Fold</Button>
+      <Button onClick={onCheck} disabled={!available.includes('check')}>Check</Button>
+      <Button onClick={onCall} disabled={!available.includes('call')}>Call</Button>
+      {layoutVariant === 'toolbar' && <span className="control-separator" />}
       <label title="Edit and drag layout elements">
         <input type="checkbox" checked={!!editLayoutMode} onChange={(e) => onToggleEditLayout?.(e.target.checked)} /> Edit Layout
       </label>
-      {onExportLayout && <button onClick={onExportLayout}>Export Layout JSON</button>}
-      {onResetLayout && <button onClick={onResetLayout}>Reset Layout</button>}
-      {layoutVariant === 'toolbar' && <span className="sep" />}
-      {onOpenHistory && <button onClick={onOpenHistory}>Open History</button>}
-      {props.onOpenLobby && <button onClick={props.onOpenLobby}>Back to Lobby</button>}
+      {onExportLayout && <Button onClick={onExportLayout}>Export Layout JSON</Button>}
+      {onResetLayout && <Button onClick={onResetLayout}>Reset Layout</Button>}
+      {layoutVariant === 'toolbar' && <span className="control-separator" />}
+      {onOpenHistory && <Button onClick={onOpenHistory}>Open History</Button>}
+      {props.onOpenLobby && <Button onClick={props.onOpenLobby}>Back to Lobby</Button>}
       {reviewInfo && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: layoutVariant === 'toolbar' ? 16 : 0 }}>
           <span style={{ opacity: 0.85 }}>Review Hand #{reviewInfo.handId} • Step {reviewInfo.step}/{reviewInfo.total}</span>
@@ -202,8 +188,8 @@ export function PokerTableHorseshoeControls(props: {
           <button onClick={onEndReview}>Exit Review</button>
         </div>
       )}
-      {onLeaveSeat && <button onClick={onLeaveSeat}>Leave Seat</button>}
-    </div>
+      {onLeaveSeat && <Button onClick={onLeaveSeat}>Leave Seat</Button>}
+    </Card>
   )
 }
 

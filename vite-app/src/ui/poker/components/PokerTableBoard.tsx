@@ -4,6 +4,7 @@ import type { PokerTableState } from '../../../poker/types'
 import { Card3D } from '../../components/Card3D'
 import { CONFIG } from '../../../config'
 import { useDragSystem } from './PokerTableLayout'
+import './PokerTableBoard.css'
 
 export interface PokerTableBoardProps {
   table: PokerTableState
@@ -83,7 +84,7 @@ export function PokerTableBoard({ table, revealed, highlightSet, layoutOverride,
   return (
     <div 
       ref={boardRef}
-      className="poker-table-board"
+      className={`poker-table-board ${editLayout ? 'poker-table-board--edit-mode' : ''}`}
       style={{
         position: 'absolute',
         left: currentPosition.left ?? '50%',
@@ -95,10 +96,6 @@ export function PokerTableBoard({ table, revealed, highlightSet, layoutOverride,
         justifyContent: 'center',
         width: currentPosition.width,
         height: currentPosition.height,
-        cursor: editLayout ? 'move' : 'default',
-        border: editLayout ? '2px dashed rgba(255,255,255,0.3)' : 'none',
-        borderRadius: editLayout ? '8px' : '0',
-        padding: editLayout ? '8px' : '0',
         zIndex: 15, // High z-index for board
       }}
     >

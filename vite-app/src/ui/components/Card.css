@@ -1,0 +1,144 @@
+/* Card Base Styles */
+.card {
+  background-color: var(--color-neutral-800);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-family-sans);
+  transition: all var(--transition-normal);
+  box-sizing: border-box;
+}
+
+/* Card Variants */
+.card--default {
+  background-color: var(--color-neutral-800);
+  border: 1px solid var(--color-neutral-600);
+}
+
+.card--elevated {
+  background-color: var(--color-neutral-800);
+  border: 1px solid var(--color-neutral-600);
+  box-shadow: var(--shadow-md);
+}
+
+.card--elevated:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.card--outlined {
+  background-color: transparent;
+  border: 2px solid var(--color-neutral-500);
+}
+
+.card--outlined:hover {
+  border-color: var(--color-neutral-400);
+}
+
+.card--interactive {
+  background-color: var(--color-neutral-800);
+  border: 1px solid var(--color-neutral-600);
+  cursor: pointer;
+  user-select: none;
+}
+
+.card--interactive:hover {
+  background-color: var(--color-neutral-700);
+  border-color: var(--color-neutral-500);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.card--interactive:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.card--interactive:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* Card Padding Variants */
+.card--padding-none {
+  padding: 0;
+}
+
+.card--padding-sm {
+  padding: var(--space-3);
+}
+
+.card--padding-md {
+  padding: var(--space-4);
+}
+
+.card--padding-lg {
+  padding: var(--space-6);
+}
+
+/* Hoverable Cards */
+.card--hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Card Content */
+.card > *:first-child {
+  margin-top: 0;
+}
+
+.card > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Card Header */
+.card__header {
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-neutral-600);
+}
+
+.card__title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-100);
+}
+
+.card__subtitle {
+  margin: var(--space-1) 0 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-400);
+}
+
+/* Card Body */
+.card__body {
+  /* Inherits padding from parent card */
+}
+
+/* Card Footer */
+.card__footer {
+  padding-top: var(--space-3);
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--color-neutral-600);
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+/* Card Actions */
+.card__actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .card--padding-lg {
+    padding: var(--space-4);
+  }
+  
+  .card--padding-md {
+    padding: var(--space-3);
+  }
+}
+
+/* Dark theme is now default */

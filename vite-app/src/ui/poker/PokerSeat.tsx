@@ -1,14 +1,14 @@
 import type { CSSProperties } from 'react'
 import type { SeatState } from '../../poker/types'
-import {
-  PokerSeatDealerButton,
-  PokerSeatCards,
-  PokerSeatInfo,
-  PokerSeatStack,
-  PokerSeatEquity,
-  PokerSeatResult,
-  PokerSeatControls
-} from './components'
+import { PokerSeatDealerButton } from './components/PokerSeatDealerButton'
+import { PokerSeatCards } from './components/PokerSeatCards'
+import { PokerSeatInfo } from './components/PokerSeatInfo'
+import { PokerSeatStack } from './components/PokerSeatStack'
+import { PokerSeatEquity } from './components/PokerSeatEquity'
+import { PokerSeatResult } from './components/PokerSeatResult'
+import { PokerSeatControls } from './components/PokerSeatControls'
+import { Card } from '../components/Card'
+import './PokerSeat.css'
 
 export interface PokerSeatProps {
   idPrefix: string
@@ -76,32 +76,35 @@ export function PokerSeat(props: PokerSeatProps) {
     reservedExpiresAtMs = null,
   } = props
 
-  const outline = seatIndex === currentToAct ? '2px solid #ffd54f' : undefined
   const isYourSeat = (mySeatIndex != null) && (mySeatIndex === seatIndex)
-  const glow = isYourSeat ? '0 0 10px rgba(43, 168, 116, 0.8), 0 0 18px rgba(255,213,79,0.5)' : undefined
+  const isCurrentToAct = seatIndex === currentToAct
+  
+  // Determine seat variant based on state
+  const getSeatVariant = () => {
+    if (isCurrentToAct) return 'interactive'
+    if (isYourSeat) return 'elevated'
+    return 'default'
+  }
 
-  // Enhanced styling for current action
-  const currentActionStyle = seatIndex === currentToAct ? {
-    boxShadow: '0 0 15px rgba(255, 213, 79, 0.8), 0 0 25px rgba(255, 213, 79, 0.4)',
-    border: '2px solid #ffd54f',
-    background: 'rgba(255, 213, 79, 0.1)'
-  } : {}
-
-  const baseStyle: CSSProperties = {
-    position: 'relative',
-    border: '1px solid rgba(255,255,255,0.14)',
-    borderRadius: 12,
-    padding: 6,
-    background: 'rgba(0,0,0,0.18)',
-    outline,
-    outlineOffset: 2,
-    boxShadow: glow,
-    // width intentionally not set; pass via containerStyle if needed (horseshoe)
-    ...currentActionStyle
+  // Determine seat className based on state
+  const getSeatClassName = () => {
+    const classes = ['poker-seat']
+    if (isCurrentToAct) classes.push('poker-seat--current-action')
+    if (isYourSeat) classes.push('poker-seat--my-seat')
+    if (seat.hasFolded) classes.push('poker-seat--folded')
+    if (seat.isAllIn) classes.push('poker-seat--all-in')
+    if (seat.isCPU) classes.push('poker-seat--cpu')
+    return classes.join(' ')
   }
 
   return (
-    <div id={`${idPrefix}-${seatIndex}`} style={{ ...baseStyle, ...containerStyle }}>
+    <Card
+      id={`${idPrefix}-${seatIndex}`}
+      variant={getSeatVariant()}
+      padding="sm"
+      className={getSeatClassName()}
+      style={containerStyle}
+    >
       <PokerSeatDealerButton
         seatIndex={seatIndex}
         buttonIndex={buttonIndex}
@@ -170,7 +173,9 @@ export function PokerSeat(props: PokerSeatProps) {
         onSitHere={onSitHere}
         idPrefix={idPrefix}
       />
-    </div>
+      
+
+    </Card>
   )
 }
 

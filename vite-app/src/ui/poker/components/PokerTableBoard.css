@@ -1,0 +1,76 @@
+/* Poker Table Board - Design System Integration */
+.poker-table-board {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15; /* High z-index for board */
+  transition: all var(--transition-normal);
+}
+
+/* Edit layout mode styling */
+.poker-table-board--edit-mode {
+  border: 2px dashed var(--color-poker-table-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2);
+  cursor: move;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Board cards container */
+.poker-table-board__cards {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+}
+
+/* Individual board card */
+.poker-table-board__card {
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.poker-table-board__card:hover {
+  transform: translateY(-4px);
+  z-index: 20;
+}
+
+/* Highlighted card state */
+.poker-table-board__card--highlighted {
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+  transform: scale(1.05);
+}
+
+/* Revealed card state */
+.poker-table-board__card--revealed {
+  opacity: 1;
+}
+
+/* Hidden card state */
+.poker-table-board__card--hidden {
+  opacity: 0.3;
+}
+
+/* Board animations */
+.poker-table-board__card-enter {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.poker-table-board__card-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all var(--transition-normal);
+}
+
+.poker-table-board__card-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.poker-table-board__card-exit-active {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all var(--transition-normal);
+}

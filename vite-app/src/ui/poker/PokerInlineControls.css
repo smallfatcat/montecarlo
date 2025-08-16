@@ -1,0 +1,24 @@
+/* Poker Inline Controls - Design System Integration */
+.poker-inline-controls {
+  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
+  border-color: var(--color-poker-table-border) !important;
+  color: var(--color-neutral-50);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.poker-inline-controls:hover {
+  border-color: var(--color-poker-cyan);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Ensure all text inherits the light color */
+.poker-inline-controls * {
+  color: var(--color-neutral-50);
+}
+
+/* Override Card component styles for poker theme */
+.poker-inline-controls.card,
+.poker-inline-controls.card--elevated {
+  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
+  border-color: var(--color-poker-table-border) !important;
+}

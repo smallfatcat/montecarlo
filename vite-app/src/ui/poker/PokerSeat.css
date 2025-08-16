@@ -1,0 +1,111 @@
+/* Poker Seat - Design System Integration */
+.poker-seat {
+  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
+  border-color: var(--color-poker-table-border) !important;
+  color: var(--color-neutral-50);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all var(--transition-normal);
+  position: relative;
+}
+
+/* Current action state - highlighted for active player */
+.poker-seat--current-action {
+  border-color: var(--color-poker-orange) !important;
+  box-shadow: 0 0 15px rgba(255, 140, 0, 0.8), 0 0 25px rgba(255, 140, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%), rgba(255, 140, 0, 0.1) !important;
+}
+
+/* My seat state - highlighted for current user */
+.poker-seat--my-seat {
+  border-color: var(--color-poker-cyan) !important;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.8), 0 0 18px rgba(0, 255, 136, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Folded state - dimmed appearance */
+.poker-seat--folded {
+  opacity: 0.6;
+  filter: grayscale(0.3);
+  background: linear-gradient(135deg, var(--color-neutral-800) 0%, var(--color-neutral-700) 100%) !important;
+}
+
+/* All-in state - special highlighting */
+.poker-seat--all-in {
+  border-color: var(--color-poker-gold) !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%), rgba(245, 158, 11, 0.1) !important;
+}
+
+/* CPU player state - subtle indicator */
+.poker-seat--cpu {
+  border-style: dashed;
+  border-color: var(--color-poker-table-border) !important;
+}
+
+/* Hover effects */
+.poker-seat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.poker-seat--current-action:hover {
+  box-shadow: 0 0 20px rgba(255, 140, 0, 0.9), 0 0 30px rgba(255, 140, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.poker-seat--my-seat:hover {
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.9), 0 0 25px rgba(0, 255, 136, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Target specific text elements for white color */
+.poker-seat .poker-seat__name,
+.poker-seat .poker-seat__stack,
+.poker-seat .poker-seat__status,
+.poker-seat .poker-seat__bet,
+.poker-seat .poker-seat__win-probability {
+  color: var(--color-neutral-50);
+}
+
+/* Force card text colors with maximum specificity */
+.poker-seat .card3d .card__front.card--red .card__corner .card__rank,
+.poker-seat .card3d .card__front.card--red .card__corner .card__suit,
+.poker-seat .card3d .card__front.card--red .card__center {
+  color: #d0021b !important;
+}
+
+.poker-seat .card3d .card__front.card--black .card__corner .card__rank,
+.poker-seat .card3d .card__front.card--black .card__corner .card__suit,
+.poker-seat .card3d .card__front.card--black .card__center {
+  color: #111 !important;
+}
+
+/* Override Card component styles for poker theme */
+.poker-seat.card,
+.poker-seat.card--default,
+.poker-seat.card--elevated,
+.poker-seat.card--interactive {
+  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
+  border-color: var(--color-poker-table-border) !important;
+}
+
+/* Sit button styling */
+.poker-seat__sit-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--color-poker-orange);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  z-index: 10;
+}
+
+.poker-seat__sit-button:hover {
+  background: var(--color-poker-orange);
+  transform: translate(-50%, -50%) scale(1.05);
+  box-shadow: 0 4px 12px rgba(255, 140, 0, 0.4);
+}

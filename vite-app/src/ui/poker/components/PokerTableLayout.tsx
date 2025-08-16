@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, createContext, useContext } from 'react'
 import type { LayoutOverrides } from '../types'
+import './PokerTableLayout.css'
 
 // Create a context for the drag system
 const DragSystemContext = createContext<any>(null)
@@ -327,14 +328,7 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
     <DragSystemContext.Provider value={dragSystem}>
       <div ref={containerRef} className={editLayoutMode ? "poker-table-layout-editor" : ""}>
         {editLayoutMode && (
-          <div className="layout-controls" style={{
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
-            zIndex: 1001,
-            display: 'flex',
-            gap: '8px'
-          }}>
+          <div className="layout-controls">
             <button onClick={exportLayoutToJson}>Export Layout</button>
             <button onClick={resetLayout}>Reset Layout</button>
           </div>
@@ -346,17 +340,7 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
         >
           {/* Grid overlay for visual alignment - only in edit mode */}
           {editLayoutMode && (
-            <svg
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                pointerEvents: 'none',
-                zIndex: 1, // Behind all components
-              }}
-            >
+                      <svg>
               <defs>
                 <pattern id="grid" width={GRID_SIZE} height={GRID_SIZE} patternUnits="userSpaceOnUse">
                   <path d={`M ${GRID_SIZE} 0 L 0 0 0 ${GRID_SIZE}`} fill="none" stroke="#ddd" strokeWidth="0.5" />

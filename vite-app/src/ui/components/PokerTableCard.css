@@ -1,0 +1,281 @@
+/* Poker Table Card Specific Styles */
+.poker-table-card {
+  min-width: 280px;
+  max-width: 320px;
+  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
+  border: 2px solid var(--color-poker-table-border) !important;
+  color: var(--color-neutral-50);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+.poker-table-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.03) 50%, transparent 70%);
+  pointer-events: none;
+}
+
+.poker-table-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border-color: var(--color-poker-cyan);
+}
+
+/* Override Card component background for poker table cards */
+.poker-table-card.card,
+.poker-table-card.card--elevated,
+.poker-table-card.card--elevated:hover,
+.card.poker-table-card,
+.card--elevated.poker-table-card {
+  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
+  border-color: var(--color-poker-table-border) !important;
+  color: var(--color-neutral-50) !important;
+}
+
+/* Maximum specificity override for Card component */
+.card.poker-table-card *,
+.card--elevated.poker-table-card * {
+  color: var(--color-neutral-50) !important;
+}
+
+/* Force dark theme with maximum specificity */
+.design-system-demo .demo-item .poker-table-card,
+.design-system-demo .demo-item .poker-table-card.card,
+.design-system-demo .demo-item .poker-table-card.card--elevated {
+  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
+  border-color: var(--color-poker-table-border) !important;
+  color: var(--color-neutral-100) !important;
+}
+
+/* Ensure text elements inherit the dark theme */
+.poker-table-card h3,
+.poker-table-card p,
+.poker-table-card span,
+.poker-table-card div {
+  color: var(--color-neutral-50) !important;
+}
+
+/* Force all text to be light */
+.poker-table-card * {
+  color: var(--color-neutral-50) !important;
+}
+
+/* Specific overrides for important elements */
+.poker-table-card .poker-table-card__name {
+  color: var(--color-poker-orange) !important;
+}
+
+.poker-table-card .poker-table-card__stat-value {
+  color: var(--color-poker-cyan) !important;
+}
+
+/* Poker-themed badge overrides */
+.poker-table-card .badge--outline {
+  background-color: var(--color-poker-cyan);
+  color: var(--color-neutral-950) !important;
+  border: 1px solid var(--color-poker-cyan);
+  font-weight: var(--font-weight-bold);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 4px rgba(0, 255, 136, 0.3);
+}
+
+.poker-table-card .badge--default {
+  background-color: var(--color-poker-wood);
+  color: var(--color-neutral-950) !important;
+  border: 1px solid var(--color-poker-table-border);
+  font-weight: var(--font-weight-bold);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Force badge text colors with maximum specificity */
+.poker-table-card .badge,
+.poker-table-card .badge * {
+  color: var(--color-neutral-950) !important;
+}
+
+/* Header */
+.poker-table-card__header {
+  margin-bottom: var(--space-4);
+}
+
+.poker-table-card__title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
+  gap: var(--space-2);
+}
+
+.poker-table-card__name {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-poker-orange);
+  line-height: var(--line-height-tight);
+  flex: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 12px rgba(255, 140, 0, 0.4);
+  letter-spacing: 0.02em;
+}
+
+.poker-table-card__meta {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* Body */
+.poker-table-card__body {
+  margin-bottom: var(--space-4);
+}
+
+.poker-table-card__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.poker-table-card__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.poker-table-card__stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-50);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: var(--font-weight-semibold);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.poker-table-card__stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-poker-cyan);
+  text-shadow: 0 3px 6px rgba(0, 0, 0, 0.9), 0 0 15px rgba(0, 255, 136, 0.5);
+  letter-spacing: 0.01em;
+}
+
+/* Reserved Players */
+.poker-table-card__reserved {
+  padding-top: var(--space-4);
+  border-top: 2px solid var(--color-poker-table-border);
+  margin-top: var(--space-3);
+}
+
+.poker-table-card__reserved-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-50);
+  margin-bottom: var(--space-2);
+  font-weight: var(--font-weight-semibold);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.poker-table-card__reserved-players {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* Footer */
+.poker-table-card__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.poker-table-card__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.poker-table-card__join-btn,
+.poker-table-card__spectate-btn {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-align: center;
+  min-height: 44px;
+}
+
+.poker-table-card__join-btn {
+  background: linear-gradient(135deg, var(--color-poker-orange) 0%, #e67e00 100%);
+  color: white;
+  border: 1px solid var(--color-poker-orange);
+  box-shadow: 0 2px 8px rgba(255, 140, 0, 0.3);
+}
+
+.poker-table-card__join-btn:hover {
+  background: linear-gradient(135deg, #e67e00 0%, var(--color-poker-orange) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 140, 0, 0.4);
+}
+
+.poker-table-card__spectate-btn {
+  background: linear-gradient(135deg, var(--color-poker-wood) 0%, var(--color-poker-table) 100%);
+  color: var(--color-neutral-100);
+  border: 1px solid var(--color-poker-table-border);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.poker-table-card__spectate-btn:hover {
+  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-wood) 100%);
+  border-color: var(--color-poker-cyan);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.poker-table-card__updated {
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-50);
+  text-align: center;
+  font-style: italic;
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-2);
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-top: var(--space-2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .poker-table-card {
+    min-width: 100%;
+    max-width: none;
+  }
+  
+  .poker-table-card__stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+  }
+  
+  .poker-table-card__actions {
+    flex-direction: column;
+  }
+}
+
+/* Dark theme is now default */

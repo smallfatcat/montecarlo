@@ -3,6 +3,8 @@ import type { BettingActionType } from '../../poker/types'
 import { PokerBettingButtons, PokerBetInput, PokerStackLabel } from './components'
 import { PokerPotSlider } from './components/PokerPotSlider'
 import { PokerStackSlider } from './components/PokerStackSlider'
+import { Card } from '../components/Card'
+import './PokerInlineControls.css'
 
 type Rect = { left?: number; top?: number; width?: number; height?: number }
 type ControlsLayout = Record<string, Rect>
@@ -118,17 +120,15 @@ export function PokerInlineControls(props: {
   const currentLayout: ControlsLayout = { ...DEFAULTS, ...(layout || {}) }
 
   return (
-    <div
-      ref={rootRef}
+    <Card
+      variant="elevated"
+      padding="sm"
+      className="poker-inline-controls"
       style={{
         transform: `scale(${scale})`,
         transformOrigin: 'center',
         width: boxWidth,
         height: boxHeight,
-        padding: 10,
-        borderRadius: 14,
-        background: 'rgba(0,0,0,0.28)',
-        border: '1px solid rgba(255,255,255,0.18)',
         position: 'relative',
       }}
     >
@@ -186,7 +186,7 @@ export function PokerInlineControls(props: {
         editLayout={editLayout}
         onLayoutChange={onLayoutChange}
       />
-    </div>
+    </Card>
   )
 }
 
