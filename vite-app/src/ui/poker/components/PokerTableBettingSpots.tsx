@@ -31,39 +31,46 @@ export function PokerTableBettingSpots({ table, layoutOverrides, editLayout }: P
           return null
         }
 
-        // Use betting spot layout if available, otherwise derive from stack position
-        let left: string | number
-        let top: string | number
-
-        if (spotLayout?.left !== undefined && spotLayout?.top !== undefined) {
-          left = spotLayout.left
-          top = spotLayout.top
-        } else if (stackLayout?.left !== undefined && stackLayout?.top !== undefined) {
-          // Position betting spot above the stack
-          const stackLeft = typeof stackLayout.left === 'string' ? parseInt(stackLayout.left) : stackLayout.left
-          const stackTop = typeof stackLayout.top === 'string' ? parseInt(stackLayout.top) : stackLayout.top
-          left = stackLeft
-          top = stackTop - 60 // 60px above the stack
-        } else if (potLayout?.left !== undefined && potLayout?.top !== undefined) {
-          // Fallback to pot position
-          const potLeft = typeof potLayout.left === 'string' ? parseInt(potLayout.left) : potLayout.left
-          const potTop = typeof potLayout.top === 'string' ? parseInt(potLayout.top) : potLayout.top
-          left = potLeft + (seatIndex * 40) // Spread out horizontally
-          top = potTop - 80 // Above the pot
-        } else {
-          // Ultimate fallback
-          left = 150 + (seatIndex * 180)
-          top = 120 + (seatIndex * 100) - 60
+        const num = (v: any, fallback: number = 0): number => {
+          if (typeof v === 'number') return v
+          if (typeof v === 'string') { const n = parseInt(v, 10); return Number.isFinite(n) ? n : fallback }
+          return fallback
         }
+
+        // Resolve spot position
+        let left = num(spotLayout?.left, num(stackLayout?.left, 150 + (seatIndex * 180)))
+        let top = num(spotLayout?.top, num(stackLayout?.top, 120 + (seatIndex * 100)) - 60)
+        const width = num(spotLayout?.width, 100)
+        const height = num(spotLayout?.height, 40)
+
+        // Entry deltas from stack
+        const stackLeftNum = num(stackLayout?.left, left)
+        const stackTopNum = num(stackLayout?.top, top + 60)
+        const deltaX = left - stackLeftNum
+        const deltaY = top - stackTopNum
+
+        // Exit deltas to pot
+        const potLeftNum = num(potLayout?.left, left)
+        const potTopNum = num(potLayout?.top, top - 80)
+        const potWidth = num(potLayout?.width, 0)
+        const potHeight = num(potLayout?.height, 0)
+        const betCenterX = left + width / 2
+        const betCenterY = top + height / 2
+        const potCenterX = potLeftNum + (potWidth ? potWidth / 2 : 0)
+        const potCenterY = potTopNum + (potHeight ? potHeight / 2 : 0)
+        const potDeltaX = potCenterX - betCenterX
+        const potDeltaY = potCenterY - betCenterY
 
         return (
           <BettingSpot
             key={`bet-${seatIndex}`}
             seatIndex={seatIndex}
             amount={seat.committedThisStreet}
-            position={{ left, top }}
+            position={{ left, top, width, height }}
             editLayout={editLayout}
             dragSystem={dragSystem}
+            entry={{ x: -deltaX, y: -deltaY }}
+            exit={{ x: potDeltaX, y: potDeltaY }}
           />
         )
       })
@@ -83,13 +90,17 @@ function BettingSpot({
   amount, 
   position, 
   editLayout, 
-  dragSystem 
+  dragSystem,
+  entry,
+  exit,
 }: {
   seatIndex: number
   amount: number
-  position: { left: string | number; top: string | number }
+  position: { left: number; top: number; width?: number; height?: number }
   editLayout?: boolean
   dragSystem: any
+  entry: { x: number; y: number }
+  exit: { x: number; y: number }
 }) {
   const spotRef = useRef<HTMLDivElement>(null)
   const [currentPosition, setCurrentPosition] = useState(position)
@@ -97,7 +108,7 @@ function BettingSpot({
   // Update position when prop changes
   useEffect(() => {
     setCurrentPosition(position)
-  }, [position])
+  }, [position.left, position.top, position.width, position.height])
 
   // Register with drag system
   useEffect(() => {
@@ -106,35 +117,14 @@ function BettingSpot({
         id: `bet-${seatIndex}`,
         type: 'bet' as const,
         element: spotRef.current,
-        priority: 4, // Lower priority than other components
-        getLayout: () => {
-          // Get the current layout from the drag system, fallback to local state
-          const currentLayout = dragSystem.getCurrentLayout?.() || {}
-          return currentLayout.bets?.[seatIndex] || currentPosition
-        },
-        setLayout: (newLayout: any) => {
-          // Update visual position in real-time during drag
-          setCurrentPosition(newLayout)
-        }
+        priority: 4,
+        getLayout: () => ({ left: currentPosition.left, top: currentPosition.top, width: currentPosition.width, height: currentPosition.height }),
+        setLayout: (newLayout: any) => setCurrentPosition(newLayout),
       }
-      
       dragSystem.registerDraggable(draggable)
-      
-      return () => {
-        dragSystem.unregisterDraggable(`bet-${seatIndex}`)
-      }
+      return () => { dragSystem.unregisterDraggable(`bet-${seatIndex}`) }
     }
   }, [dragSystem, editLayout, seatIndex, currentPosition])
-
-  // Sync with drag system layout updates
-  useEffect(() => {
-    if (dragSystem && editLayout) {
-      const currentLayout = dragSystem.getCurrentLayout?.()
-      if (currentLayout?.bets?.[seatIndex]) {
-        setCurrentPosition(currentLayout.bets[seatIndex])
-      }
-    }
-  }, [dragSystem, editLayout, seatIndex])
 
   return (
     <motion.div
@@ -149,7 +139,7 @@ function BettingSpot({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 6, // Above stacks but below pot
+        zIndex: 6,
         cursor: editLayout ? 'move' : 'default',
         border: editLayout ? '2px dashed rgba(255,255,255,0.3)' : 'none',
         borderRadius: editLayout ? '8px' : '0',
@@ -167,19 +157,17 @@ function BettingSpot({
           background: 'rgba(0,0,0,0.3)',
           border: '1px solid rgba(255,255,255,0.2)',
           backdropFilter: 'blur(4px)',
-          // Disabled glow to reduce GPU/CPU while idle
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
         }}
-        // Removed pulsing animation
+        initial={{ opacity: 0, scale: 0.8, x: entry.x, y: entry.y }}
+        animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+        exit={{ opacity: 0, scale: 0.8, x: exit.x, y: exit.y }}
+        transition={{ duration: CONFIG.poker.animations?.chipFlyDurationMs ? CONFIG.poker.animations.chipFlyDurationMs / 1000 : 0.15, ease: 'easeOut' }}
       >
         <motion.div
           initial={{ scale: 0.5 }}
           animate={{ scale: 1 }}
-          transition={{ 
-            duration: 0.3,
-            ease: "easeOut",
-            delay: 0.1
-          }}
+          transition={{ duration: 0.3, ease: 'easeOut', delay: 0.1 }}
         >
           <ChipStack
             amount={amount}
@@ -191,16 +179,8 @@ function BettingSpot({
         <motion.span 
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ 
-            duration: 0.2,
-            delay: 0.2
-          }}
-          style={{ 
-            fontSize: '11px', 
-            color: 'rgba(255,255,255,0.8)', 
-            fontWeight: 500,
-            textShadow: '0 1px 2px rgba(0,0,0,0.8)'
-          }}
+          transition={{ duration: 0.2, delay: 0.2 }}
+          style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', fontWeight: 500, textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}
         >
           ${amount}
         </motion.span>

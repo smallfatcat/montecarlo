@@ -1,4 +1,6 @@
-import { useRef, useState, forwardRef, useImperativeHandle } from 'react'
+import { useRef, useState, forwardRef, useImperativeHandle, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { ChipStack } from '../components/ChipStack'
 import type { PokerTableState, BettingActionType } from '../../poker/types'
 import { CONFIG } from '../../config'
 import {
@@ -123,6 +125,12 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
             editLayout={editLayoutMode}
           />
 
+          {/* Pot payout overlay (fly pot -> stacks on hand over) */}
+          <PotPayoutOverlay
+            table={table}
+            layoutOverrides={layoutOverrides}
+          />
+
                         {/* Seats */}
               <PokerTableSeats
                 table={table}
@@ -174,5 +182,81 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
     </PokerTableLayout>
   )
 })
+
+function PotPayoutOverlay({ table, layoutOverrides }: { table: PokerTableState; layoutOverrides: any }) {
+  const prevRef = useRef<PokerTableState | null>(null)
+  const [flights, setFlights] = useState<Array<{ key: string; from: { x: number; y: number }; to: { x: number; y: number }; amount: number }>>([])
+
+  useEffect(() => {
+    const prev = prevRef.current
+    const curr = table
+    // Detect transition where pot was paid out
+    if (prev && prev.pot?.main > 0 && curr.pot?.main === 0 && curr.status === 'hand_over') {
+      const num = (v: any, fb: number = 0): number => {
+        if (typeof v === 'number') return v
+        if (typeof v === 'string') { const n = parseInt(v, 10); return Number.isFinite(n) ? n : fb }
+        return fb
+      }
+      // Pot center
+      const pot = layoutOverrides.pot || {}
+      const potLeft = num(pot.left, 0)
+      const potTop = num(pot.top, 0)
+      const potW = num(pot.width, 0)
+      const potH = num(pot.height, 0)
+      const potCenter = { x: potLeft + (potW ? potW/2 : 0), y: potTop + (potH ? potH/2 : 0) }
+      // Compute per-seat stack increases
+      const nextFlights: typeof flights = []
+      curr.seats.forEach((s, i) => {
+        const before = prev.seats[i]
+        if (!before) return
+        const delta = Math.max(0, Math.floor(s.stack - before.stack))
+        if (delta <= 0) return
+        const st = layoutOverrides.stacks?.[i] || {}
+        const sx = num(st.left, 150 + (i * 180)) + num(st.width, 100)/2
+        const sy = num(st.top, 120 + (i * 100))
+        nextFlights.push({ key: `payout-${curr.handId}-${i}`, from: potCenter, to: { x: sx, y: sy }, amount: delta })
+      })
+      if (nextFlights.length > 0) setFlights(nextFlights)
+    }
+    prevRef.current = curr
+  }, [table.handId, table.status, table.pot?.main, table.seats, layoutOverrides])
+
+  // Auto-clear flights after animation duration
+  useEffect(() => {
+    if (flights.length === 0) return
+    const id = setTimeout(() => setFlights([]), (CONFIG.poker.animations?.chipFlyDurationMs ?? 150) + 50)
+    return () => clearTimeout(id)
+  }, [flights])
+
+  if (flights.length === 0) return null
+  return (
+    <div style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 25 }}>
+      {flights.map((f) => {
+        const dx = f.to.x - f.from.x
+        const dy = f.to.y - f.from.y
+        return (
+          <div key={f.key} style={{ position: 'absolute', left: f.to.x, top: f.to.y }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, x: -dx, y: -dy }}
+              animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+              transition={{ duration: (CONFIG.poker.animations?.chipFlyDurationMs ?? 150) / 1000, ease: 'easeOut' }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
+            >
+              <ChipStack amount={Math.max(1, Math.floor(f.amount))} size={20} overlap={0.75} maxChipsPerRow={12} />
+              <motion.span
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.15, delay: 0.08 }}
+                style={{ fontSize: 10, color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 2px rgba(0,0,0,0.7)' }}
+              >
+                +{f.amount}
+              </motion.span>
+            </motion.div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 
