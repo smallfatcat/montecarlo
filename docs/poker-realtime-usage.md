@@ -47,7 +47,7 @@ cat > .env << 'ENV'
 HOST=0.0.0.0
 PORT=8080
 # Frontend origins you will use. Add/remove as needed.
-FRONTEND_ORIGINS=http://192.168.1.107:5173,https://smallfatcat.github.io,https://smallfatcat.github.io/montecarlo/
+FRONTEND_ORIGINS=http://192.168.1.107:5173,https://yourserver.github.io,https://yourserver.github.io/montecarlo/
 ENV
 
 npm run dev
@@ -69,18 +69,18 @@ cd /home/pi/montecarlo/vite-app
 npm install
 
 # Create .env.local
-echo "VITE_WS_URL=ws://192.168.1.107:8080" > .env.local
+echo "VITE_WS_URL=ws://yourserver:8080" > .env.local
 
 # Start dev server bound to LAN
 npm run dev -- --host 0.0.0.0
 ```
 Open from your PC browser:
 ```
-http://192.168.1.107:5173/montecarlo/
+http://yourserver:5173/montecarlo/
 ```
 
 Expected:
-- Backend logs: `socket connected` with origin `http://192.168.1.107:5173`, then `[server-runtime] join`.
+- Backend logs: `socket connected` with origin `http://yourserver:5173`, then `[server-runtime] join`.
 - Clicking Deal in the UI streams server events: `hand_start`, `post_blind`, `hand_setup`, `action`, `state`.
 
 If the browser console shows a brief “closed before connection established” on first mount, that is React dev Strict Mode re‑mounting effects. The socket reconnects immediately after.
@@ -141,10 +141,10 @@ npm install
 
 # .env (bind to localhost when tunneling)
 cat > .env << 'ENV'
-HOST=127.0.0.1
+HOST=yourserver
 PORT=8080
 # Allowlist your frontend origins
-FRONTEND_ORIGINS=https://smallfatcat.github.io,https://smallfatcat.github.io/montecarlo/
+FRONTEND_ORIGINS=https://yourserver.github.io,https://yourserver.github.io/montecarlo/
 ENV
 
 npm run dev
@@ -174,7 +174,7 @@ tunnel: poker
 credentials-file: /home/pi/.cloudflared/<TUNNEL_ID>.json
 ingress:
   - hostname: ws.yourdomain.com
-    service: http://localhost:8080
+    service: http://yourserver:8080
   - service: http_status:404
 ```
 
@@ -257,7 +257,7 @@ tunnel: poker
 credentials-file: /home/$USER/.cloudflared/<TUNNEL_ID>.json
 ingress:
   - hostname: ws.yourdomain.com
-    service: http://localhost:8080
+    service: http://yourserver:8080
   - service: http_status:404
 YAML
 cloudflared tunnel run poker
@@ -276,7 +276,7 @@ tunnel: poker
 credentials-file: C:\Users\<you>\.cloudflared\<TUNNEL_ID>.json
 ingress:
   - hostname: ws.yourdomain.com
-    service: http://localhost:8080
+    service: http://yourserver:8080
   - service: http_status:404
 ```
 Run foreground:
@@ -286,7 +286,7 @@ cloudflared.exe tunnel run poker
 
 ### Cloudflare Tunnel troubleshooting and tips
 - Mixed content or WS blocked: ensure `wss://` and valid TLS via Cloudflare.
-- 400/426 upgrade errors: `ingress` must point to `http://localhost:8080`; WS path matches Socket.IO default `/socket.io`.
+- 400/426 upgrade errors: `ingress` must point to `http://yourserver:8080`; WS path matches Socket.IO default `/socket.io`.
 - CORS failures: backend allowlist must include your frontend origins.
 - WSL reachability: use WSL2 with mirrored networking and bind the server to `0.0.0.0`.
 - Security: validate messages (Zod), run backend as non-root, and prefer SSD over SD on Pi.
