@@ -1,3 +1,5 @@
+import { memo, useEffect, useState } from 'react'
+
 export interface PokerSeatInfoProps {
   seatIndex: number
   buttonIndex: number
@@ -11,7 +13,7 @@ export interface PokerSeatInfoProps {
   reservedExpiresAtMs?: number | null
 }
 
-export function PokerSeatInfo({ 
+function PokerSeatInfoBase({ 
   seatIndex, 
   buttonIndex, 
   currentToAct, 
@@ -23,12 +25,17 @@ export function PokerSeatInfo({
   idPrefix,
   reservedExpiresAtMs = null,
 }: PokerSeatInfoProps) {
-  let reservedText: string | null = null
-  if (typeof reservedExpiresAtMs === 'number' && isFinite(reservedExpiresAtMs)) {
-    const now = Date.now()
-    const secs = Math.max(0, Math.ceil((reservedExpiresAtMs - now) / 1000))
-    reservedText = secs > 0 ? ` · Rejoining in ${secs}s` : null
-  }
+  const [remaining, setRemaining] = useState<number | null>(null)
+  useEffect(() => {
+    if (typeof reservedExpiresAtMs !== 'number' || !isFinite(reservedExpiresAtMs)) { setRemaining(null); return }
+    const calc = () => {
+      const secs = Math.max(0, Math.ceil((reservedExpiresAtMs - Date.now()) / 1000))
+      setRemaining(secs > 0 ? secs : null)
+    }
+    calc()
+    const id = setInterval(calc, 1000)
+    return () => clearInterval(id)
+  }, [reservedExpiresAtMs])
   return (
     <div id={`${idPrefix}-label-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>
       {displayName ?? (isCPU ? `CPU ${seatIndex}` : `Player ${seatIndex}`)}
@@ -37,7 +44,9 @@ export function PokerSeatInfo({
       {hasFolded ? ' · Folded' : ''}
       {isAllIn ? ' · All-in' : ''}
       {mySeatIndex === seatIndex ? ' · You' : ''}
-      {reservedText ?? ''}
+      {remaining != null ? ` · Rejoining in ${remaining}s` : ''}
     </div>
   )
 }
+
+export const PokerSeatInfo = memo(PokerSeatInfoBase)

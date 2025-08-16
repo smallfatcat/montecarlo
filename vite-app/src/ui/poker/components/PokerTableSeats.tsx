@@ -13,6 +13,7 @@ export interface PokerTableSeatsProps {
   playerNames?: Array<string | null>
   highlightSet?: Set<string>
   layoutOverrides: any
+  nowMs?: number
   // Equity and results data
   equity?: { winPct: number[]; tiePct: number[]; running: boolean } | null
   winnersSet?: Set<number>
@@ -34,6 +35,7 @@ export function PokerTableSeats({
   winnersSet,
   showdownText,
   editLayout,
+  nowMs,
 }: PokerTableSeatsProps) {
   const renderSeats = () => {
     // Always render all seats, regardless of their state
@@ -107,6 +109,7 @@ function DraggableSeat({
   editLayout,
   buttonIndex,
   currentToAct,
+  nowMs,
 }: {
   seat: any
   seatIndex: number
@@ -123,22 +126,16 @@ function DraggableSeat({
   editLayout?: boolean
   buttonIndex: number
   currentToAct: number | null
+  nowMs?: number
 }) {
   const seatRef = useRef<HTMLDivElement>(null)
   const dragSystem = useDragSystem()
   const [currentPosition, setCurrentPosition] = useState(position)
-  const [tick, setTick] = useState(0)
 
   // Update position when prop changes
   useEffect(() => {
     setCurrentPosition(position)
   }, [position])
-
-  // Force periodic re-render to update reservation countdowns
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000)
-    return () => clearInterval(id)
-  }, [])
 
   // Register with drag system
   useEffect(() => {
@@ -186,7 +183,6 @@ function DraggableSeat({
         padding: editLayout ? '4px' : '0',
         zIndex: 10, // High z-index for seats
       }}
-      data-tick={tick}
     >
       <PokerSeat
         idPrefix="seat"
@@ -206,6 +202,7 @@ function DraggableSeat({
         forceFaceDown={hideHoleCardsUntilShowdown && seatIndex !== mySeatIndex}
         hideStackRow={true} // Hide stack row since we have separate stack components
         reservedExpiresAtMs={reservedExpiresAtMs}
+        reservedNowMs={nowMs}
       />
     </motion.div>
   )

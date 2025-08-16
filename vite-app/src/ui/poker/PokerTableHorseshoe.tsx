@@ -29,7 +29,7 @@ export function PokerTableHorseshoe() {
   const samples = 2000
   const lastEqKeyRef = useRef<string | null>(null)
   useEffect(() => {
-    const shouldRun = table.status === 'in_hand' || (table.status === 'hand_over' && community.length >= 5)
+    const shouldRun = (table.status === 'in_hand' && table.currentToAct != null && table.seats[table.currentToAct]?.isCPU) || (table.status === 'hand_over' && community.length >= 5)
     if (!shouldRun) return
     const keyPartSeats = table.seats.map((s, i) => {
       if (s.hasFolded) return 'X'
@@ -45,7 +45,7 @@ export function PokerTableHorseshoe() {
       folded: s.hasFolded,
     }))
     runEquity(seatsForEquity as any, community as any, samples)
-  }, [table.status, table.seats, community, hideHoleCardsUntilShowdown, mySeatIndex])
+  }, [table.status, table.currentToAct, table.seats, community, hideHoleCardsUntilShowdown, mySeatIndex])
 
   const highlightSet = useMemo(() => {
     if (table.status !== 'hand_over' || community.length < 5) return new Set<string>()

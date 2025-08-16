@@ -22,6 +22,7 @@ export interface PokerTableHorseshoeViewProps {
   onSitHere?: (seatIndex: number) => void
   mySeatIndex?: number | null
   playerNames?: Array<string | null>
+  nowMs?: number
   // Derived display
   winnersSet?: Set<number>
   highlightSet?: Set<string>
@@ -46,6 +47,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
     onSitHere,
     mySeatIndex,
     playerNames,
+    nowMs,
     highlightSet: highlightSetProp,
     showdownText: showdownTextProp,
     equity,
@@ -131,6 +133,7 @@ export const PokerTableHorseshoeView = forwardRef<PokerTableViewHandle, PokerTab
                 playerNames={playerNames}
                 highlightSet={highlightSetProp}
                 layoutOverrides={layoutOverrides}
+                nowMs={nowMs}
                 equity={equity}
                 winnersSet={winnersSet}
                 showdownText={showdownTextProp}

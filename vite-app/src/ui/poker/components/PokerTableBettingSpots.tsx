@@ -167,20 +167,10 @@ function BettingSpot({
           background: 'rgba(0,0,0,0.3)',
           border: '1px solid rgba(255,255,255,0.2)',
           backdropFilter: 'blur(4px)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3), 0 0 20px rgba(255,215,0,0.2)'
+          // Disabled glow to reduce GPU/CPU while idle
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
         }}
-        animate={{
-          boxShadow: [
-            '0 4px 12px rgba(0,0,0,0.3), 0 0 20px rgba(255,215,0,0.2)',
-            '0 4px 12px rgba(0,0,0,0.3), 0 0 30px rgba(255,215,0,0.4)',
-            '0 4px 12px rgba(0,0,0,0.3), 0 0 20px rgba(255,215,0,0.2)'
-          ]
-        }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
+        // Removed pulsing animation
       >
         <motion.div
           initial={{ scale: 0.5 }}
