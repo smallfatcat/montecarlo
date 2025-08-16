@@ -6,7 +6,6 @@ export interface PokerStackSliderProps {
   betAmount: number
   setBetAmountSafe: (value: number) => void
   layout: { left?: number; top?: number; width?: number; height?: number }
-  labelLayout?: { left?: number; top?: number; width?: number; height?: number }
   editLayout: boolean
   onLayoutChange?: (layout: Record<string, { left?: number; top?: number; width?: number; height?: number }>) => void
 }
@@ -16,7 +15,6 @@ export function PokerStackSlider({
   betAmount,
   setBetAmountSafe,
   layout,
-  labelLayout,
   editLayout,
   onLayoutChange
 }: PokerStackSliderProps) {
@@ -74,12 +72,10 @@ export function PokerStackSlider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [betAmount, stack])
 
-  // percentage shown inline in label below
-
   return (
     <>
       <div id="control-stackSlider" style={{ position: 'absolute', left: layout.left, top: layout.top, transform: 'translate(-50%, -50%)', ...sized(layout) }} {...makeDragHandlers('stackSlider', layout)}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: '100%', height: '100%' }}>
+        <div className="slider-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: '100%', height: '100%' }}>
           <input
             type="range"
             min={0}
@@ -95,24 +91,12 @@ export function PokerStackSlider({
               setSliderPct(pct)
             }}
             title="% of stack"
-            className="vertical-slider"
+            className="slider vertical-slider"
             style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', width: layout.height ?? 120, height: layout.width ?? 24 }}
           />
         </div>
       </div>
-      {(() => {
-        const computedLabelLayout = labelLayout || { left: layout.left, top: (layout.top ?? 0) + (layout.height ?? 120) + 10, width: layout.width }
-        return (
-          <div id="control-stackSliderLabel" style={{ position: 'absolute', left: computedLabelLayout.left, top: computedLabelLayout.top, transform: 'translate(-50%, -50%)', pointerEvents: editLayout ? 'auto' : 'none', ...sized(computedLabelLayout) }} {...makeDragHandlers('stackSliderLabel', computedLabelLayout)}>
-            <span style={{ fontSize: 12, opacity: 0.9, userSelect: 'none' }}>Stack% {(() => {
-              const high = Math.max(0, Math.floor(stack))
-              if (high === 0) return '(0%)'
-              const pct = Math.min(100, Math.round((Math.max(0, Math.min(high, Math.floor(betAmount))) / high) * 100))
-              return `(${pct}%)`
-            })()}</span>
-          </div>
-        )
-      })()}
+
     </>
   )
 }

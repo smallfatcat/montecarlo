@@ -13,6 +13,14 @@ import {
   useIsCreatingTable,
   useIsRefreshingTables
 } from '../../stores'
+import { 
+  StatusMessage, 
+  LoadingSpinner, 
+  Button, 
+  Card, 
+  Badge 
+} from '../../ui/components'
+import './PokerLobbyRefactored.css'
 
 export function PokerLobbyRefactored() {
   // Store selectors
@@ -31,10 +39,12 @@ export function PokerLobbyRefactored() {
   const isCreatingTable = useIsCreatingTable()
   const isRefreshingTables = useIsRefreshingTables()
   
-  // Local state for form inputs
+  // Local state for form inputs and error handling
   const [nameDraft, setNameDraft] = useState<string>(() => 
     (sessionStorage?.getItem('playerName') || '').trim()
   )
+  const [nameError, setNameError] = useState<string>('')
+  const [createTableError, setCreateTableError] = useState<string>('')
   
   // Auto-connect on mount
   useEffect(() => {
@@ -56,24 +66,28 @@ export function PokerLobbyRefactored() {
     const trimmed = (nameDraft || '').trim()
     if (!trimmed || !isConnected) return
     
+    setNameError('')
     try {
       await actions.identifyPlayer(trimmed)
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to identify player'
+      setNameError(errorMessage)
       console.error('Failed to identify player:', error)
-      // TODO: Add proper error handling UI
     }
   }
   
   // Handle table creation
   const handleCreateTable = async () => {
+    setCreateTableError('')
     try {
       await actions.createTable({
         seats: 6,
         startingStack: 5000
       })
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create table'
+      setCreateTableError(errorMessage)
       console.error('Failed to create table:', error)
-      // TODO: Add proper error handling UI
     }
   }
   
@@ -100,24 +114,27 @@ export function PokerLobbyRefactored() {
       
       {/* Connection Status */}
       {connection.connectionError && (
-        <div style={{ 
-          margin: '12px 0', 
-          padding: 12, 
-          border: '1px solid #ef4444', 
-          borderRadius: 8, 
-          backgroundColor: 'rgba(239, 68, 68, 0.1)',
-          color: '#ef4444'
-        }}>
-          <div style={{ fontWeight: 600 }}>Connection Error</div>
-          <div>{connection.connectionError}</div>
-          <button 
-            onClick={actions.reconnectSocket}
-            disabled={connection.isConnecting}
-            style={{ marginTop: 8 }}
-          >
-            {connection.isConnecting ? 'Reconnecting...' : 'Reconnect'}
-          </button>
-        </div>
+        <StatusMessage
+          type="error"
+          title="Connection Error"
+          message={connection.connectionError}
+          actions={
+            <button 
+              onClick={actions.reconnectSocket}
+              disabled={connection.isConnecting}
+              style={{ 
+                padding: '8px 16px',
+                backgroundColor: 'var(--color-danger-600)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              {connection.isConnecting ? 'Reconnecting...' : 'Reconnect'}
+            </button>
+          }
+        />
       )}
       
       {/* Player Identification */}
@@ -152,6 +169,17 @@ export function PokerLobbyRefactored() {
           <div style={{ marginTop: 6, fontSize: 12, opacity: 0.75 }}>
             Your name is shown on the table when you sit.
           </div>
+          
+          {/* Name Error */}
+          {nameError && (
+            <StatusMessage
+              type="error"
+              message={nameError}
+              dismissible
+              onDismiss={() => setNameError('')}
+              className="mt-3"
+            />
+          )}
         </div>
       ) : (
         <div style={{ margin: '12px 0', opacity: 0.85 }}>
@@ -204,6 +232,18 @@ export function PokerLobbyRefactored() {
           <option value="compact">Compact</option>
         </select>
       </div>
+      
+      {/* Create Table Error */}
+      {createTableError && (
+        <StatusMessage
+          type="error"
+          title="Table Creation Failed"
+          message={createTableError}
+          dismissible
+          onDismiss={() => setCreateTableError('')}
+          className="mb-4"
+        />
+      )}
       
       {/* Filters */}
       {ui.showFilters && (
@@ -264,95 +304,91 @@ export function PokerLobbyRefactored() {
       )}
       
       {/* Tables Grid */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: ui.viewMode === 'compact' 
-          ? 'repeat(auto-fill, minmax(200px, 1fr))'
-          : ui.viewMode === 'list'
-          ? '1fr'
-          : 'repeat(auto-fill, minmax(240px, 1fr))', 
-        gap: 12 
-      }}>
+      <div className={`poker-lobby__tables poker-lobby__tables--${ui.viewMode}`}>
         {sortedTables.map((table) => (
-          <div 
+          <Card 
             key={table.tableId} 
-            style={{ 
-              border: '1px solid #444', 
-              borderRadius: 8, 
-              padding: ui.viewMode === 'compact' ? 8 : 12,
-              backgroundColor: ui.selectedTableId === table.tableId 
-                ? 'rgba(100, 216, 203, 0.1)' 
-                : 'transparent'
-            }}
+            variant="elevated"
+            className={`poker-lobby__table-card ${ui.selectedTableId === table.tableId ? 'poker-lobby__table-card--selected' : ''}`}
+            data-status={table.status}
           >
-            <div style={{ fontWeight: 600 }}>{table.tableId}</div>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>
-              {table.status} {table.handId != null ? `(hand ${table.handId})` : ''}
-            </div>
-            <div style={{ marginTop: 8 }}>
-              Seats: {table.humans}/{table.seats} humans, {table.cpus} CPUs
+            <div className="poker-lobby__table-header">
+              <h3 className="poker-lobby__table-id">{table.tableId}</h3>
+              <Badge 
+                variant={table.status === 'waiting' ? 'success' : table.status === 'in-game' ? 'warning' : 'outline'}
+                size="sm"
+              >
+                {table.status} {table.handId != null ? `(hand ${table.handId})` : ''}
+              </Badge>
             </div>
             
-            {table.reserved && table.reserved.length > 0 && (
-              <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
-                Reserved: {table.reserved.map(r => (
-                  <span key={r.seatIndex} style={{ marginRight: 8 }}>
-                    {r.playerName ? r.playerName : 'Unknown'}@{r.seatIndex} 
-                    ({formatReservationTime(r.expiresAt)})
-                  </span>
-                ))}
+            <div className="poker-lobby__table-info">
+              <div className="poker-lobby__table-seats">
+                Seats: {table.humans}/{table.seats} humans, {table.cpus} CPUs
               </div>
-            )}
+              
+              {table.reserved && table.reserved.length > 0 && (
+                <div className="poker-lobby__table-reservations">
+                  Reserved: {table.reserved.map(r => (
+                    <span key={r.seatIndex} className="poker-lobby__reservation">
+                      {r.playerName ? r.playerName : 'Unknown'}@{r.seatIndex} 
+                      ({formatReservationTime(r.expiresAt)})
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
             
-            <div style={{ marginTop: 12 }}>
-              <button 
+            <div className="poker-lobby__table-actions">
+              <Button 
                 onClick={() => handleJoinTable(table.tableId)} 
                 disabled={!isIdentified}
-                style={{ marginRight: 8 }}
+                variant="primary"
+                size="sm"
               >
                 Join
-              </button>
-              <button 
+              </Button>
+              <Button 
                 onClick={() => actions.spectateTable(table.tableId)}
                 disabled={!isIdentified}
-                style={{ fontSize: 12, padding: '4px 8px' }}
+                variant="outline"
+                size="sm"
               >
                 Watch
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         ))}
         
         {sortedTables.length === 0 && (
-          <div style={{ 
-            opacity: 0.7, 
-            gridColumn: '1 / -1', 
-            textAlign: 'center', 
-            padding: '40px 20px' 
-          }}>
-            {isRefreshingTables ? 'Loading tables...' : 'No tables found. Create one to get started.'}
-          </div>
+          <Card variant="outlined" className="poker-lobby__empty-state">
+            {isRefreshingTables ? (
+              <div className="poker-lobby__loading-state">
+                <LoadingSpinner size="medium" />
+                <span>Loading tables...</span>
+              </div>
+            ) : (
+              <div className="poker-lobby__no-tables">
+                <p>No tables found. Create one to get started.</p>
+              </div>
+            )}
+          </Card>
         )}
       </div>
       
       {/* Debug Info (remove in production) */}
       {import.meta.env.DEV && (
-        <div style={{ 
-          marginTop: 20, 
-          padding: 16, 
-          border: '1px solid #666', 
-          borderRadius: 8, 
-          fontSize: 12, 
-          opacity: 0.7 
-        }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>Debug Info</div>
-          <div>Connected: {isConnected ? 'Yes' : 'No'}</div>
-          <div>Identified: {isIdentified ? 'Yes' : 'No'}</div>
-          <div>Tables: {tables.length}</div>
-          <div>Filtered: {filteredTables.length}</div>
-          <div>View Mode: {ui.viewMode}</div>
-          <div>Filters: {JSON.stringify(filters)}</div>
-        </div>
+        <Card variant="outlined" className="poker-lobby__debug">
+          <h3 className="poker-lobby__debug-title">Debug Info</h3>
+          <div className="poker-lobby__debug-content">
+            <div>Connected: {isConnected ? 'Yes' : 'No'}</div>
+            <div>Identified: {isIdentified ? 'Yes' : 'No'}</div>
+            <div>Tables: {tables.length}</div>
+            <div>Filtered: {filteredTables.length}</div>
+            <div>View Mode: {ui.viewMode}</div>
+            <div>Filters: {JSON.stringify(filters)}</div>
+          </div>
+        </Card>
       )}
     </div>
   )

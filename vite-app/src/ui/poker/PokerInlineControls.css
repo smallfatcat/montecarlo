@@ -1,14 +1,51 @@
 /* Poker Inline Controls - Design System Integration */
 .poker-inline-controls {
-  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
-  border-color: var(--color-poker-table-border) !important;
+  background: rgba(15, 26, 15, 0.95) !important;
+  border: 1px solid var(--color-poker-table-border) !important;
+  border-radius: 12px !important;
   color: var(--color-neutral-50);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Grid container inside the controls card */
+.poker-inline-controls .pic-grid {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "buttons bet"
+    "buttons sliders"
+    "buttons stack";
+  gap: 8px;
+  padding: 8px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.poker-inline-controls .pic-area--buttons { grid-area: buttons; }
+.poker-inline-controls .pic-area--bet { grid-area: bet; }
+.poker-inline-controls .pic-area--sliders { grid-area: sliders; }
+.poker-inline-controls .pic-area--stack { grid-area: stack; }
+
+.poker-inline-controls::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.05) 0%, rgba(0, 255, 136, 0.02) 100%);
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .poker-inline-controls:hover {
   border-color: var(--color-poker-cyan);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 /* Ensure all text inherits the light color */
@@ -19,6 +56,179 @@
 /* Override Card component styles for poker theme */
 .poker-inline-controls.card,
 .poker-inline-controls.card--elevated {
-  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
+  background: rgba(15, 26, 15, 0.95) !important;
   border-color: var(--color-poker-table-border) !important;
+}
+
+/* Button styling improvements */
+.poker-inline-controls button {
+  background: rgba(15, 26, 15, 0.8);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 8px;
+  color: var(--color-neutral-50);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.poker-inline-controls button:hover:not(:disabled) {
+  background: rgba(0, 255, 136, 0.1);
+  border-color: rgba(0, 255, 136, 0.6);
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+  transform: translateY(-1px);
+}
+
+.poker-inline-controls button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.poker-inline-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(100, 100, 100, 0.2);
+  border-color: rgba(100, 100, 100, 0.3);
+}
+
+/* Specific button styling */
+.poker-betting-button {
+  background: rgba(15, 26, 15, 0.9) !important;
+  border: 1px solid rgba(0, 255, 136, 0.4) !important;
+  border-radius: 8px !important;
+  color: var(--color-neutral-50) !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  padding: 8px 16px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  min-width: 80px !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.poker-betting-button:hover:not(:disabled) {
+  background: rgba(0, 255, 136, 0.1) !important;
+  border-color: rgba(0, 255, 136, 0.6) !important;
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+.poker-betting-button:active:not(:disabled) {
+  transform: translateY(0) !important;
+}
+
+.poker-betting-button:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  background: rgba(100, 100, 100, 0.2) !important;
+  border-color: rgba(100, 100, 100, 0.3) !important;
+  box-shadow: none !important;
+}
+
+/* Special styling for RAISE button (red glow) */
+.poker-betting-button--raise {
+  border-color: rgba(255, 0, 0, 0.6) !important;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.4), 0 0 20px rgba(255, 0, 0, 0.2) !important;
+}
+
+.poker-betting-button--raise:hover:not(:disabled) {
+  border-color: rgba(255, 0, 0, 0.8) !important;
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.6), 0 0 25px rgba(255, 0, 0, 0.4) !important;
+}
+
+/* Input field styling with yellow borders */
+.poker-inline-controls input[type="number"],
+.poker-inline-controls input[type="text"] {
+  background: rgba(15, 26, 15, 0.9);
+  border: 2px solid #fbbf24;
+  border-radius: 6px;
+  color: var(--color-neutral-50);
+  padding: 6px 10px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  min-width: 60px;
+}
+
+.poker-inline-controls input[type="number"]:focus,
+.poker-inline-controls input[type="text"]:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+/* Label styling */
+.poker-inline-controls label {
+  color: #fbbf24;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Stack display styling */
+.poker-inline-controls .stack-display {
+  background: rgba(15, 26, 15, 0.9);
+  border: 2px solid #fbbf24;
+  border-radius: 6px;
+  color: var(--color-neutral-50);
+  padding: 6px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  min-width: 80px;
+}
+
+/* Slider styling improvements */
+.poker-inline-controls .slider-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.poker-inline-controls .slider {
+  width: 100%;
+  height: 6px;
+  background: rgba(100, 100, 100, 0.3);
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.poker-inline-controls .slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.poker-inline-controls .slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Percentage display styling */
+.poker-inline-controls .percentage-display {
+  color: #fbbf24;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
 }

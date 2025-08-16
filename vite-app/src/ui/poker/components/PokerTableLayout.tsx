@@ -60,6 +60,20 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
   const GRID_SIZE = 10
   const MAJOR_GRID_SIZE = 50
 
+  // Allowed child keys for simplified control box schema
+  const ALLOWED_CONTROL_KEYS = [
+    'checkBtn', 'callBtn', 'foldBtn', 'betBtn', 'raiseBtn',
+    'betBox', 'potSlider', 'stackSlider', 'stackLabel',
+  ] as const
+
+  type AllowedControlKey = typeof ALLOWED_CONTROL_KEYS[number]
+
+  function sanitizeControlsChildren(input: Record<string, any> | undefined | null): Record<AllowedControlKey, any> {
+    if (!input || typeof input !== 'object') return {} as any
+    const entries = Object.entries(input).filter(([k]) => (ALLOWED_CONTROL_KEYS as readonly string[]).includes(k))
+    return Object.fromEntries(entries) as any
+  }
+
   // Register a draggable object
   const registerDraggable = useCallback((draggable: DraggableObject) => {
     // Wrap the setLayout function to provide real-time visual feedback
@@ -247,6 +261,7 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
       .then(r => r.ok ? r.json() : null)
       .then((data) => {
         if (data && typeof data === 'object') {
+          console.log('Layout data loaded:', data) // Debug log
           const seats = (data as any).seats ?? {}
           const next: LayoutOverrides = {
             seats: typeof seats === 'object' && seats ? seats : {},
@@ -255,10 +270,14 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
             showdown: (data as any).showdown,
             bets: (data as any).bets ?? {},
             stacks: (data as any).stacks ?? {},
-            controls: (data as any).controls,
-            controlsChildren: (data as any).controlsChildren ?? {},
+            controls: (data as any).controls ?? {},
+            controlsChildren: sanitizeControlsChildren((data as any).controlsChildren ?? {}),
             controlsBox: (data as any).controlsBox ?? {},
           }
+          
+          console.log('Processed layout overrides:', next) // Debug log
+          console.log('Controls section:', next.controls) // Debug log
+          console.log('ControlsBox section:', next.controlsBox) // Debug log
 
           defaultFromFileRef.current = next
           setLayoutOverrides(next)
@@ -302,7 +321,7 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
       bets: exportData.bets || {},
       stacks: exportData.stacks || {},
       controls: exportData.controls,
-      controlsChildren: exportData.controlsChildren || {},
+      controlsChildren: sanitizeControlsChildren(exportData.controlsChildren || {}),
       controlsBox: exportData.controlsBox,
     }
     

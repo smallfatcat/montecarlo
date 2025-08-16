@@ -1,58 +1,134 @@
 /* Poker Seat - Design System Integration */
 .poker-seat {
-  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
-  border-color: var(--color-poker-table-border) !important;
-  color: var(--color-neutral-50);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  transition: all var(--transition-normal);
   position: relative;
+  min-width: 120px;
+  min-height: 160px;
+  transition: all var(--transition-normal);
 }
 
-/* Current action state - highlighted for active player */
+/* State-based styling */
 .poker-seat--current-action {
-  border-color: var(--color-poker-orange) !important;
-  box-shadow: 0 0 15px rgba(255, 140, 0, 0.8), 0 0 25px rgba(255, 140, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%), rgba(255, 140, 0, 0.1) !important;
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.9), 0 0 25px rgba(0, 255, 136, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-/* My seat state - highlighted for current user */
 .poker-seat--my-seat {
-  border-color: var(--color-poker-cyan) !important;
-  box-shadow: 0 0 10px rgba(0, 255, 136, 0.8), 0 0 18px rgba(0, 255, 136, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* Folded state - dimmed appearance */
 .poker-seat--folded {
   opacity: 0.6;
   filter: grayscale(0.3);
-  background: linear-gradient(135deg, var(--color-neutral-800) 0%, var(--color-neutral-700) 100%) !important;
 }
 
-/* All-in state - special highlighting */
 .poker-seat--all-in {
-  border-color: var(--color-poker-gold) !important;
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%), rgba(245, 158, 11, 0.1) !important;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-/* CPU player state - subtle indicator */
 .poker-seat--cpu {
-  border-style: dashed;
-  border-color: var(--color-poker-table-border) !important;
+  border-color: var(--color-neutral-400);
 }
 
-/* Hover effects */
-.poker-seat:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+.poker-seat--dealing {
+  pointer-events: none;
 }
 
-.poker-seat--current-action:hover {
-  box-shadow: 0 0 20px rgba(255, 140, 0, 0.9), 0 0 30px rgba(255, 140, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+.poker-seat--processing {
+  pointer-events: none;
 }
 
-.poker-seat--my-seat:hover {
-  box-shadow: 0 0 15px rgba(0, 255, 136, 0.9), 0 0 25px rgba(0, 255, 136, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+.poker-seat--error {
+  border-color: var(--color-danger-500);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+
+/* Loading States */
+.poker-seat__dealing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 26, 15, 0.9);
+  backdrop-filter: blur(2px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3);
+  z-index: 10;
+  border-radius: inherit;
+}
+
+.poker-seat__dealing-text {
+  color: var(--color-neutral-50);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Processing indicator */
+.poker-seat__processing-indicator {
+  position: absolute;
+  top: var(--spacing-2);
+  right: var(--spacing-2);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: 50%;
+  border: 1px solid var(--color-warning-300);
+}
+
+/* Error States */
+.poker-seat__error-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(239, 68, 68, 0.1);
+  backdrop-filter: blur(1px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3);
+  z-index: 10;
+  border-radius: inherit;
+  padding: var(--spacing-4);
+  text-align: center;
+}
+
+.poker-seat__error-icon {
+  font-size: var(--font-size-xl);
+  line-height: 1;
+}
+
+.poker-seat__error-message {
+  color: var(--color-danger-600);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  max-width: 120px;
+}
+
+.poker-seat__error-retry {
+  background: var(--color-danger-600);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-1) var(--spacing-2);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.poker-seat__error-retry:hover {
+  background: var(--color-danger-700);
 }
 
 /* Target specific text elements for white color */
@@ -77,35 +153,13 @@
   color: #111 !important;
 }
 
-/* Override Card component styles for poker theme */
-.poker-seat.card,
-.poker-seat.card--default,
-.poker-seat.card--elevated,
-.poker-seat.card--interactive {
-  background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
-  border-color: var(--color-poker-table-border) !important;
-}
-
-/* Sit button styling */
-.poker-seat__sit-button {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--color-poker-orange);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  z-index: 10;
-}
-
-.poker-seat__sit-button:hover {
-  background: var(--color-poker-orange);
-  transform: translate(-50%, -50%) scale(1.05);
-  box-shadow: 0 4px 12px rgba(255, 140, 0, 0.4);
+/* Dark theme adjustments */
+@media (prefers-color-scheme: dark) {
+  .poker-seat__dealing-text {
+    color: var(--color-neutral-100);
+  }
+  
+  .poker-seat__error-message {
+    color: var(--color-danger-400);
+  }
 }

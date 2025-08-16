@@ -7,7 +7,7 @@ import { PokerSeatStack } from './components/PokerSeatStack'
 import { PokerSeatEquity } from './components/PokerSeatEquity'
 import { PokerSeatResult } from './components/PokerSeatResult'
 import { PokerSeatControls } from './components/PokerSeatControls'
-import { Card } from '../components/Card'
+import { Card, LoadingSpinner } from '../components'
 import './PokerSeat.css'
 
 export interface PokerSeatProps {
@@ -46,6 +46,12 @@ export interface PokerSeatProps {
   // Drag system
   dragSystem?: any
   reservedExpiresAtMs?: number | null
+  // Loading states
+  isDealing?: boolean
+  isProcessingAction?: boolean
+  // Error handling
+  error?: string
+  onRetry?: () => void
 }
 
 export function PokerSeat(props: PokerSeatProps) {
@@ -74,6 +80,10 @@ export function PokerSeat(props: PokerSeatProps) {
     winnersSet,
     showdownText,
     reservedExpiresAtMs = null,
+    isDealing = false,
+    isProcessingAction = false,
+    error,
+    onRetry,
   } = props
 
   const isYourSeat = (mySeatIndex != null) && (mySeatIndex === seatIndex)
@@ -94,7 +104,54 @@ export function PokerSeat(props: PokerSeatProps) {
     if (seat.hasFolded) classes.push('poker-seat--folded')
     if (seat.isAllIn) classes.push('poker-seat--all-in')
     if (seat.isCPU) classes.push('poker-seat--cpu')
+    if (isDealing) classes.push('poker-seat--dealing')
+    if (isProcessingAction) classes.push('poker-seat--processing')
+    if (error) classes.push('poker-seat--error')
     return classes.join(' ')
+  }
+
+  // Show loading overlay when dealing
+  if (isDealing) {
+    return (
+      <Card
+        id={`${idPrefix}-${seatIndex}`}
+        variant={getSeatVariant()}
+        padding="sm"
+        className={getSeatClassName()}
+        style={containerStyle}
+      >
+        <div className="poker-seat__dealing-overlay">
+          <LoadingSpinner size="medium" color="var(--color-primary-500)" />
+          <span className="poker-seat__dealing-text">Dealing cards...</span>
+        </div>
+      </Card>
+    )
+  }
+
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <Card
+        id={`${idPrefix}-${seatIndex}`}
+        variant={getSeatVariant()}
+        padding="sm"
+        className={getSeatClassName()}
+        style={containerStyle}
+      >
+        <div className="poker-seat__error-overlay">
+          <div className="poker-seat__error-icon">⚠️</div>
+          <div className="poker-seat__error-message">{error}</div>
+          {onRetry && (
+            <button 
+              className="poker-seat__error-retry"
+              onClick={onRetry}
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      </Card>
+    )
   }
 
   return (
@@ -105,6 +162,13 @@ export function PokerSeat(props: PokerSeatProps) {
       className={getSeatClassName()}
       style={containerStyle}
     >
+      {/* Processing action indicator */}
+      {isProcessingAction && (
+        <div className="poker-seat__processing-indicator">
+          <LoadingSpinner size="small" color="var(--color-warning-500)" />
+        </div>
+      )}
+      
       <PokerSeatDealerButton
         seatIndex={seatIndex}
         buttonIndex={buttonIndex}
@@ -173,8 +237,6 @@ export function PokerSeat(props: PokerSeatProps) {
         onSitHere={onSitHere}
         idPrefix={idPrefix}
       />
-      
-
     </Card>
   )
 }

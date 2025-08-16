@@ -38,26 +38,65 @@ export function PokerBettingButtons({
     alignItems: 'center',
     justifyContent: 'center',
     textAlign: 'center',
+    background: 'rgba(15, 26, 15, 0.9)',
+    border: '1px solid rgba(0, 255, 136, 0.4)',
+    borderRadius: '8px',
+    color: 'var(--color-neutral-50)',
+    fontWeight: 600,
+    fontSize: '14px',
+    padding: '8px 16px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    minWidth: '80px',
+    position: 'relative',
+    overflow: 'hidden',
   }
 
   function styleOk(): React.CSSProperties {
     return {
       ...buttonStyle,
-      boxShadow: '0 0 5px rgba(0,255,180,0.85), 0 0 20px rgba(0,255,180,0.55)',
-      border: '1px solid rgba(31, 206, 54, 0.9)'
+      background: 'rgba(15, 26, 15, 0.9)',
+      border: '1px solid rgba(0, 255, 136, 0.6)',
+      boxShadow: '0 0 8px rgba(0, 255, 136, 0.4), 0 0 16px rgba(0, 255, 136, 0.2)',
     }
   }
 
   function styleError(): React.CSSProperties {
     return {
       ...buttonStyle,
-      boxShadow: '0 0 6px rgba(255,0,0,0.9), 0 0 18px rgba(255,0,0,0.5)',
-      border: '1px solid rgba(255,0,0,0.9)'
+      background: 'rgba(15, 26, 15, 0.9)',
+      border: '1px solid rgba(255, 0, 0, 0.6)',
+      boxShadow: '0 0 8px rgba(255, 0, 0, 0.4), 0 0 16px rgba(255, 0, 0, 0.2)',
     }
   }
 
-  function styleForStatus({ availableAction, disabledGlobal, legal }: { availableAction: boolean; disabledGlobal: boolean; legal: boolean }): React.CSSProperties {
-    if (!availableAction || disabledGlobal) return buttonStyle
+  function styleRaise(): React.CSSProperties {
+    return {
+      ...buttonStyle,
+      background: 'rgba(15, 26, 15, 0.9)',
+      border: '1px solid rgba(255, 0, 0, 0.6)',
+      boxShadow: '0 0 10px rgba(255, 0, 0, 0.5), 0 0 20px rgba(255, 0, 0, 0.3)',
+    }
+  }
+
+  function styleForStatus({ availableAction, disabledGlobal, legal, isRaise }: { availableAction: boolean; disabledGlobal: boolean; legal: boolean; isRaise?: boolean }): React.CSSProperties {
+    if (!availableAction || disabledGlobal) {
+      return {
+        ...buttonStyle,
+        opacity: 0.5,
+        cursor: 'not-allowed',
+        background: 'rgba(100, 100, 100, 0.2)',
+        borderColor: 'rgba(100, 100, 100, 0.3)',
+        boxShadow: 'none',
+      }
+    }
+    
+    if (isRaise) {
+      return legal ? styleRaise() : styleError()
+    }
+    
     return legal ? styleOk() : styleError()
   }
 
@@ -96,27 +135,59 @@ export function PokerBettingButtons({
 
   return (
     <>
-      <div id="control-check" style={{ position: 'absolute', left: layout.check?.left, top: layout.check?.top, transform: 'translate(-50%, -50%)', ...sized(layout.check) }} {...makeDragHandlers('check')}>
-        <button onClick={() => onCheck?.()} disabled={disabled || !available.includes('check')} style={styleForStatus({ availableAction: available.includes('check'), disabledGlobal: disabled, legal: true })}>CHECK</button>
+      <div id="control-checkBtn" style={{ position: 'absolute', left: (layout as any).checkBtn?.left, top: (layout as any).checkBtn?.top, transform: 'translate(-50%, -50%)', ...sized((layout as any).checkBtn) }} {...makeDragHandlers('checkBtn')}>
+        <button 
+          onClick={() => onCheck?.()} 
+          disabled={disabled || !available.includes('check')} 
+          style={styleForStatus({ availableAction: available.includes('check'), disabledGlobal: disabled, legal: true })}
+          className="poker-betting-button poker-betting-button--check"
+        >
+          CHECK
+        </button>
       </div>
-      <div id="control-call" style={{ position: 'absolute', left: layout.call?.left, top: layout.call?.top, transform: 'translate(-50%, -50%)', ...sized(layout.call) }} {...makeDragHandlers('call')}>
+      
+      <div id="control-callBtn" style={{ position: 'absolute', left: (layout as any).callBtn?.left, top: (layout as any).callBtn?.top, transform: 'translate(-50%, -50%)', ...sized((layout as any).callBtn) }} {...makeDragHandlers('callBtn')}>
         {(() => {
           const availableCall = available.includes('call')
           const callNeeded = Math.max(0, Math.floor(toCall || 0))
           const equal = callNeeded === Math.max(0, Math.floor(betAmount))
           const isDisabled = disabled || !availableCall || !equal
           return (
-            <button onClick={() => onCall?.()} disabled={isDisabled} style={styleForStatus({ availableAction: availableCall, disabledGlobal: disabled, legal: equal })}>CALL</button>
+            <button 
+              onClick={() => onCall?.()} 
+              disabled={isDisabled} 
+              style={styleForStatus({ availableAction: availableCall, disabledGlobal: disabled, legal: equal })}
+              className="poker-betting-button poker-betting-button--call"
+            >
+              CALL
+            </button>
           )
         })()}
       </div>
-      <div id="control-fold" style={{ position: 'absolute', left: layout.fold?.left, top: layout.fold?.top, transform: 'translate(-50%, -50%)', ...sized(layout.fold) }} {...makeDragHandlers('fold')}>
-        <button onClick={() => onFold?.()} disabled={disabled || !available.includes('fold')} style={styleForStatus({ availableAction: available.includes('fold'), disabledGlobal: disabled, legal: true })}>FOLD</button>
+      
+      <div id="control-foldBtn" style={{ position: 'absolute', left: (layout as any).foldBtn?.left, top: (layout as any).foldBtn?.top, transform: 'translate(-50%, -50%)', ...sized((layout as any).foldBtn) }} {...makeDragHandlers('foldBtn')}>
+        <button 
+          onClick={() => onFold?.()} 
+          disabled={disabled || !available.includes('fold')} 
+          style={styleForStatus({ availableAction: available.includes('fold'), disabledGlobal: disabled, legal: true })}
+          className="poker-betting-button poker-betting-button--fold"
+        >
+          FOLD
+        </button>
       </div>
-      <div id="control-betBtn" style={{ position: 'absolute', left: layout.betBtn?.left, top: layout.betBtn?.top, transform: 'translate(-50%, -50%)', ...sized(layout.betBtn) }} {...makeDragHandlers('betBtn')}>
-        <button onClick={() => onBet?.(betAmount)} disabled={disabled || !available.includes('bet')} style={styleForStatus({ availableAction: available.includes('bet'), disabledGlobal: disabled, legal: true })}>BET</button>
+      
+      <div id="control-betBtn" style={{ position: 'absolute', left: (layout as any).betBtn?.left, top: (layout as any).betBtn?.top, transform: 'translate(-50%, -50%)', ...sized((layout as any).betBtn) }} {...makeDragHandlers('betBtn')}>
+        <button 
+          onClick={() => onBet?.(betAmount)} 
+          disabled={disabled || !available.includes('bet')} 
+          style={styleForStatus({ availableAction: available.includes('bet'), disabledGlobal: disabled, legal: true })}
+          className="poker-betting-button poker-betting-button--bet"
+        >
+          BET
+        </button>
       </div>
-      <div id="control-raise" style={{ position: 'absolute', left: layout.raise?.left, top: layout.raise?.top, transform: 'translate(-50%, -50%)', ...sized(layout.raise) }} {...makeDragHandlers('raise')}>
+      
+      <div id="control-raiseBtn" style={{ position: 'absolute', left: (layout as any).raiseBtn?.left, top: (layout as any).raiseBtn?.top, transform: 'translate(-50%, -50%)', ...sized((layout as any).raiseBtn) }} {...makeDragHandlers('raiseBtn')}>
         {(() => {
           const availableRaise = available.includes('raise')
           const callNeeded = Math.max(0, Math.floor(toCall || 0))
@@ -125,10 +196,17 @@ export function PokerBettingButtons({
           const legal = callNeeded > 0 && desiredExtra >= minExtra
           const isDisabled = disabled || !availableRaise || !legal
           return (
-            <button onClick={() => {
-              const extra = Math.max(desiredExtra, callNeeded > 0 ? minExtra : 0)
-              onRaise?.(extra)
-            }} disabled={isDisabled} style={styleForStatus({ availableAction: availableRaise, disabledGlobal: disabled, legal })}>RAISE</button>
+            <button 
+              onClick={() => {
+                const extra = Math.max(desiredExtra, callNeeded > 0 ? minExtra : 0)
+                onRaise?.(extra)
+              }} 
+              disabled={isDisabled} 
+              style={styleForStatus({ availableAction: availableRaise, disabledGlobal: disabled, legal, isRaise: true })}
+              className="poker-betting-button poker-betting-button--raise"
+            >
+              RAISE
+            </button>
           )
         })()}
       </div>

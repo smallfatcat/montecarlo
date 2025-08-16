@@ -1,0 +1,101 @@
+.error-boundary {
+  padding: var(--spacing-4);
+}
+
+.error-boundary__card {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.error-boundary__header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+}
+
+.error-boundary__icon {
+  font-size: var(--font-size-2xl);
+  line-height: 1;
+}
+
+.error-boundary__title {
+  margin: 0;
+  color: var(--color-danger-600);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.error-boundary__content {
+  margin-bottom: var(--spacing-4);
+}
+
+.error-boundary__message {
+  margin: 0 0 var(--spacing-3) 0;
+  color: var(--color-neutral-700);
+  line-height: 1.5;
+}
+
+.error-boundary__details {
+  border: 1px solid var(--color-neutral-300);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.error-boundary__summary {
+  padding: var(--spacing-3);
+  background: var(--color-neutral-100);
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--color-neutral-700);
+  border-bottom: 1px solid var(--color-neutral-300);
+}
+
+.error-boundary__summary:hover {
+  background: var(--color-neutral-200);
+}
+
+.error-boundary__error-stack {
+  margin: 0;
+  padding: var(--spacing-3);
+  background: var(--color-neutral-50);
+  color: var(--color-neutral-800);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-boundary__actions {
+  display: flex;
+  gap: var(--spacing-3);
+  justify-content: flex-end;
+}
+
+/* Dark theme adjustments */
+@media (prefers-color-scheme: dark) {
+  .error-boundary__title {
+    color: var(--color-danger-400);
+  }
+  
+  .error-boundary__message {
+    color: var(--color-neutral-300);
+  }
+  
+  .error-boundary__summary {
+    background: var(--color-neutral-800);
+    color: var(--color-neutral-200);
+    border-bottom-color: var(--color-neutral-600);
+  }
+  
+  .error-boundary__summary:hover {
+    background: var(--color-neutral-700);
+  }
+  
+  .error-boundary__error-stack {
+    background: var(--color-neutral-900);
+    color: var(--color-neutral-200);
+  }
+}

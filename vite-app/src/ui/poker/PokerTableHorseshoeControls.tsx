@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+// import { motion } from 'framer-motion'
 import type { PokerTableState } from '../../poker/types'
 import type { BettingActionType } from '../../poker/types'
 import { Button, Input, Badge, Card } from '../components'

@@ -31,7 +31,7 @@ export function PokerInlineControls(props: {
   layout?: ControlsLayout
   onLayoutChange?: (next: ControlsLayout) => void
 }) {
-  const { available, disabled, pot, stack, toCall, minOpen, minRaiseExtraHint, onCheck, onCall, onFold, onBet, onRaise, scale = 1, boxWidth = 320, boxHeight = 220, editLayout = false, layout, onLayoutChange } = props
+  const { available, disabled, pot, stack, toCall, minOpen, minRaiseExtraHint, onCheck, onCall, onFold, onBet, onRaise, scale = 1, boxWidth = 400, boxHeight = 300, editLayout = false, layout, onLayoutChange } = props
 
   const [betAmount, setBetAmount] = useState<number>(0)
   const prevDisabledRef = useRef<boolean>(true)
@@ -102,22 +102,23 @@ export function PokerInlineControls(props: {
     setBetAmount(desired)
   }
 
-  const rootRef = useRef<HTMLDivElement | null>(null)
+  // Removed unused rootRef after grid refactor
 
+  // New 1-9 rectangle schema defaults kept minimal for editability only
   const DEFAULTS: ControlsLayout = {
-    check: { left: 70, top: 30 },
-    call: { left: 70, top: 65 },
-    fold: { left: 70, top: 100 },
+    checkBtn: { left: 70, top: 30 },
+    callBtn: { left: 70, top: 65 },
+    foldBtn: { left: 70, top: 100 },
     betBtn: { left: 70, top: 135 },
-    raise: { left: 70, top: 170 },
-    betLabel: { left: 230, top: 26 },
-    betInput: { left: 290, top: 26 },
-    potSlider: { left: 230, top: 120 },
-    stackSlider: { left: 290, top: 120 },
-    stackLabel: { left: 270, top: 200 },
+    raiseBtn: { left: 70, top: 170 },
+    betBox: { left: 280, top: 26, width: 120, height: 52 },
+    potSlider: { left: 280, top: 120 },
+    stackSlider: { left: 340, top: 120 },
+    stackLabel: { left: 310, top: 250, width: 120, height: 30 },
   }
 
   const currentLayout: ControlsLayout = { ...DEFAULTS, ...(layout || {}) }
+  const areaMode = Boolean((layout as any)?.betBox)
 
   return (
     <Card
@@ -132,60 +133,123 @@ export function PokerInlineControls(props: {
         position: 'relative',
       }}
     >
-      <PokerBettingButtons
-        available={available}
-        disabled={disabled}
-        betAmount={betAmount}
-        toCall={toCall}
-        minRaiseExtra={minRaiseExtra ?? undefined}
-        onCheck={onCheck}
-        onCall={onCall}
-        onFold={onFold}
-        onBet={onBet}
-        onRaise={onRaise}
-        layout={currentLayout}
-        editLayout={editLayout}
-        onLayoutChange={onLayoutChange}
-      />
+      {areaMode ? (
+        <>
+          <PokerBettingButtons
+            available={available}
+            disabled={disabled}
+            betAmount={betAmount}
+            toCall={toCall}
+            minRaiseExtra={minRaiseExtra ?? undefined}
+            onCheck={onCheck}
+            onCall={onCall}
+            onFold={onFold}
+            onBet={onBet}
+            onRaise={onRaise}
+            layout={currentLayout}
+            editLayout={editLayout}
+            onLayoutChange={onLayoutChange}
+          />
 
-      <PokerBetInput
-        betAmount={betAmount}
-        minVal={minVal}
-        maxVal={maxVal}
-        toCall={toCall}
-        setBetAmountSafe={setBetAmountSafe}
-        layout={currentLayout.betLabel || {}}
-        inputLayout={currentLayout.betInput || currentLayout.betLabel || {}}
-        editLayout={editLayout}
-        onLayoutChange={onLayoutChange}
-      />
+          <PokerBetInput
+            betAmount={betAmount}
+            minVal={minVal}
+            maxVal={maxVal}
+            toCall={toCall}
+            setBetAmountSafe={setBetAmountSafe}
+            boxLayout={currentLayout.betBox}
+            editLayout={editLayout}
+            onLayoutChange={onLayoutChange}
+          />
 
-      <PokerPotSlider
-        pot={pot}
-        betAmount={betAmount}
-        setBetAmountSafe={setBetAmountSafe}
-        layout={currentLayout.potSlider || {}}
-        labelLayout={currentLayout.potSliderLabel}
-        editLayout={editLayout}
-        onLayoutChange={onLayoutChange}
-      />
+          <PokerPotSlider
+            pot={pot}
+            betAmount={betAmount}
+            setBetAmountSafe={setBetAmountSafe}
+            layout={currentLayout.potSlider || {}}
+            editLayout={editLayout}
+            onLayoutChange={onLayoutChange}
+          />
 
-      <PokerStackSlider
-        stack={stack}
-        betAmount={betAmount}
-        setBetAmountSafe={setBetAmountSafe}
-        layout={currentLayout.stackSlider || {}}
-        labelLayout={currentLayout.stackSliderLabel}
-        editLayout={editLayout}
-        onLayoutChange={onLayoutChange}
-      />
+          <PokerStackSlider
+            stack={stack}
+            betAmount={betAmount}
+            setBetAmountSafe={setBetAmountSafe}
+            layout={currentLayout.stackSlider || {}}
+            editLayout={editLayout}
+            onLayoutChange={onLayoutChange}
+          />
 
-      <PokerStackLabel
-        stack={stack}
-        layout={currentLayout.stackLabel || {}}
-        editLayout={editLayout}
-        onLayoutChange={onLayoutChange}
-      />
+          <PokerStackLabel
+            stack={stack}
+            layout={currentLayout.stackLabel || {}}
+            editLayout={editLayout}
+            onLayoutChange={onLayoutChange}
+          />
+        </>
+      ) : (
+        <div className="pic-grid" style={{ position: 'absolute', inset: 0 }}>
+          <div className="pic-area pic-area--buttons" style={{ gridArea: 'buttons', position: 'relative' }}>
+            <PokerBettingButtons
+              available={available}
+              disabled={disabled}
+              betAmount={betAmount}
+              toCall={toCall}
+              minRaiseExtra={minRaiseExtra ?? undefined}
+              onCheck={onCheck}
+              onCall={onCall}
+              onFold={onFold}
+              onBet={onBet}
+              onRaise={onRaise}
+              layout={currentLayout}
+              editLayout={editLayout}
+              onLayoutChange={onLayoutChange}
+            />
+          </div>
+
+          <div className="pic-area pic-area--bet" style={{ gridArea: 'bet', position: 'relative' }}>
+            <PokerBetInput
+              betAmount={betAmount}
+              minVal={minVal}
+              maxVal={maxVal}
+              toCall={toCall}
+              setBetAmountSafe={setBetAmountSafe}
+              boxLayout={currentLayout.betBox}
+              editLayout={editLayout}
+              onLayoutChange={onLayoutChange}
+            />
+          </div>
+
+          <div className="pic-area pic-area--sliders" style={{ gridArea: 'sliders', position: 'relative' }}>
+            <PokerPotSlider
+              pot={pot}
+              betAmount={betAmount}
+              setBetAmountSafe={setBetAmountSafe}
+              layout={currentLayout.potSlider || {}}
+              editLayout={editLayout}
+              onLayoutChange={onLayoutChange}
+            />
+
+            <PokerStackSlider
+              stack={stack}
+              betAmount={betAmount}
+              setBetAmountSafe={setBetAmountSafe}
+              layout={currentLayout.stackSlider || {}}
+              editLayout={editLayout}
+              onLayoutChange={onLayoutChange}
+            />
+          </div>
+
+          <div className="pic-area pic-area--stack" style={{ gridArea: 'stack', position: 'relative' }}>
+            <PokerStackLabel
+              stack={stack}
+              layout={currentLayout.stackLabel || {}}
+              editLayout={editLayout}
+              onLayoutChange={onLayoutChange}
+            />
+          </div>
+        </div>
+      )}
     </Card>
   )
 }

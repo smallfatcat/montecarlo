@@ -1,7 +1,8 @@
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { PokerTableState } from '../../../poker/types'
 import { Card3D } from '../../components/Card3D'
+import { LoadingSpinner } from '../../components'
 import { CONFIG } from '../../../config'
 import { useDragSystem } from './PokerTableLayout'
 import './PokerTableBoard.css'
@@ -13,9 +14,25 @@ export interface PokerTableBoardProps {
   layoutOverride?: any
   // Edit layout props
   editLayout?: boolean
+  // Loading states
+  isDealing?: boolean
+  isRevealing?: boolean
+  // Error handling
+  error?: string
+  onRetry?: () => void
 }
 
-export function PokerTableBoard({ table, revealed, highlightSet, layoutOverride, editLayout }: PokerTableBoardProps) {
+export function PokerTableBoard({ 
+  table, 
+  revealed, 
+  highlightSet, 
+  layoutOverride, 
+  editLayout,
+  isDealing = false,
+  isRevealing = false,
+  error,
+  onRetry
+}: PokerTableBoardProps) {
   const { horseshoe } = CONFIG.poker
   const { boardOffsetY } = horseshoe
   const boardGapPx = 8 // Tighter spacing between board cards
@@ -81,6 +98,68 @@ export function PokerTableBoard({ table, revealed, highlightSet, layoutOverride,
     })
   }
 
+  // Show loading state when dealing
+  if (isDealing) {
+    return (
+      <div 
+        ref={boardRef}
+        className={`poker-table-board ${editLayout ? 'poker-table-board--edit-mode' : ''}`}
+        style={{
+          position: 'absolute',
+          left: currentPosition.left ?? '50%',
+          top: currentPosition.top ?? '50%',
+          transform: currentPosition.left ? 'none' : 'translate(-50%, -50%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: currentPosition.width,
+          height: currentPosition.height,
+          zIndex: 15,
+        }}
+      >
+        <div className="poker-table-board__loading">
+          <LoadingSpinner size="medium" color="var(--color-primary-500)" />
+          <span className="poker-table-board__loading-text">Dealing cards...</span>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <div 
+        ref={boardRef}
+        className={`poker-table-board ${editLayout ? 'poker-table-board--edit-mode' : ''}`}
+        style={{
+          position: 'absolute',
+          left: currentPosition.left ?? '50%',
+          top: currentPosition.top ?? '50%',
+          transform: currentPosition.left ? 'none' : 'translate(-50%, -50%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: currentPosition.width,
+          height: currentPosition.height,
+          zIndex: 15,
+        }}
+      >
+        <div className="poker-table-board__error">
+          <div className="poker-table-board__error-icon">⚠️</div>
+          <div className="poker-table-board__error-message">{error}</div>
+          {onRetry && (
+            <button 
+              className="poker-table-board__error-retry"
+              onClick={onRetry}
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div 
       ref={boardRef}
@@ -99,9 +178,14 @@ export function PokerTableBoard({ table, revealed, highlightSet, layoutOverride,
         zIndex: 15, // High z-index for board
       }}
     >
-      <AnimatePresence>
-        {renderBoardCards()}
-      </AnimatePresence>
+      {renderBoardCards()}
+      
+      {/* Show loading indicator when revealing cards */}
+      {isRevealing && (
+        <div className="poker-table-board__revealing">
+          <LoadingSpinner size="small" color="var(--color-warning-500)" />
+        </div>
+      )}
     </div>
   )
 }

@@ -139,9 +139,32 @@ This document tracks the implementation of a comprehensive refactor to improve t
   - [x] Layout editor styling and grid system
 - [x] Implement consistent spacing and typography
   - [x] Using design tokens for all spacing and typography
-- [ ] Add proper loading and error states
+- [x] Add proper loading and error states
+  - [x] Created LoadingSpinner component with multiple sizes and overlay support
+  - [x] Created ErrorBoundary component for React error handling
+  - [x] Created StatusMessage component for success/warning/error/info/loading states
+  - [x] Enhanced PokerLobbyRefactored with proper error handling and loading states
+  - [x] Enhanced PokerTableBoard with dealing and error states
+  - [x] Enhanced PokerSeat with loading overlays and error handling
+  - [x] Updated DesignSystemDemo to showcase all new components
 
 ### 3.2 Advanced Features
+
+### 3.2B Poker Lobby Design System Integration ✅
+- [x] Updated `PokerLobbyRefactored.tsx` to use new design system components:
+  - Replaced inline styles with CSS classes and design tokens
+  - Integrated `Button`, `Card`, `Badge`, `StatusMessage`, and `LoadingSpinner` components
+  - Added proper semantic HTML structure with header, sections, and cards
+- [x] Created `PokerLobbyRefactored.css` with comprehensive styling:
+  - Dark poker theme using design tokens
+  - Responsive grid layout for different view modes (grid, list, compact)
+  - Hover effects and status-based styling for table cards
+  - Mobile-first responsive design
+- [x] Enhanced user experience:
+  - Better visual hierarchy with cards and badges
+  - Improved loading states and error handling
+  - Consistent spacing and typography using design tokens
+  - Status indicators for table states (waiting, in-game, finished)
 - [ ] **Table Filtering & Sorting**
   - [ ] Status-based filtering
   - [ ] Player count filtering
@@ -157,6 +180,20 @@ This document tracks the implementation of a comprehensive refactor to improve t
   - [ ] Live updates
   - [ ] Notifications
   - [ ] Chat system
+
+### 3.2A Poker Inline Controls Schema Lock ✅
+- Adopt a strict nine-rect schema for the control box, defined only in `vite-app/public/horseshoe-layout.json` under `controlsChildren`.
+- Supported keys:
+  - `checkBtn`, `callBtn`, `foldBtn`, `betBtn`, `raiseBtn`
+  - `betBox` (label + input combined)
+  - `potSlider`, `stackSlider`
+  - `stackLabel`
+- Removed legacy/unused keys and paths: `betLabel`, `betInput`, `potSliderLabel`, `stackSliderLabel`.
+- Import/export now sanitize to the nine keys only.
+- UI updates aligned to schema:
+  - Compact bet: label on the left of input within `betBox`.
+  - Slider labels removed.
+  - `stackLabel` renders single-line: “Stack: $NNN”.
 
 ### 3.3 Performance Optimization
 - [ ] Implement virtual scrolling for large table lists

@@ -1,330 +1,386 @@
-import React, { useState } from 'react'
-import { Button, Card, Badge, StatusBadge, Input, PokerTableCard } from './index'
-import type { TableSummary } from '../../stores/types'
+import { useState } from 'react'
+import { 
+  Button, 
+  Card, 
+  Badge, 
+  Input, 
+  PokerTableCard,
+  LoadingSpinner,
+  ErrorBoundary,
+  StatusMessage
+} from './index'
 import './DesignSystemDemo.css'
 
-export const DesignSystemDemo: React.FC = () => {
+export function DesignSystemDemo() {
   const [inputValue, setInputValue] = useState('')
-  const [inputError, setInputError] = useState('')
-  
-  // Mock table data for demo - more realistic poker scenarios
-  const mockTables: TableSummary[] = [
-    {
-      tableId: 'high-stakes-001',
-      seats: 9,
-      humans: 3,
-      cpus: 2,
-      status: 'playing',
-      handId: 12345,
-      updatedAt: Date.now() - 30000,
-      reserved: [
-        { seatIndex: 1, playerName: 'Alice', expiresAt: Date.now() + 30000 },
-        { seatIndex: 3, playerName: 'Bob', expiresAt: Date.now() + 30000 }
-      ]
-    },
-    {
-      tableId: 'quick-play-002',
-      seats: 6,
-      humans: 1,
-      cpus: 4,
-      status: 'waiting',
-      handId: null,
-      updatedAt: Date.now() - 15000
-    },
-    {
-      tableId: 'tournament-003',
-      seats: 8,
-      humans: 6,
-      cpus: 0,
-      status: 'playing',
-      handId: 12346,
-      updatedAt: Date.now() - 10000
-    }
-  ]
+  // const [selectedVariant, setSelectedVariant] = useState('primary')
+  const [showError, setShowError] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value)
-    if (e.target.value.length < 3) {
-      setInputError('Player name must be at least 3 characters')
-    } else {
-      setInputError('')
-    }
+  const handleSimulateError = () => {
+    setShowError(true)
+    setTimeout(() => setShowError(false), 3000)
+  }
+
+  const handleSimulateLoading = () => {
+    setIsLoading(true)
+    setTimeout(() => setIsLoading(false), 2000)
   }
 
   return (
     <div className="design-system-demo">
-      <div className="demo-header">
-        <h1>Monte Carlo Design System</h1>
-        <p>A professional design system built for high-stakes poker applications, featuring consistent components, accessibility, and a sophisticated visual hierarchy.</p>
-      </div>
+      <header className="design-system-demo__header">
+        <h1>Poker Design System</h1>
+        <p>A comprehensive collection of reusable UI components for the poker application</p>
+      </header>
 
-      <div className="demo-section">
-        <h2>Design Foundation</h2>
-        <div className="demo-grid">
-          <div className="demo-item">
-            <h3>Color Palette</h3>
-            <div className="color-palette">
-              <div className="color-swatch" style={{ backgroundColor: 'var(--color-poker-green)' }}>
-                <span>Poker Green</span>
-              </div>
-              <div className="color-swatch" style={{ backgroundColor: 'var(--color-poker-gold)' }}>
-                <span>Poker Gold</span>
-              </div>
-              <div className="color-swatch" style={{ backgroundColor: 'var(--color-primary-600)' }}>
-                <span>Primary Blue</span>
-              </div>
-              <div className="color-swatch" style={{ backgroundColor: 'var(--color-success-500)' }}>
-                <span>Success Green</span>
-              </div>
-            </div>
-            <p style={{ textAlign: 'center', marginTop: 'var(--space-4)', color: 'var(--color-neutral-300)' }}>
-              Professional color scheme optimized for poker table aesthetics
-            </p>
-          </div>
+      <div className="design-system-demo__content">
+        {/* Loading & Error States Section */}
+        <section className="design-system-demo__section">
+          <h2>Loading & Error States</h2>
+          <p>Components for handling loading states, errors, and user feedback</p>
           
-          <div className="demo-item">
-            <h3>Spacing System</h3>
-            <div className="spacing-demo">
-              <div className="spacing-item" style={{ marginBottom: 'var(--space-1)' }}>4px - Micro spacing</div>
-              <div className="spacing-item" style={{ marginBottom: 'var(--space-2)' }}>8px - Component padding</div>
-              <div className="spacing-item" style={{ marginBottom: 'var(--space-4)' }}>16px - Section margins</div>
-              <div className="spacing-item" style={{ marginBottom: 'var(--space-8)' }}>32px - Major sections</div>
-            </div>
-            <p style={{ textAlign: 'center', marginTop: 'var(--space-4)', color: 'var(--color-neutral-300)' }}>
-              Consistent spacing scale for professional layouts
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="demo-section">
-        <h2>Interactive Components</h2>
-        <div className="demo-grid">
-          <div className="demo-item">
-            <h3>Action Buttons</h3>
-            <div className="button-group">
-              <Button variant="primary">CALL</Button>
-              <Button variant="outline">CHECK</Button>
-              <Button variant="danger">FOLD</Button>
-            </div>
-            <div className="button-group" style={{ marginTop: 'var(--space-3)' }}>
-              <Button variant="primary" size="lg">RAISE</Button>
-              <Button variant="secondary" size="lg">ALL IN</Button>
-            </div>
-            <p style={{ textAlign: 'center', marginTop: 'var(--space-4)', color: 'var(--color-neutral-300)' }}>
-              Poker action buttons with clear visual hierarchy
-            </p>
-          </div>
-          
-          <div className="demo-item">
-            <h3>Button States</h3>
-            <div className="button-group">
-              <Button loading>Processing...</Button>
-              <Button disabled>Disabled</Button>
-            </div>
-            <div className="button-group" style={{ marginTop: 'var(--space-3)' }}>
-              <Button variant="ghost" size="sm">Settings</Button>
-              <Button variant="outline" size="sm">Help</Button>
-            </div>
-            <p style={{ textAlign: 'center', marginTop: 'var(--space-4)', color: 'var(--color-neutral-300)' }}>
-              Loading states and disabled states for better UX
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="demo-section">
-        <h2>Information Display</h2>
-        <div className="demo-grid">
-          <div className="demo-item">
-            <Card variant="elevated" padding="md">
-              <div className="card__header">
-                <h3 className="card__title">Player Statistics</h3>
-                <p className="card__subtitle">Session performance overview</p>
+          <div className="design-system-demo__grid">
+            <Card variant="outlined" className="design-system-demo__component">
+              <h3>Loading Spinner</h3>
+              <div className="design-system-demo__examples">
+                <div>
+                  <h4>Small</h4>
+                  <LoadingSpinner size="small" />
+                </div>
+                <div>
+                  <h4>Medium</h4>
+                  <LoadingSpinner size="medium" />
+                </div>
+                <div>
+                  <h4>Large</h4>
+                  <LoadingSpinner size="large" />
+                </div>
+                <div>
+                  <h4>With Text</h4>
+                  <LoadingSpinner size="medium" text="Loading..." />
+                </div>
+                <div>
+                  <h4>Custom Color</h4>
+                  <LoadingSpinner size="medium" color="#10b981" />
+                </div>
               </div>
-              <div className="card__body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'bold', color: 'var(--color-poker-gold)' }}>$2,450</div>
-                    <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-neutral-400)' }}>Total Winnings</div>
+            </Card>
+
+            <Card variant="outlined" className="design-system-demo__component">
+              <h3>Status Messages</h3>
+              <div className="design-system-demo__examples">
+                <StatusMessage
+                  type="success"
+                  title="Success!"
+                  message="Your action was completed successfully."
+                  details="Additional details can be shown here for debugging or user information."
+                />
+                
+                <StatusMessage
+                  type="warning"
+                  title="Warning"
+                  message="Please review your input before proceeding."
+                  dismissible
+                  onDismiss={() => console.log('Dismissed')}
+                />
+                
+                <StatusMessage
+                  type="error"
+                  title="Error Occurred"
+                  message="Something went wrong. Please try again."
+                  actions={
+                    <Button onClick={handleSimulateError} variant="danger" size="sm">
+                      Simulate Error
+                    </Button>
+                  }
+                />
+                
+                <StatusMessage
+                  type="info"
+                  message="This is an informational message for the user."
+                />
+                
+                <StatusMessage
+                  type="loading"
+                  message="Processing your request..."
+                />
+              </div>
+            </Card>
+
+            <Card variant="outlined" className="design-system-demo__component">
+              <h3>Error Boundary</h3>
+              <p>Catches React errors and displays a fallback UI</p>
+              <ErrorBoundary>
+                <div>
+                  <p>This content is wrapped in an error boundary.</p>
+                  {showError && (
+                    <button onClick={() => { throw new Error('Simulated error!') }}>
+                      Throw Error
+                    </button>
+                  )}
+                </div>
+              </ErrorBoundary>
+            </Card>
+          </div>
+        </section>
+
+        {/* Interactive Examples Section */}
+        <section className="design-system-demo__section">
+          <h2>Interactive Examples</h2>
+          <p>See the components in action with real interactions</p>
+          
+          <div className="design-system-demo__grid">
+            <Card variant="outlined" className="design-system-demo__component">
+              <h3>Loading States</h3>
+              <div className="design-system-demo__examples">
+                <Button 
+                  onClick={handleSimulateLoading}
+                  disabled={isLoading}
+                  variant="primary"
+                >
+                  {isLoading ? 'Loading...' : 'Simulate Loading'}
+                </Button>
+                
+                {isLoading && (
+                  <div style={{ marginTop: 16 }}>
+                    <LoadingSpinner size="small" text="Processing..." />
                   </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'bold', color: 'var(--color-success-500)' }}>68%</div>
-                    <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-neutral-400)' }}>Win Rate</div>
+                )}
+              </div>
+            </Card>
+
+            <Card variant="outlined" className="design-system-demo__component">
+              <h3>Form Validation</h3>
+              <div className="design-system-demo__examples">
+                <Input
+                  label="Player Name"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Enter your name"
+                  helperText="Choose a unique display name"
+                />
+                
+                {inputValue.length > 0 && inputValue.length < 3 && (
+                  <StatusMessage
+                    type="warning"
+                    message="Name must be at least 3 characters long"
+                    className="mt-2"
+                  />
+                )}
+                
+                {inputValue.length >= 3 && (
+                  <StatusMessage
+                    type="success"
+                    message="Name looks good!"
+                    className="mt-2"
+                  />
+                )}
+              </div>
+            </Card>
+          </div>
+        </section>
+
+        {/* Base Components Section */}
+        <section className="design-system-demo__section">
+          <h2>Base Components</h2>
+          <p>Fundamental UI building blocks</p>
+          
+          <div className="design-system-demo__grid">
+            <Card variant="outlined" className="design-system-demo__component">
+              <h3>Buttons</h3>
+              <div className="design-system-demo__examples">
+                <div>
+                  <h4>Variants</h4>
+                  <Button variant="primary">Primary</Button>
+                  <Button variant="secondary">Secondary</Button>
+                  <Button variant="outline">Outline</Button>
+                  <Button variant="ghost">Ghost</Button>
+                  <Button variant="danger">Danger</Button>
+                </div>
+                
+                <div>
+                  <h4>Sizes</h4>
+                  <Button size="sm">Small</Button>
+                  <Button size="md">Medium</Button>
+                  <Button size="lg">Large</Button>
+                </div>
+                
+                <div>
+                  <h4>States</h4>
+                  <Button disabled>Disabled</Button>
+                  <Button loading>Loading</Button>
+                </div>
+              </div>
+            </Card>
+
+            <Card variant="outlined" className="design-system-demo__component">
+              <h3>Cards</h3>
+              <div className="design-system-demo__examples">
+                <Card variant="default" padding="sm">
+                  <h4>Default Card</h4>
+                  <p>Basic card with default styling</p>
+                </Card>
+                
+                <Card variant="elevated" padding="md">
+                  <h4>Elevated Card</h4>
+                  <p>Card with shadow and elevation</p>
+                </Card>
+                
+                <Card variant="outlined" padding="lg">
+                  <h4>Outlined Card</h4>
+                  <p>Card with border emphasis</p>
+                </Card>
+              </div>
+            </Card>
+
+            <Card variant="outlined" className="design-system-demo__component">
+              <h3>Badges</h3>
+              <div className="design-system-demo__examples">
+                <div>
+                  <h4>Variants</h4>
+                  <Badge variant="primary">Primary</Badge>
+                  <Badge variant="success">Success</Badge>
+                  <Badge variant="warning">Warning</Badge>
+                  <Badge variant="error">Error</Badge>
+                  <Badge variant="outline">Outline</Badge>
+                </div>
+                
+                <div>
+                  <h4>Sizes</h4>
+                  <Badge size="sm">Small</Badge>
+                  <Badge size="md">Medium</Badge>
+                  <Badge size="lg">Large</Badge>
+                </div>
+                
+                <div>
+                  <h4>Features</h4>
+                  <Badge dot>With Dot</Badge>
+                  <Badge removable onRemove={() => console.log('Removed')}>
+                    Removable
+                  </Badge>
+                </div>
+              </div>
+            </Card>
+
+            <Card variant="outlined" className="design-system-demo__component">
+              <h3>Inputs</h3>
+              <div className="design-system-demo__examples">
+                <Input
+                  label="Text Input"
+                  placeholder="Enter text here"
+                  helperText="This is helper text"
+                />
+                
+                <Input
+                  label="Required Input"
+                  placeholder="This field is required"
+                  required
+                  error="This field is required"
+                />
+                
+                <Input
+                  label="Disabled Input"
+                  placeholder="This input is disabled"
+                  disabled
+                  value="Disabled value"
+                />
+              </div>
+            </Card>
+          </div>
+        </section>
+
+        {/* Poker Components Section */}
+        <section className="design-system-demo__section">
+          <h2>Poker-Specific Components</h2>
+          <p>Components designed specifically for poker gameplay</p>
+          
+          <div className="design-system-demo__grid">
+            <Card variant="outlined" className="design-system-demo__component">
+              <h3>Poker Table Card</h3>
+              <div className="design-system-demo__examples">
+                <PokerTableCard
+                  table={{
+                    tableId: 'demo-table-1',
+                    status: 'waiting',
+                    seats: 6,
+                    humans: 2,
+                    cpus: 1,
+                    handId: null,
+                    updatedAt: Date.now()
+                  }}
+                  onJoin={() => console.log('Join table')}
+                  onSpectate={() => console.log('Spectate table')}
+                />
+                
+                <PokerTableCard
+                  table={{
+                    tableId: 'demo-table-2',
+                    status: 'in-game',
+                    seats: 9,
+                    humans: 6,
+                    cpus: 2,
+                    handId: 12345,
+                    updatedAt: Date.now()
+                  }}
+                  onJoin={() => console.log('Join table')}
+                  onSpectate={() => console.log('Spectate table')}
+                />
+              </div>
+            </Card>
+          </div>
+        </section>
+
+        {/* Design Tokens Section */}
+        <section className="design-system-demo__section">
+          <h2>Design Tokens</h2>
+          <p>CSS custom properties that define the design system</p>
+          
+          <div className="design-system-demo__grid">
+            <Card variant="outlined" className="design-system-demo__component">
+              <h3>Colors</h3>
+              <div className="design-system-demo__examples">
+                <div className="design-system-demo__color-grid">
+                  <div className="design-system-demo__color-swatch" style={{ backgroundColor: 'var(--color-primary-500)' }}>
+                    <span>Primary 500</span>
+                  </div>
+                  <div className="design-system-demo__color-swatch" style={{ backgroundColor: 'var(--color-success-500)' }}>
+                    <span>Success 500</span>
+                  </div>
+                  <div className="design-system-demo__color-swatch" style={{ backgroundColor: 'var(--color-warning-500)' }}>
+                    <span>Warning 500</span>
+                  </div>
+                  <div className="design-system-demo__color-swatch" style={{ backgroundColor: 'var(--color-danger-500)' }}>
+                    <span>Danger 500</span>
+                  </div>
+                  <div className="design-system-demo__color-swatch" style={{ backgroundColor: 'var(--color-neutral-500)' }}>
+                    <span>Neutral 500</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <Card variant="outlined" className="design-system-demo__component">
+              <h3>Spacing</h3>
+              <div className="design-system-demo__examples">
+                <div className="design-system-demo__spacing-examples">
+                  <div style={{ padding: 'var(--spacing-1)', backgroundColor: 'var(--color-neutral-200)' }}>
+                    Spacing 1 (4px)
+                  </div>
+                  <div style={{ padding: 'var(--spacing-2)', backgroundColor: 'var(--color-neutral-200)' }}>
+                    Spacing 2 (8px)
+                  </div>
+                  <div style={{ padding: 'var(--spacing-3)', backgroundColor: 'var(--color-neutral-200)' }}>
+                    Spacing 3 (12px)
+                  </div>
+                  <div style={{ padding: 'var(--spacing-4)', backgroundColor: 'var(--color-neutral-200)' }}>
+                    Spacing 4 (16px)
                   </div>
                 </div>
               </div>
             </Card>
           </div>
-          
-          <div className="demo-item">
-            <Card variant="outlined" padding="md">
-              <div className="card__header">
-                <h3 className="card__title">Game Status</h3>
-                <p className="card__subtitle">Current hand information</p>
-              </div>
-              <div className="card__body">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--color-neutral-300)' }}>Pot Size:</span>
-                    <span style={{ fontWeight: 'bold', color: 'var(--color-poker-gold)' }}>$1,200</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--color-neutral-300)' }}>Players:</span>
-                    <span style={{ fontWeight: 'bold', color: 'var(--color-primary-400)' }}>6 active</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--color-neutral-300)' }}>Blinds:</span>
-                    <span style={{ fontWeight: 'bold', color: 'var(--color-neutral-200)' }}>$10/$20</span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </div>
-
-      <div className="demo-section">
-        <h2>Status & Indicators</h2>
-        <div className="demo-grid">
-          <div className="demo-item">
-            <h3>Player Status</h3>
-            <div className="badge-group">
-              <StatusBadge status="online">Online</StatusBadge>
-              <StatusBadge status="away">Away</StatusBadge>
-              <StatusBadge status="busy">In Game</StatusBadge>
-              <StatusBadge status="offline">Offline</StatusBadge>
-            </div>
-            <p style={{ textAlign: 'center', marginTop: 'var(--space-4)', color: 'var(--color-neutral-300)' }}>
-              Clear status indicators for player availability
-            </p>
-          </div>
-          
-          <div className="demo-item">
-            <h3>Game Indicators</h3>
-            <div className="badge-group">
-              <Badge variant="success" dot>Active</Badge>
-              <Badge variant="warning" dot>Waiting</Badge>
-              <Badge variant="error" dot>Full</Badge>
-              <Badge variant="primary" dot>Tournament</Badge>
-            </div>
-            <div className="badge-group" style={{ marginTop: 'var(--space-3)' }}>
-              <Badge variant="outline" size="lg">VIP Table</Badge>
-              <Badge variant="outline" size="lg">High Stakes</Badge>
-            </div>
-            <p style={{ textAlign: 'center', marginTop: 'var(--space-4)', color: 'var(--color-neutral-300)' }}>
-              Game state and table type indicators
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="demo-section">
-        <h2>Form Elements</h2>
-        <div className="demo-grid">
-          <div className="demo-item">
-            <h3>Player Input</h3>
-            <Input
-              label="Player Name"
-              placeholder="Enter your poker alias..."
-              helperText="Choose a unique name for the poker room"
-              fullWidth
-            />
-            <Input
-              label="Buy-in Amount"
-              placeholder="Enter amount in dollars"
-              helperText="Minimum buy-in: $100"
-              fullWidth
-              style={{ marginTop: 'var(--space-4)' }}
-            />
-          </div>
-          
-          <div className="demo-item">
-            <h3>Validation & Errors</h3>
-            <Input
-              label="Email Address"
-              placeholder="your@email.com"
-              value={inputValue}
-              onChange={handleInputChange}
-              error={inputError}
-              fullWidth
-            />
-            <Input
-              variant="outlined"
-              label="Password"
-              type="password"
-              placeholder="Enter your password"
-              helperText="Must be at least 8 characters"
-              fullWidth
-              style={{ marginTop: 'var(--space-4)' }}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="demo-section">
-        <h2>Poker Table Components</h2>
-        <div className="demo-grid">
-          {mockTables.map((table, index) => (
-            <div key={table.tableId} className="demo-item">
-              <h3>Table {index + 1}</h3>
-              <PokerTableCard
-                table={table}
-                onJoin={(tableId) => console.log('Joining table:', tableId)}
-                onSpectate={(tableId) => console.log('Spectating table:', tableId)}
-                className="poker-table-card"
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="demo-section">
-        <h2>Responsive Design</h2>
-        <p style={{ textAlign: 'center', marginBottom: 'var(--space-6)', color: 'var(--color-neutral-300)', fontSize: 'var(--font-size-lg)' }}>
-          This design system is built with mobile-first responsive design principles, ensuring optimal experience across all devices.
-        </p>
-        
-        <div className="responsive-demo">
-          <div className="responsive-item">
-            <h4>Mobile Optimized</h4>
-            <p>Touch-friendly controls and mobile-optimized layouts for on-the-go poker gaming.</p>
-          </div>
-          <div className="responsive-item">
-            <h4>Tablet Ready</h4>
-            <p>Perfect balance of information density and usability for tablet devices.</p>
-          </div>
-          <div className="responsive-item">
-            <h4>Desktop Enhanced</h4>
-            <p>Full-featured interface with advanced controls and multi-table support.</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="demo-section">
-        <h2>Accessibility Features</h2>
-        <div className="demo-grid">
-          <div className="demo-item">
-            <h3>Screen Reader Support</h3>
-            <p style={{ color: 'var(--color-neutral-300)', textAlign: 'center' }}>
-              All components include proper ARIA labels, semantic HTML, and keyboard navigation support.
-            </p>
-            <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
-              <Badge variant="success">WCAG 2.1 AA Compliant</Badge>
-            </div>
-          </div>
-          
-          <div className="demo-item">
-            <h3>Keyboard Navigation</h3>
-            <p style={{ color: 'var(--color-neutral-300)', textAlign: 'center' }}>
-              Full keyboard support with visible focus indicators and logical tab order.
-            </p>
-            <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
-              <Badge variant="primary">Tab Navigation</Badge>
-              <Badge variant="primary" className="ml-2">Arrow Keys</Badge>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
     </div>
   )

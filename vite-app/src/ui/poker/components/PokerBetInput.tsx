@@ -4,8 +4,8 @@ export interface PokerBetInputProps {
   maxVal: number
   toCall?: number
   setBetAmountSafe: (value: number) => void
-  layout: { left?: number; top?: number; width?: number; height?: number }
-  inputLayout?: { left?: number; top?: number; width?: number; height?: number }
+  // Single rectangle to contain label + input (mandatory in new schema)
+  boxLayout: { left?: number; top?: number; width?: number; height?: number }
   editLayout: boolean
   onLayoutChange?: (layout: Record<string, { left?: number; top?: number; width?: number; height?: number }>) => void
 }
@@ -16,8 +16,7 @@ export function PokerBetInput({
   maxVal,
   toCall,
   setBetAmountSafe,
-  layout,
-  inputLayout,
+  boxLayout,
   editLayout,
   onLayoutChange
 }: PokerBetInputProps) {
@@ -60,50 +59,61 @@ export function PokerBetInput({
 
   return (
     <>
-      <div id="control-betLabel" style={{ position: 'absolute', left: layout.left, top: layout.top, transform: 'translate(-50%, -50%)', ...sized(layout) }} {...makeDragHandlers('betLabel', layout)}>
-        <span style={{ opacity: 0.9, display: 'inline-block', width: '100%' }}>
-          Bet: {betAmount > 0 ? `$${betAmount}` : ''}
-        </span>
-      </div>
-      <div id="control-betInput" style={{ position: 'absolute', left: (inputLayout?.left ?? layout.left), top: (inputLayout?.top ?? ((layout.top || 0) + 30)), transform: 'translate(-50%, -50%)', ...sized(inputLayout || layout) }} {...makeDragHandlers('betInput', inputLayout || layout)}>
-        <input
-          type="number"
-          value={betAmount}
-          min={minVal}
-          max={maxVal}
-          step={1}
-          title={`Bet amount: $${minVal} - $${maxVal}${(toCall || 0) > 0 ? ` (must call at least $${toCall})` : ''}`}
-          onChange={(e) => {
-            const inputValue = e.target.value
-            if (inputValue === '') {
-              // Allow empty input temporarily for better UX
-              setBetAmountSafe(0)
-              return
-            }
-            const parsed = parseInt(inputValue, 10)
-            if (isNaN(parsed)) {
-              // Invalid input, reset to current value
-              return
-            }
-            setBetAmountSafe(parsed)
-          }}
-          onBlur={(e) => {
-            // Ensure value is clamped when input loses focus
-            const inputValue = e.target.value
-            if (inputValue === '' || isNaN(parseInt(inputValue, 10))) {
-              setBetAmountSafe(minVal)
-            }
-          }}
-          style={{ 
-            width: (inputLayout?.width ?? layout.width ?? 100), 
-            padding: '4px 6px', 
-            borderRadius: 8, 
-            border: `1px solid ${betAmount === minVal || betAmount === maxVal ? 'rgba(255,255,0,0.5)' : 'rgba(255,255,255,0.25)'}`, 
-            background: betAmount === minVal || betAmount === maxVal ? 'rgba(255,255,0,0.1)' : 'rgba(255,255,255,0.06)', 
-            color: 'inherit',
-            textAlign: 'center'
-          }}
-        />
+      <div id="control-betBox" style={{ position: 'absolute', left: boxLayout.left, top: boxLayout.top, transform: 'translate(-50%, -50%)', ...sized(boxLayout) }} {...makeDragHandlers('betBox', boxLayout)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: '100%', boxSizing: 'border-box' }}>
+          <label style={{ 
+            color: '#fbbf24', 
+            fontWeight: 600, 
+            fontSize: '14px', 
+            textTransform: 'uppercase', 
+            letterSpacing: '0.5px',
+            whiteSpace: 'nowrap'
+          }}>
+            Bet:
+          </label>
+          <input
+            type="number"
+            value={betAmount}
+            min={minVal}
+            max={maxVal}
+            step={1}
+            title={`Bet amount: $${minVal} - $${maxVal}${(toCall || 0) > 0 ? ` (must call at least $${toCall})` : ''}`}
+            onChange={(e) => {
+              const inputValue = e.target.value
+              if (inputValue === '') {
+                // Allow empty input temporarily for better UX
+                setBetAmountSafe(0)
+                return
+              }
+              const parsed = parseInt(inputValue, 10)
+              if (isNaN(parsed)) {
+                // Invalid input, reset to current value
+                return
+              }
+              setBetAmountSafe(parsed)
+            }}
+            onBlur={(e) => {
+              // Ensure value is clamped when input loses focus
+              const inputValue = e.target.value
+              if (inputValue === '' || isNaN(parseInt(inputValue, 10))) {
+                setBetAmountSafe(minVal)
+              }
+            }}
+            style={{ 
+              width: (boxLayout?.width ?? 100), 
+              padding: '6px 10px', 
+              borderRadius: 6, 
+              border: '2px solid #fbbf24', 
+              background: 'rgba(15, 26, 15, 0.9)', 
+              color: 'var(--color-neutral-50)',
+              textAlign: 'center',
+              fontSize: '14px',
+              fontWeight: 500,
+              minWidth: '60px'
+            }}
+            className="poker-bet-input"
+          />
+        </div>
       </div>
     </>
   )

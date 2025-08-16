@@ -47,24 +47,34 @@ export function PokerStackLabel({
   return (
     <div id="control-stackLabel" style={{ position: 'absolute', left: layout.left, top: layout.top, transform: 'translate(-50%, -50%)', ...sized(layout) }} {...makeDragHandlers('stackLabel')}>
       <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+        display: 'flex',
         alignItems: 'center',
-        fontWeight: 600, 
-        width: layout.width ?? 120,
-        padding: '4px 8px',
-        background: 'rgba(0,0,0,0.3)',
-        borderRadius: '8px',
-        border: '1px solid rgba(255,255,255,0.2)'
+        justifyContent: 'space-between',
+        width: layout.width ?? 160,
+        height: layout.height != null ? '100%' : undefined,
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+        padding: '6px 10px',
+        background: 'rgba(15, 26, 15, 0.9)',
+        borderRadius: '6px',
+        border: '2px solid #fbbf24'
       }}>
-        <span style={{ opacity: 0.9, fontSize: '12px' }}>Stack:</span>
         <span style={{ 
-          opacity: 0.95, 
-          fontSize: '13px',
-          fontWeight: 700,
-          color: '#ffd54f',
-          textShadow: '0 1px 2px rgba(0,0,0,0.8)'
-        }}>${stack}</span>
+          color: '#fbbf24', 
+          fontWeight: 600, 
+          fontSize: '14px', 
+          textTransform: 'uppercase', 
+          letterSpacing: '0.5px'
+        }}>
+          Stack:
+        </span>
+        <span style={{ 
+          fontSize: '14px',
+          fontWeight: 600,
+          color: '#fbbf24'
+        }}>
+          ${stack}
+        </span>
       </div>
     </div>
   )
