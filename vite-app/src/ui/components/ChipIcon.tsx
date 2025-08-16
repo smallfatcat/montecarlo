@@ -1,16 +1,17 @@
 import React from 'react'
 import { CONFIG } from '../../config'
 
-export type ChipDenomination = 1 | 5 | 10 | 25 | 100 | 500 | 1000
+export type ChipDenomination = 5 | 10 | 25 | 100 | 500 | 1000 | 5000
 
 const CHIP_COLORS: Record<ChipDenomination, { base: string; ring: string; text: string }> = {
-  1:   { base: '#ffffff', ring: '#cfd8dc', text: '#263238' }, // white / grey
+  // 1:   { base: '#ffffff', ring: '#cfd8dc', text: '#263238' }, // white / grey
   5:   { base: '#ef5350', ring: '#b71c1c', text: '#ffffff' }, // red
   10:  { base: '#42a5f5', ring: '#1565c0', text: '#ffffff' }, // blue
   25:  { base: '#66bb6a', ring: '#2e7d32', text: '#ffffff' }, // green
   100: { base: '#424242', ring: '#000000', text: '#ffffff' }, // black
   500: { base: '#ab47bc', ring: '#6a1b9a', text: '#ffffff' }, // purple
   1000:{ base: '#ff9800', ring: '#e65100', text: '#1a1a1a' }, // orange
+  5000:{ base: '#00bcd4', ring: '#00838f', text: '#1a1a1a' }, // teal
 }
 
 export function ChipIcon({ denom, size = CONFIG.poker.chipIconSizePx, style }: { denom: ChipDenomination; size?: number; style?: React.CSSProperties }) {
@@ -44,6 +45,6 @@ export function ChipIcon({ denom, size = CONFIG.poker.chipIconSizePx, style }: {
   )
 }
 
-export const DEFAULT_DENOMS: ChipDenomination[] = [1000, 500, 100, 25, 10, 5, 1]
+export const DEFAULT_DENOMS: ChipDenomination[] = [5000, 1000, 500, 100, 25, 10, 5]
 
 

@@ -15,7 +15,7 @@ export interface SimulationResult {
 
 export function runSimulation(config: SimulationConfig): SimulationResult {
   const cpuSeats = Array.from({ length: config.seats }, (_, i) => i);
-  let state: PokerTableState = createInitialPokerTable(config.seats, cpuSeats, config.startingStack);
+  let state: PokerTableState = createInitialPokerTable(config.seats, cpuSeats, config.startingStack as number);
 
   for (let h = 0; h < config.hands; h += 1) {
     state = startHand(state);

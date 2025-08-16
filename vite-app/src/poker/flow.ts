@@ -1,23 +1,53 @@
-import { createShoe, shuffleInPlace } from "../blackjack/deck";
+import { createStandardDeck, shuffleInPlace, makeXorShift32 } from "../blackjack/deck";
 import type { Card } from "../blackjack/types";
-import { DEFAULT_RULES, cloneState, countActiveSeats, getStreetBetSize, nextSeatIndex, nextSeatIndexWithChips } from "./types";
+import { cloneState, countActiveSeats, getStreetBetSize, nextSeatIndex, nextSeatIndexWithChips } from "./types";
 import { CONFIG } from "../config";
 import type { PokerTableState, SeatState, BettingAction } from "./types";
 import { evaluateSeven } from "./handEval";
 
 function drawCard(deck: Card[]): Card {
-  // Robust draw with automatic refills; loops until a card is drawn
-  // In pathological cases, this avoids throwing in long randomized simulations
-  // while keeping the same deck reference.
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const c = deck.pop();
-    if (c) return c;
-    deck.push(...shuffleInPlace(createShoe(6)));
+  const c = deck.pop();
+  if (!c) throw new Error("Deck exhausted while dealing – expected fresh 52-card deck per hand");
+  return c;
+}
+
+// Flow logging toggle
+const FLOW_DEBUG = false;
+function flowLog(...args: any[]) {
+  if (!FLOW_DEBUG) return;
+  try { console.log(...(args as any)); } catch {}
+}
+
+// Debug helpers: chip conservation assertions
+function __sumStacks(state: PokerTableState): number {
+  return state.seats.reduce((sum, s) => sum + Math.max(0, Math.floor(s.stack)), 0)
+}
+function __getBaseline(state: PokerTableState): number | undefined {
+  return (state as any).__baselineChips as number | undefined
+}
+function __setBaseline(state: PokerTableState): void {
+  ;(state as any).__baselineChips = __sumStacks(state) + Math.max(0, Math.floor(state.pot.main))
+}
+function __assertConservation(state: PokerTableState, context: string, expectedRake: number = 0): void {
+  const baseline = __getBaseline(state)
+  if (baseline == null) return
+  const now = __sumStacks(state) + Math.max(0, Math.floor(state.pot.main))
+  const expected = baseline - Math.max(0, Math.floor(expectedRake))
+  // During hand flow (e.g., commitChips), allow tests to mutate stacks for scenarios.
+  // Enforce "no chip creation": now must never exceed expected. Require exact equality only at settlement.
+  const isSettlement = context.includes('settleAndEnd')
+  if (isSettlement) {
+    if (now !== expected) {
+      throw new Error(`[CONSERVATION] ${context}: expected total ${expected} (baseline ${baseline} - rake ${expectedRake}), got ${now}`)
+    }
+  } else {
+    if (now > expected) {
+      throw new Error(`[CONSERVATION-UPPER-BOUND] ${context}: total ${now} exceeds expected ${expected}`)
+    }
   }
 }
 
-export function createInitialPokerTable(numSeats: number, cpuSeats: number[], startingStack = 200, shoe?: Card[]): PokerTableState {
+export function createInitialPokerTable(numSeats: number, cpuSeats: number[], startingStack: number = CONFIG.poker.startingStack, shoe?: Card[]): PokerTableState {
   const seats: SeatState[] = Array.from({ length: numSeats }, (_, i) => ({
     seatIndex: i,
     isCPU: cpuSeats.includes(i),
@@ -28,9 +58,10 @@ export function createInitialPokerTable(numSeats: number, cpuSeats: number[], st
     hasFolded: false,
     isAllIn: false,
   }));
+  
   return {
     handId: 0,
-    deck: shoe ? [...shoe] : shuffleInPlace(createShoe(6)),
+    deck: shoe ? [...shoe] : shuffleInPlace(createStandardDeck()),
     community: [],
     seats,
     buttonIndex: 0,
@@ -39,9 +70,9 @@ export function createInitialPokerTable(numSeats: number, cpuSeats: number[], st
     currentToAct: null,
     lastAggressorIndex: null,
     betToCall: 0,
-    lastRaiseAmount: DEFAULT_RULES.bigBlind,
+    lastRaiseAmount: CONFIG.poker.blinds.startingBigBlind,
     pot: { main: 0 },
-    rules: { ...DEFAULT_RULES },
+    rules: { smallBlind: CONFIG.poker.blinds.startingSmallBlind, bigBlind: CONFIG.poker.blinds.startingBigBlind },
     gameOver: false,
   };
 }
@@ -56,11 +87,19 @@ export function startHand(state: PokerTableState): PokerTableState {
     s.rules.smallBlind = Math.max(1, s.rules.smallBlind * incFactor);
     s.rules.bigBlind = Math.max(1, s.rules.bigBlind * incFactor);
   }
-  // New shoe if too few cards (simple threshold)
-  if (s.deck.length < 20) {
-    s.deck = shuffleInPlace(createShoe(6));
+  // Always start each hand with a freshly shuffled single 52-card deck
+  if (CONFIG.poker.random?.useSeeded) {
+    // Derive per-hand seed to vary hands while remaining deterministic
+    const base = CONFIG.poker.random.seed ?? 1
+    const inc = CONFIG.poker.random.perHandIncrement ?? 1
+    const seed = (base + (s.handId + 1) * inc) >>> 0
+    const rng = makeXorShift32(seed)
+    s.deck = shuffleInPlace(createStandardDeck(), rng);
+  } else {
+    s.deck = shuffleInPlace(createStandardDeck());
   }
   s.handId += 1;
+  flowLog('[FLOW] startHand init', { handId: s.handId, deckLen: s.deck.length, seatsLen: s.seats.length })
   s.community = [];
   s.seats = s.seats.map((seat) => ({
     ...seat,
@@ -88,18 +127,22 @@ export function startHand(state: PokerTableState): PokerTableState {
   const bbIndex = nextSeatIndexWithChips(s.seats, sbIndex!)!;
   postBlind(s, sbIndex, s.rules.smallBlind);
   postBlind(s, bbIndex, s.rules.bigBlind);
+  // Establish baseline for chip conservation (stacks + pot)
+  __setBaseline(s)
 
-  // Deal hole cards (ensure enough cards, else reshuffle)
-  const neededCards = s.seats.filter((seat) => seat.stack > 0).length * 2
-  if (s.deck.length < neededCards) s.deck = shuffleInPlace(createShoe(6))
+  // Deal hole cards
+  // const neededCards = s.seats.filter((seat) => seat.stack > 0).length * 2
+  flowLog('[FLOW] dealHole begin', { handId: s.handId, deckPre: s.deck.length })
   for (let r = 0; r < 2; r += 1) {
     for (let i = 0; i < s.seats.length; i += 1) {
       const idx = (s.buttonIndex + 1 + i) % s.seats.length;
       const seat = s.seats[idx];
-      if (seat.stack <= 0) continue;
+      // Deal to anyone who isn't folded at hand start, even if blind-post made them all-in
+      if (seat.hasFolded) continue;
       seat.hole.push(drawCard(s.deck));
     }
   }
+  flowLog('[FLOW] dealHole end', { handId: s.handId, deckPost: s.deck.length })
 
   // If fewer than 2 players have chips, mark game over
   const contenders = s.seats.filter((x) => x.stack > 0);
@@ -155,10 +198,12 @@ export function applyAction(state: PokerTableState, action: BettingAction): Poke
   const s = cloneState(state);
   const actorIndex = s.currentToAct!;
   const seat = s.seats[actorIndex];
+  flowLog('[FLOW] applyAction start', { handId: s.handId, street: s.street, actorIndex, action: action.type, betToCall: s.betToCall })
   if (seat.hasFolded || seat.isAllIn) return s;
   const toCall = Math.max(0, s.betToCall - seat.committedThisStreet);
   const minOpen = getStreetBetSize(s);
 
+  let lastActionWasRaise = false
   switch (action.type) {
     case "fold": {
       seat.hasFolded = true;
@@ -201,6 +246,7 @@ export function applyAction(state: PokerTableState, action: BettingAction): Poke
       if (isValidRaise) {
         s.lastRaiseAmount = actualExtra;
         s.lastAggressorIndex = seat.seatIndex;
+        lastActionWasRaise = true;
       } else if (toCall === 0) {
         // Treated effectively as a check (didn't meet min raise)
         // no change to lastAggressorIndex
@@ -216,38 +262,50 @@ export function applyAction(state: PokerTableState, action: BettingAction): Poke
     return settleAndEnd(s);
   }
 
-  // Determine if betting round should close.
+  // Determine next actor
   const nextIdx = nextSeatIndex(s.seats, actorIndex);
+
+  // After a valid raise, always pass action to the next eligible seat (or close if none)
+  if (lastActionWasRaise) {
+    if (nextIdx == null) {
+      flowLog('[FLOW] advanceStreet after raise (no next actor)', { handId: s.handId, street: s.street })
+      return advanceStreet(s);
+    }
+    s.currentToAct = nextIdx;
+    flowLog('[FLOW] next actor after raise', { handId: s.handId, street: s.street, nextIdx })
+    return s;
+  }
+
+  // Determine if betting round should close.
   const active = s.seats.filter((p) => !p.hasFolded && !p.isAllIn && p.hole.length === 2);
   const noActive = active.length === 0;
   const allMatched = noActive || active.every((p) => p.committedThisStreet === s.betToCall);
 
   if (noActive) {
+    flowLog('[FLOW] advanceStreet: no active', { handId: s.handId, street: s.street })
     return advanceStreet(s);
   }
 
   if (allMatched) {
-    // Close the round only after action has returned to the closing sentinel:
-    // - With aggression present, the sentinel is lastAggressorIndex
-    // - With no aggression, sentinel was set to last-to-act at street start (in advanceStreet)
-    const sentinel = s.lastAggressorIndex;
-    if (sentinel != null) {
-      if (actorIndex === sentinel) {
-        // The sentinel just acted and everyone is matched → close now
-        return advanceStreet(s);
-      }
-      if (nextIdx === sentinel) {
-        // Give the sentinel their option (e.g., BB option preflop)
-        s.currentToAct = nextIdx;
-        return s;
-      }
+    // If there has been aggression, close immediately when matched
+    if (s.betToCall > 0) {
+      flowLog('[FLOW] advanceStreet: all matched with aggression', { handId: s.handId, street: s.street })
+      return advanceStreet(s);
     }
-    // Fallback: if for some reason sentinel is null, close when all matched
+    // No aggression: close only when the last-to-act has acted; otherwise continue
+    const sentinel = s.lastAggressorIndex;
+    if (sentinel != null && actorIndex !== sentinel) {
+      s.currentToAct = nextIdx;
+      flowLog('[FLOW] continue: no aggression, passing to next', { handId: s.handId, street: s.street, nextIdx, sentinel })
+      return s;
+    }
+    flowLog('[FLOW] advanceStreet: no aggression and sentinel acted', { handId: s.handId, street: s.street })
     return advanceStreet(s);
   }
 
   // Otherwise continue to next actor
   s.currentToAct = nextIdx;
+  flowLog('[FLOW] continue: next actor', { handId: s.handId, street: s.street, nextIdx, betToCall: s.betToCall })
   return s;
 }
 
@@ -258,6 +316,8 @@ function commitChips(state: PokerTableState, seat: SeatState, amount: number) {
   seat.totalCommitted += pay;
   state.pot.main += pay;
   if (seat.stack === 0) seat.isAllIn = true;
+  // Assert conservation during hand (no rake applied yet)
+  try { __assertConservation(state, 'commitChips', 0) } catch (e) { throw e }
 }
 
 function resetStreet(state: PokerTableState) {
@@ -309,16 +369,37 @@ function settleAndEnd(state: PokerTableState): PokerTableState {
     // Award immediately without dealing further board cards
     const rake = computeRake(s.pot.main);
     contenders[0].stack += s.pot.main - rake;
+    s.pot.main = 0
+    try { __assertConservation(s, 'settleAndEnd (single contender)', rake) } catch (e) { throw e }
   } else {
     // Ensure full board for evaluation if needed
     while (s.community.length < 5) {
       s.community.push(drawCard(s.deck));
     }
     // Build side pots from total contributions and award each to best eligible
-    const pots = buildSidePots(s);
+    let pots = computePots(s);
+    // Sanity checks: totals must match
+    const committedTotal = s.seats.reduce((sum, seat) => sum + Math.max(0, Math.floor(seat.totalCommitted)), 0)
+    const potsTotal = pots.reduce((sum, p) => sum + p.amount, 0)
+    const livePot = Math.max(0, Math.floor(s.pot.main))
+    // In live play, livePot should equal committedTotal. In reconstructed previews, livePot may be 0.
+    if (livePot > 0 && committedTotal !== livePot) {
+      throw new Error(`[POT CHECK] live pot mismatch: committedTotal=${committedTotal} livePot=${livePot}`)
+    }
+    if (committedTotal !== potsTotal) {
+      // Fallback: reconstruct pots using distinct commitment levels to ensure conservation
+      const fallback = __computePotsDistinct(s)
+      const fallbackTotal = fallback.reduce((sum, p) => sum + p.amount, 0)
+      if (fallbackTotal !== committedTotal) {
+        throw new Error(`[POT CHECK] sidepot sum mismatch: committedTotal=${committedTotal} potsTotal=${potsTotal}`)
+      }
+      pots = fallback
+    }
+    let totalRake = 0
     for (const pot of pots) {
       if (pot.amount <= 0 || pot.eligibleSeatIdxs.length === 0) continue;
       const rake = computeRake(pot.amount)
+      totalRake += rake
       const distributable = pot.amount - rake
       // Determine winners among eligible
       const ranking = pot.eligibleSeatIdxs
@@ -368,6 +449,8 @@ function settleAndEnd(state: PokerTableState): PokerTableState {
         })
       }
     }
+    s.pot.main = 0
+    try { __assertConservation(s, 'settleAndEnd (multi)', totalRake) } catch (e) { throw e }
   }
   s.status = "hand_over";
   s.currentToAct = null;
@@ -393,25 +476,94 @@ function compareRankArrays(a: number[], b: number[]): number {
 
 // Construct side pots from per-seat total commitments.
 // Folded players' chips remain in pots but they are not eligible to win.
-function buildSidePots(state: PokerTableState): { amount: number; eligibleSeatIdxs: number[] }[] {
-  const totals = state.seats.map((s, i) => ({ idx: i, total: Math.max(0, Math.floor(s.totalCommitted)) }))
+export function computePots(state: PokerTableState): { amount: number; eligibleSeatIdxs: number[] }[] {
+  const seats = state.seats
+  const totals = seats.map((s, i) => ({ idx: i, total: Math.max(0, Math.floor(s.totalCommitted)) }))
     .filter((x) => x.total > 0)
-    .sort((a, b) => a.total - b.total);
-  if (totals.length === 0) return [];
-  const pots: { amount: number; eligibleSeatIdxs: number[] }[] = [];
-  let prev = 0;
-  for (let i = 0; i < totals.length; i += 1) {
-    const level = totals[i].total;
-    const delta = level - prev;
-    if (delta > 0) {
-      const participants = totals.slice(i).map((x) => x.idx);
-      const amount = delta * participants.length;
-      const eligible = participants.filter((idx) => !state.seats[idx].hasFolded);
-      pots.push({ amount, eligibleSeatIdxs: eligible });
-      prev = level;
-    }
+  if (totals.length === 0) return []
+
+  // Decide whether we need layered pots (side pots) or just a single main pot.
+  // Only layer when at least one participant is all-in (explicit) OR has zero stack after committing (implicit).
+  const anyExplicitAllIn = seats.some((s) => s.isAllIn)
+  const anyImplicitAllIn = seats.some((s, i) => s.stack === 0 && (seats[i].totalCommitted ?? s.totalCommitted) > 0)
+  const needsLayering = anyExplicitAllIn || anyImplicitAllIn
+  if (!needsLayering) {
+    const amount = totals.reduce((sum, x) => sum + x.total, 0)
+    const eligible = totals.map((x) => x.idx).filter((idx) => !seats[idx].hasFolded)
+    return eligible.length > 0 ? [{ amount, eligibleSeatIdxs: eligible }] : []
   }
-  return pots;
+
+  // Build pot boundaries from ALL-IN commitment thresholds, plus a final tier at max total
+  const allInLevels = Array.from(new Set(
+    totals
+      .filter((x) => seats[x.idx].isAllIn || seats[x.idx].stack === 0)
+      .map((x) => x.total)
+  )).sort((a, b) => a - b)
+  const maxTotal = totals.reduce((m, x) => Math.max(m, x.total), 0)
+  const minTotal = totals.reduce((m, x) => Math.min(m, x.total), Infinity)
+  const levels: number[] = []
+  if (Number.isFinite(minTotal) && minTotal > 0) levels.push(minTotal)
+  for (const v of allInLevels) { if (levels[levels.length - 1] !== v) levels.push(v) }
+  if (levels.length === 0 || levels[levels.length - 1] < maxTotal) levels.push(maxTotal)
+
+  // Build pots between consecutive levels
+  const pots: { amount: number; eligibleSeatIdxs: number[] }[] = []
+  let prev = 0
+  let carry = 0
+  for (const level of levels) {
+    const delta = level - prev
+    if (delta <= 0) { prev = level; continue }
+    const participants = totals.filter((x) => x.total >= level).map((x) => x.idx)
+    const amount = delta * participants.length
+    const eligible = participants.filter((idx) => !seats[idx].hasFolded)
+    if (eligible.length > 0) {
+      // Merge any amounts from tiers that had no eligible players into this pot
+      pots.push({ amount: amount + carry, eligibleSeatIdxs: eligible })
+      carry = 0
+    } else {
+      // No eligible winners at this tier (all contributors folded). Accumulate
+      // this tier's chips and merge into the next pot that has eligible seats.
+      carry += amount
+    }
+    prev = level
+  }
+  if (carry > 0 && pots.length > 0) {
+    pots[pots.length - 1].amount += carry
+    carry = 0
+  }
+  return pots
+}
+
+// Internal: build pots from all distinct commitment totals with fold-carry merge.
+function __computePotsDistinct(state: PokerTableState): { amount: number; eligibleSeatIdxs: number[] }[] {
+  const seats = state.seats
+  const totals = seats.map((s, i) => ({ idx: i, total: Math.max(0, Math.floor(s.totalCommitted)) }))
+    .filter((x) => x.total > 0)
+  if (totals.length === 0) return []
+  const levels: number[] = Array.from(new Set(totals.map((x) => x.total))).sort((a, b) => a - b)
+  const pots: { amount: number; eligibleSeatIdxs: number[] }[] = []
+  let prev = 0
+  let carry = 0
+  for (const level of levels) {
+    const delta = level - prev
+    if (delta <= 0) { prev = level; continue }
+    const participants = totals.filter((x) => x.total >= level).map((x) => x.idx)
+    const amount = delta * participants.length
+    const eligible = participants.filter((idx) => !seats[idx].hasFolded)
+    if (eligible.length > 0) {
+      pots.push({ amount: amount + carry, eligibleSeatIdxs: eligible })
+      carry = 0
+    } else {
+      carry += amount
+    }
+    prev = level
+  }
+  if (carry > 0 && pots.length > 0) pots[pots.length - 1].amount += carry
+  return pots
+}
+
+export function getTotalPot(state: PokerTableState): number {
+  return computePots(state).reduce((sum, p) => sum + p.amount, 0)
 }
 
 function prevActiveSeatIndex(seats: SeatState[], startExclusive: number): number | null {

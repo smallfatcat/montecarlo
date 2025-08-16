@@ -4,7 +4,7 @@ import type { PokerTableState } from '../types'
 
 describe('no-limit min-raise rules', () => {
   it('preflop min-open is 2x big blind (1/2 -> to 4)', () => {
-    let t: PokerTableState = createInitialPokerTable(3, [1,2], 200)
+    let t: PokerTableState = createInitialPokerTable(3, [1,2], 200 as number)
     t.rules.smallBlind = 1
     t.rules.bigBlind = 2
     t = startHand(t)
@@ -16,7 +16,7 @@ describe('no-limit min-raise rules', () => {
   })
 
   it('postflop bet of 6 requires min-raise to 12 (extra 6)', () => {
-    let t: PokerTableState = createInitialPokerTable(3, [1,2], 200)
+    let t: PokerTableState = createInitialPokerTable(3, [1,2], 200 as number)
     t.rules.smallBlind = 1
     t.rules.bigBlind = 2
     t = startHand(t)
@@ -34,7 +34,7 @@ describe('no-limit min-raise rules', () => {
   })
 
   it('short all-in below min-raise does not re-open action', () => {
-    let t: PokerTableState = createInitialPokerTable(4, [1,2,3], 200)
+    let t: PokerTableState = createInitialPokerTable(4, [1,2,3], 200 as number)
     t.rules.smallBlind = 1
     t.rules.bigBlind = 2
     t = startHand(t)

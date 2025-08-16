@@ -1,7 +1,7 @@
 {
   "name": "montecarlo",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.2.0",
   "homepage": "https://smallfatcat.github.io/montecarlo/",
   "type": "module",
   "scripts": {
@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "analyze": "vite build --mode analyze",
     "gen:faces": "node ./scripts/generate-face-art.mjs"
   },
   "devDependencies": {
@@ -20,11 +21,18 @@
     "gh-pages": "^6.3.0",
     "typescript": "~5.8.3",
     "vite": "^7.1.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "rollup-plugin-visualizer": "^5.12.0",
+    "rollup": "npm:@rollup/wasm-node@4.46.2"
   },
   "dependencies": {
+    "@montecarlo/shared": "file:../packages/shared",
     "framer-motion": "^12.23.12",
+    "socket.io-client": "^4.7.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
+  },
+  "overrides": {
+    "rollup": "npm:@rollup/wasm-node@4.46.2"
   }
 }

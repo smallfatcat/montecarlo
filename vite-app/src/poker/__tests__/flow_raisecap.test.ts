@@ -4,7 +4,7 @@ import type { PokerTableState } from '../types'
 
 describe('raise availability in no-limit', () => {
   it('keeps raises available (no cap) after multiple raises', () => {
-    let t: PokerTableState = createInitialPokerTable(3, [1,2], 200)
+    let t: PokerTableState = createInitialPokerTable(3, [1,2], 200 as number)
     t = startHand(t)
     // preflop close quickly: fold, call, check
     t = applyAction(t, { type: 'fold' })

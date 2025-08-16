@@ -7,7 +7,7 @@ const C = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit })
 
 describe('poker flow: blinds, preflop to flop, simple actions', () => {
   it('posts blinds, deals, advances to flop when betting round closes', () => {
-    let t: PokerTableState = createInitialPokerTable(3, [1,2], 200, [
+    let t: PokerTableState = createInitialPokerTable(3, [1,2], 200 as number, [
       // bottom ........................................ top
       C('2','Clubs'), C('3','Clubs'), C('4','Clubs'), C('5','Clubs'), C('6','Clubs'),
       C('7','Clubs'), C('8','Clubs'), C('9','Clubs'), C('10','Clubs'), C('J','Clubs'),

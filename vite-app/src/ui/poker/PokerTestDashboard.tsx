@@ -38,6 +38,33 @@ export function PokerTestDashboard() {
 
   return (
     <div style={{ display: 'grid', gap: 8 }}>
+      {/* Navigation */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        padding: '16px',
+        background: 'rgba(0,0,0,0.1)',
+        borderRadius: '8px',
+        border: '1px solid rgba(255,255,255,0.1)'
+      }}>
+        <h2 style={{ margin: 0, color: '#fff' }}>Poker Test Dashboard</h2>
+        <a 
+          href="#poker-layout-editor"
+          style={{
+            padding: '8px 16px',
+            background: '#4CAF50',
+            color: 'white',
+            textDecoration: 'none',
+            borderRadius: '6px',
+            fontWeight: '600',
+            fontSize: '14px'
+          }}
+        >
+          🎯 Layout Editor
+        </a>
+      </div>
+
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <label>Seats <input type="number" min={2} max={9} value={seats} onChange={(e)=>setSeats(parseInt(e.target.value||'0'))} /></label>
         <label>Stack <input type="number" min={1} value={stack} onChange={(e)=>setStack(parseInt(e.target.value||'0'))} /></label>

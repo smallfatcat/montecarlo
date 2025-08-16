@@ -1,90 +1,230 @@
 {
   "seats": {
     "0": {
-      "left": 1082,
-      "top": 182,
+      "left": 980,
+      "top": 20,
       "width": 200,
-      "height": 214
+      "height": 140
     },
     "1": {
-      "left": 1082,
-      "top": 532,
+      "left": 980,
+      "top": 430,
       "width": 200,
-      "height": 214
+      "height": 140
     },
     "2": {
-      "left": 802,
-      "top": 562,
+      "left": 650,
+      "top": 430,
       "width": 200,
-      "height": 214
+      "height": 140
     },
     "3": {
-      "left": 402,
-      "top": 562,
+      "left": 300,
+      "top": 430,
       "width": 200,
-      "height": 214
+      "height": 140
     },
     "4": {
-      "left": 122,
-      "top": 532,
+      "left": 10,
+      "top": 430,
       "width": 200,
-      "height": 214
+      "height": 140
     },
     "5": {
-      "left": 122,
-      "top": 182,
+      "left": 10,
+      "top": 20,
       "width": 200,
-      "height": 214
-    }
-  },
-  "bets": {
-    "0": {
-      "left": 932,
-      "top": 162,
-      "width": 22.015625,
-      "height": 14
+      "height": 140
     },
-    "1": {
-      "left": 932,
-      "top": 382,
-      "width": 22.015625,
-      "height": 14
+    "seat-0": {
+      "left": 980,
+      "top": 20,
+      "width": 200,
+      "height": 140
     },
-    "2": {
-      "left": 802,
-      "top": 422,
-      "width": 22.015625,
-      "height": 14
-    },
-    "3": {
-      "left": 402,
-      "top": 422,
-      "width": 22.015625,
-      "height": 14
-    },
-    "4": {
-      "left": 272,
-      "top": 382,
-      "width": 22.015625,
-      "height": 14
-    },
-    "5": {
-      "left": 272,
-      "top": 162,
-      "width": 22.015625,
-      "height": 14
+    "seat-1": {
+      "left": 970,
+      "top": 430,
+      "width": 200,
+      "height": 140
     }
   },
   "board": {
-    "left": 321,
-    "top": 151,
-    "width": 0,
-    "height": 0
+    "left": 330,
+    "top": 260,
+    "width": 400,
+    "height": 140
   },
   "pot": {
-    "left": 551,
-    "top": 331,
-    "width": 62.71875,
+    "left": 520,
+    "top": 400,
+    "width": 100,
+    "height": 60
+  },
+  "showdown": {
+    "left": -220,
+    "top": -60,
+    "width": 400,
     "height": 24
+  },
+  "bets": {
+    "0": {
+      "left": 900,
+      "top": 220,
+      "width": 60,
+      "height": 40
+    },
+    "1": {
+      "left": 920,
+      "top": 360,
+      "width": 22.015625,
+      "height": 14
+    },
+    "2": {
+      "left": 720,
+      "top": 360,
+      "width": 22.015625,
+      "height": 14
+    },
+    "3": {
+      "left": 370,
+      "top": 360,
+      "width": 22.015625,
+      "height": 14
+    },
+    "4": {
+      "left": 210,
+      "top": 360,
+      "width": 22.015625,
+      "height": 14
+    },
+    "5": {
+      "left": 220,
+      "top": 220,
+      "width": 22.015625,
+      "height": 14
+    }
+  },
+  "stacks": {
+    "0": {
+      "left": 1020,
+      "top": 270,
+      "width": 120,
+      "height": 40
+    },
+    "1": {
+      "left": 1020,
+      "top": 670,
+      "width": 120,
+      "height": 40
+    },
+    "2": {
+      "left": 690,
+      "top": 670,
+      "width": 120,
+      "height": 40
+    },
+    "3": {
+      "left": 340,
+      "top": 670,
+      "width": 120,
+      "height": 40
+    },
+    "4": {
+      "left": 50,
+      "top": 670,
+      "width": 120,
+      "height": 40
+    },
+    "5": {
+      "left": 50,
+      "top": 260,
+      "width": 120,
+      "height": 40
+    }
+  },
+  "controls": {
+    "left": 450,
+    "top": 10,
+    "width": 200,
+    "height": 200
+  },
+  "controlsChildren": {
+    "check": {
+      "left": 34,
+      "top": 20,
+      "width": 60,
+      "height": 30
+    },
+    "call": {
+      "left": 34,
+      "top": 54,
+      "width": 60,
+      "height": 30
+    },
+    "fold": {
+      "left": 34,
+      "top": 90,
+      "width": 60,
+      "height": 30
+    },
+    "betBtn": {
+      "left": 34,
+      "top": 124,
+      "width": 60,
+      "height": 30
+    },
+    "raise": {
+      "left": 34,
+      "top": 160,
+      "width": 60,
+      "height": 30
+    },
+    "betLabel": {
+      "left": 92,
+      "top": 14,
+      "width": 40,
+      "height": 20
+    },
+    "betInput": {
+      "left": 148,
+      "top": 14,
+      "width": 60,
+      "height": 20
+    },
+    "potSlider": {
+      "left": 120,
+      "top": 96,
+      "width": 60,
+      "height": 80
+    },
+    "potSliderLabel": {
+      "left": 108,
+      "top": 106,
+      "width": 60,
+      "height": 20
+    },
+    "stackSlider": {
+      "left": 196,
+      "top": 96,
+      "width": 60,
+      "height": 80
+    },
+    "stackSliderLabel": {
+      "left": 176,
+      "top": 106,
+      "width": 60,
+      "height": 20
+    },
+    "stackLabel": {
+      "left": 140,
+      "top": 160,
+      "width": 100,
+      "height": 20
+    }
+  },
+  "controlsBox": {
+    "width": 200,
+    "height": 160
   }
 }

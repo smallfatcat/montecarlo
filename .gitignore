@@ -1,1 +1,154 @@
-node_modules
+# Cursor rules
+.cursorrules
+
+# Version and build information files (auto-generated)
+VERSION
+BUILD_INFO
+**/VERSION
+**/BUILD_INFO
+src/version.h
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+dist-ssr/
+**/dist-ssr/
+
+# TypeScript build info
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+**/*.tsbuildinfo
+**/tsconfig.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+**/.env
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+**/logs/
+**/*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+**/coverage/
+**/*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+**/.cache
+**/.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+**/*.tmp
+**/*.temp
+
+# Game server specific
+apps/game-server/node_modules
+apps/game-server/dist
+apps/game-server/build
+apps/game-server/public
+apps/game-server/src
+apps/game-server/src/assets
+apps/game-server/src/assets/images
+apps/game-server/src/assets/images/icons
+apps/game-server/src/assets/images/icons/favicon.ico
+
+# Package specific build outputs
+packages/shared/dist/
+packages/poker-engine/dist/

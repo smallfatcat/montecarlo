@@ -1,11 +1,73 @@
 import { describe, it, expect } from 'vitest'
-import type { Card } from '../../blackjack/types'
-import { createInitialPokerTable, __test__finalizeShowdown } from '../flow'
+import { createInitialPokerTable, computePots, __test__finalizeShowdown } from '../flow'
 import type { PokerTableState } from '../types'
+import type { Card } from '../../blackjack/types'
+import { CONFIG } from '../../config'
 
 const C = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit })
 
 describe('side pots', () => {
+  it('constructs layered pots for 3-way uneven commitments', () => {
+    const t = createInitialPokerTable(3, [1,2], 0 as number)
+    t.seats.forEach(s => { s.hasFolded = false })
+    t.seats[0].totalCommitted = 10
+    t.seats[1].totalCommitted = 20
+    t.seats[2].totalCommitted = 50
+
+    const pots = computePots(t)
+    expect(pots).toEqual([
+      { amount: 30, eligibleSeatIdxs: [0,1,2] },
+      { amount: 20, eligibleSeatIdxs: [1,2] },
+      { amount: 30, eligibleSeatIdxs: [2] },
+    ])
+  })
+
+  it('awards all pots to the best eligible hand', () => {
+    let t: PokerTableState = createInitialPokerTable(3, [1,2], 0 as number)
+    t.buttonIndex = 0
+    t.seats.forEach(s => { s.hasFolded = false; s.stack = 0 })
+    // Commitments: 10, 20, 50 -> pots 30,20,30 (rake 0)
+    t.seats[0].totalCommitted = 10
+    t.seats[1].totalCommitted = 20
+    t.seats[2].totalCommitted = 50
+    // Give player 2 the clear best hand
+    t.community = [C('A','Clubs'), C('K','Diamonds'), C('7','Clubs'), C('2','Diamonds'), C('9','Spades')]
+    t.seats[0].hole = [C('3','Clubs'), C('4','Clubs')]
+    t.seats[1].hole = [C('K','Hearts'), C('Q','Hearts')]
+    t.seats[2].hole = [C('A','Hearts'), C('A','Spades')]
+
+    t = __test__finalizeShowdown(t)
+    // Player 2 should receive 80 total; others zero
+    expect(t.seats[2].stack).toBe(80)
+    expect(t.seats[0].stack).toBe(0)
+    expect(t.seats[1].stack).toBe(0)
+  })
+
+  it('splits pot with remainder deterministically (rake creates odd distributable)', () => {
+    const restore = { pct: CONFIG.poker.rakePercent, cap: CONFIG.poker.rakeCap }
+    ;(CONFIG.poker as any).rakePercent = 0.05
+    ;(CONFIG.poker as any).rakeCap = 0
+    let t: PokerTableState = createInitialPokerTable(2, [1], 0 as number)
+    t.buttonIndex = 0
+    t.seats.forEach(s => { s.hasFolded = false; s.stack = 0 })
+    // Both commit 10 -> single pot amount 20; rake=1 -> distributable 19
+    t.seats[0].totalCommitted = 10
+    t.seats[1].totalCommitted = 10
+    // Force a tie between both seats
+    t.community = [C('A','Clubs'), C('K','Diamonds'), C('Q','Clubs'), C('J','Diamonds'), C('10','Spades')]
+    t.seats[0].hole = [C('2','Clubs'), C('3','Clubs')]
+    t.seats[1].hole = [C('2','Hearts'), C('3','Hearts')]
+
+    t = __test__finalizeShowdown(t)
+    // 19 split -> 9 each, remainder 1 goes clockwise from button+1 (seat 1)
+    expect(t.seats[0].stack).toBe(9)
+    expect(t.seats[1].stack).toBe(10)
+    ;(CONFIG.poker as any).rakePercent = restore.pct
+    ;(CONFIG.poker as any).rakeCap = restore.cap
+  })
+})
+
+describe('side pots (advanced scenarios)', () => {
   it('awards pots correctly when multiple all-ins with different amounts', () => {
     let t: PokerTableState = createInitialPokerTable(3, [1,2], 200)
     // Manually craft a showdown state: all to showdown, set community and totals
@@ -58,6 +120,32 @@ describe('side pots', () => {
     const delta012 = (after[0]-before[0]) + (after[1]-before[1]) + (after[2]-before[2])
     expect(delta012).toBe(120)
     expect(after[3] - before[3]).toBe(1)
+  })
+
+  it('4-way all-in layered side pots with overpairs on dry board (Aces > Kings > Queens > Jacks)', () => {
+    let t: PokerTableState = createInitialPokerTable(4, [1,2,3], 0)
+    t.seats.forEach(s => { s.hasFolded = false; s.stack = 0 })
+    // Totals: 10,20,30,40
+    t.seats[0].totalCommitted = 10
+    t.seats[1].totalCommitted = 20
+    t.seats[2].totalCommitted = 30
+    t.seats[3].totalCommitted = 40
+    // Hole cards
+    t.seats[0].hole = [C('A','Clubs'), C('A','Hearts')]
+    t.seats[1].hole = [C('K','Clubs'), C('K','Hearts')]
+    t.seats[2].hole = [C('Q','Clubs'), C('Q','Hearts')]
+    t.seats[3].hole = [C('J','Clubs'), C('J','Hearts')]
+    // Board: 2H, 3C, 6S, 7D, 8H
+    t.community = [C('2','Hearts'), C('3','Clubs'), C('6','Spades'), C('7','Diamonds'), C('8','Hearts')]
+
+    const pots = computePots(t)
+    expect(pots.map(p => p.amount)).toEqual([40, 30, 20, 10])
+    // Settle and assert stacks
+    t = __test__finalizeShowdown(t)
+    expect(t.seats[0].stack).toBe(40)
+    expect(t.seats[1].stack).toBe(30)
+    expect(t.seats[2].stack).toBe(20)
+    expect(t.seats[3].stack).toBe(10)
   })
 })
 

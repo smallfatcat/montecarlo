@@ -7,7 +7,7 @@ const C = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit })
 
 describe('street-by-street closures', () => {
   it('preflop check-around closes when no aggression (heads-up after blinds)', () => {
-    let t: PokerTableState = createInitialPokerTable(2, [1], 200)
+    let t: PokerTableState = createInitialPokerTable(2, [1], 200 as number)
     t = startHand(t)
     // Assuming SB posts 1, BB posts 2; preflop starts at UTG (SB when 2 players)
     // SB calls 1, BB checks → go to flop
@@ -17,7 +17,7 @@ describe('street-by-street closures', () => {
   })
 
   it('flop bet and one raise then calls -> advances off flop', () => {
-    let t: PokerTableState = createInitialPokerTable(3, [1,2], 200)
+    let t: PokerTableState = createInitialPokerTable(3, [1,2], 200 as number)
     t = startHand(t)
     // close preflop quickly: fold, call, check
     // UTG folds
@@ -43,7 +43,7 @@ describe('street-by-street closures', () => {
   })
 
   it('all-in fast-forwards remaining streets to showdown (preflop shove)', () => {
-    let t: PokerTableState = createInitialPokerTable(2, [1], 10)
+    let t: PokerTableState = createInitialPokerTable(2, [1], 10 as number)
     t = startHand(t)
     // SB (to act) shoves preflop, BB calls
     t = applyAction(t, { type: 'raise', amount: 100 })

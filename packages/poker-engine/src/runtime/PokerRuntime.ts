@@ -1,0 +1,221 @@
+import { makeXorShift32 } from '../blackjack/deck.js'
+import { applyAction, createInitialPokerTable, getAvailableActions, startHand } from '../flow.js'
+import { suggestActionPoker } from '../strategy.js'
+import type { PokerTableState, BettingAction } from '../types'
+import { CONFIG } from '../localConfig.js'
+
+export type RuntimeCallbacks = {
+  onState: (state: PokerTableState) => void
+  onAction?: (handId: number, seat: number, action: BettingAction, toCall: number, street: PokerTableState['street']) => void
+  onDeal?: (handId: number, street: Exclude<PokerTableState['street'], 'preflop' | 'showdown' | null>, cardCodes: string[]) => void
+  onHandStart?: (handId: number, buttonIndex: number, smallBlind: number, bigBlind: number) => void
+  onPostBlind?: (seat: number, amount: number) => void
+  onHandSetup?: (setup: {
+    handId: number
+    buttonIndex: number
+    rules: { smallBlind: number; bigBlind: number }
+    deck: string[]
+    deckRemaining: number
+    deckTotal: number
+    seats: Array<{
+      stack: number
+      committedThisStreet: number
+      totalCommitted: number
+      hasFolded: boolean
+      isAllIn: boolean
+      hole: string[]
+    }>
+  }) => void
+}
+
+export interface RuntimeOptions {
+  seats: number
+  cpuSeats: number[]
+  startingStack: number
+}
+
+type TimerId = number | null
+
+export class PokerRuntime {
+  private state: PokerTableState
+  private autoPlay: boolean = false
+  private timers: { cpu: TimerId; player: TimerId; autoDeal: TimerId; watchdog: TimerId } = {
+    cpu: null,
+    player: null,
+    autoDeal: null,
+    watchdog: null,
+  }
+  private readonly cb: RuntimeCallbacks
+  private delayBumpOnceMs: number = 0
+
+  constructor(opts: RuntimeOptions, cb: RuntimeCallbacks) {
+    this.state = createInitialPokerTable(opts.seats, opts.cpuSeats, opts.startingStack)
+    this.cb = cb
+    if (CONFIG.poker.random?.useSeeded) {
+      const base = CONFIG.poker.random.seed ?? 1
+      const rng = makeXorShift32(((base * 0x9E3779B1) >>> 0))
+      ;(globalThis as any).__POKER_RNG__ = rng
+    }
+    this.cb.onState(this.state)
+  }
+
+  dispose() { this.clearAllTimers() }
+  setAutoPlay(v: boolean) { this.autoPlay = v; this.armTimers() }
+
+  /**
+   * Toggle whether a given seat should be driven by CPU logic.
+   * When set to false, the runtime will not schedule an automatic CPU action when it is this seat's turn.
+   */
+  setSeatCpu(seatIndex: number, isCpu: boolean) {
+    if (seatIndex < 0 || seatIndex >= this.state.seats.length) return
+    const before = this.state.seats[seatIndex].isCPU
+    if (before === isCpu) return
+    this.state.seats[seatIndex].isCPU = isCpu
+    this.cb.onState(this.state)
+    this.armTimers()
+  }
+
+  beginHand() {
+    this.state = startHand(this.state)
+    const s = this.state
+    const toCode = (c: any) => `${c.rank}${c.suit[0]}`
+    this.cb.onHandStart?.(s.handId, s.buttonIndex, s.rules.smallBlind, s.rules.bigBlind)
+    s.seats.forEach((seat, i) => { if (seat.committedThisStreet > 0) this.cb.onPostBlind?.(i, seat.committedThisStreet) })
+    const setup = {
+      handId: s.handId,
+      buttonIndex: s.buttonIndex,
+      rules: { smallBlind: s.rules.smallBlind, bigBlind: s.rules.bigBlind },
+      deck: s.deck.map(toCode),
+      deckRemaining: s.deck.length,
+      deckTotal: s.deck.length + s.community.length + s.seats.reduce((sum, seat) => sum + seat.hole.length, 0),
+      seats: s.seats.map((seat) => ({
+        stack: seat.stack,
+        committedThisStreet: seat.committedThisStreet,
+        totalCommitted: seat.totalCommitted,
+        hasFolded: seat.hasFolded,
+        isAllIn: seat.isAllIn,
+        hole: seat.hole.map(toCode),
+      })),
+    }
+    this.cb.onHandSetup?.(setup)
+    this.cb.onState(this.state)
+    try {
+      const committedSum = this.state.seats.reduce((sum, s) => sum + (s.committedThisStreet || 0), 0)
+      if (committedSum > 0) {
+        const bump = CONFIG.poker.animations?.chipFlyDurationMs ?? 0
+        this.delayBumpOnceMs = Math.max(this.delayBumpOnceMs, bump)
+      }
+    } catch {}
+    this.armTimers()
+  }
+
+  act(action: BettingAction) {
+    if (this.state.status !== 'in_hand') return
+    const toAct = this.state.currentToAct
+    const isPlayer = toAct === 0
+    const before = this.state
+    const actorIndex = before.currentToAct ?? -1
+    const toCall = Math.max(0, before.betToCall - (before.seats[actorIndex]?.committedThisStreet || 0))
+    const street = before.street
+    const handId = before.handId
+    const prevCommittedSum = before.seats.reduce((sum: number, s: any) => sum + (s.committedThisStreet || 0), 0)
+    const next = applyAction(before, action)
+    if (next === before) return
+    const prevComm = before.community.length
+    const nextComm = next.community.length
+    this.state = next
+    const nextCommittedSum = next.seats.reduce((sum: number, s: any) => sum + (s.committedThisStreet || 0), 0)
+    if (prevCommittedSum > 0 && nextCommittedSum === 0) {
+      const bump = CONFIG.poker.animations?.chipFlyDurationMs ?? 0
+      this.delayBumpOnceMs = Math.max(this.delayBumpOnceMs, bump)
+    }
+    try {
+      const actorBefore = before.seats[actorIndex]
+      const actorAfter = next.seats[actorIndex]
+      if (actorBefore && actorAfter) {
+        const deltaCommitted = (actorAfter.committedThisStreet || 0) - (actorBefore.committedThisStreet || 0)
+        if (deltaCommitted > 0) {
+          const bump = CONFIG.poker.animations?.chipFlyDurationMs ?? 0
+          this.delayBumpOnceMs = Math.max(this.delayBumpOnceMs, bump)
+        }
+      }
+    } catch {}
+    this.cb.onAction?.(handId, actorIndex, action, toCall, street)
+    if (nextComm > prevComm) {
+      const toCode = (c: any) => `${c.rank}${c.suit[0]}`
+      if (nextComm === 3) this.cb.onDeal?.(handId, 'flop', next.community.slice(0, 3).map(toCode))
+      else if (nextComm === 4) this.cb.onDeal?.(handId, 'turn', next.community.slice(3, 4).map(toCode))
+      else if (nextComm === 5) this.cb.onDeal?.(handId, 'river', next.community.slice(4, 5).map(toCode))
+    }
+    this.cb.onState(this.state)
+    this.armTimers()
+  }
+
+  private clearAllTimers() { Object.keys(this.timers).forEach((k) => { const key = k as keyof typeof this.timers; const id = this.timers[key]; if (id != null) clearTimeout(id as number); this.timers[key] = null }) }
+
+  private armTimers() {
+    this.clearAllTimers()
+    const s = this.state
+    if (s.status === 'hand_over') {
+      if (s.gameOver) return
+      if (this.autoPlay) {
+        const bump = this.delayBumpOnceMs
+        this.delayBumpOnceMs = 0
+        const delay = CONFIG.pokerAutoplay.autoDealDelayMs + (CONFIG.poker.animations?.chipFlyDurationMs ?? 0) + bump
+        this.timers.autoDeal = setTimeout(() => this.beginHand(), delay) as unknown as number
+      }
+      return
+    }
+    if (s.status !== 'in_hand') return
+    const toAct = s.currentToAct
+    if (toAct == null) return
+    const toActSeat = s.seats[toAct]
+    const scheduleCpu = () => {
+      const bump = this.delayBumpOnceMs
+      this.delayBumpOnceMs = 0
+      const delay = CONFIG.pokerAutoplay.cpuActionDelayMs + bump
+      this.timers.cpu = setTimeout(() => {
+        const cur = this.state
+        if (cur.status !== 'in_hand' || cur.currentToAct !== toAct) return
+        const seat = cur.seats[toAct]
+        if (!seat?.isCPU) return
+        const a = this.suggestCpuAction()
+        this.act(a)
+      }, delay) as unknown as number
+      this.timers.watchdog = setTimeout(() => {
+        const cur = this.state
+        if (cur.status !== 'in_hand' || cur.currentToAct !== toAct) return
+        const seat = cur.seats[toAct]
+        if (!seat?.isCPU) return
+        const a = this.suggestCpuAction()
+        this.act(a)
+      }, delay + 1200) as unknown as number
+    }
+    const schedulePlayer = () => {
+      if (!this.autoPlay) return
+      const bump = this.delayBumpOnceMs
+      this.delayBumpOnceMs = 0
+      const delay = CONFIG.pokerAutoplay.playerActionDelayMs + bump
+      this.timers.player = setTimeout(() => {
+        if (this.state.status !== 'in_hand' || this.state.currentToAct !== toAct) return
+        const a = this.suggestCpuAction()
+        this.act(a)
+      }, delay) as unknown as number
+    }
+    // Drive by seat type: if CPU seat, schedule CPU; otherwise, treat as human and only schedule player when autoplay is enabled
+    if (toActSeat?.isCPU) scheduleCpu(); else schedulePlayer()
+  }
+
+  private suggestCpuAction(): BettingAction {
+    const suggested = suggestActionPoker(this.state, 'tight')
+    if (suggested) return suggested
+    const avail = getAvailableActions(this.state)
+    if (avail.includes('check')) return { type: 'check' }
+    if (avail.includes('call')) return { type: 'call' }
+    if (avail.includes('fold')) return { type: 'fold' }
+    return { type: 'fold' }
+  }
+}
+
+
+

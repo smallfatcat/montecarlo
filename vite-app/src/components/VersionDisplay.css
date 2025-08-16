@@ -1,0 +1,166 @@
+.version-display {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  position: relative;
+  display: inline-block;
+}
+
+.version-toggle {
+  background: #2d3748;
+  color: #e2e8f0;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.version-toggle:hover {
+  background: #4a5568;
+  border-color: #718096;
+}
+
+.version-toggle:active {
+  transform: translateY(1px);
+}
+
+.version-details {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #1a202c;
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  padding: 16px;
+  margin-top: 4px;
+  min-width: 300px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  font-size: 11px;
+}
+
+.version-details::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 12px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid #4a5568;
+}
+
+.version-details::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: 12px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid #1a202c;
+}
+
+.version-section {
+  margin-bottom: 16px;
+}
+
+.version-section:last-child {
+  margin-bottom: 0;
+}
+
+.version-section h4 {
+  margin: 0 0 8px 0;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.version-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.version-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.version-item .label {
+  color: #a0aec0;
+  font-weight: 500;
+}
+
+.version-item .value {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.status-clean {
+  color: #68d391 !important;
+}
+
+.status-dirty {
+  color: #f6ad55 !important;
+}
+
+.component-versions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.component-version {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid #2d3748;
+}
+
+.component-version:last-child {
+  border-bottom: none;
+}
+
+.component-name {
+  color: #a0aec0;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.component-version-value {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .version-details {
+    right: auto;
+    left: 0;
+    min-width: 280px;
+  }
+  
+  .version-details::before,
+  .version-details::after {
+    right: auto;
+    left: 12px;
+  }
+  
+  .version-grid {
+    grid-template-columns: 1fr;
+  }
+}

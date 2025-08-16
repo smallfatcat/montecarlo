@@ -1,0 +1,1 @@
+{"version":3,"file":"strategy.d.ts","sourceRoot":"","sources":["../src/strategy.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,SAAS,CAAC;AAC7C,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,SAAS,CAAC;AAK/C,MAAM,MAAM,UAAU,GAAG,OAAO,GAAG,OAAO,CAAC;AA6D3C,wBAAgB,kBAAkB,CAAC,KAAK,EAAE,eAAe,EAAE,OAAO,GAAE,UAAoB,GAAG,aAAa,CA4DvG"}

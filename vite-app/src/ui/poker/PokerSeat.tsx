@@ -1,9 +1,14 @@
-import { Fragment } from 'react'
 import type { CSSProperties } from 'react'
-import { Card3D } from '../components/Card3D'
-import { ChipStack } from '../components/ChipStack'
-// import { CONFIG } from '../../config'
 import type { SeatState } from '../../poker/types'
+import {
+  PokerSeatDealerButton,
+  PokerSeatCards,
+  PokerSeatInfo,
+  PokerSeatStack,
+  PokerSeatEquity,
+  PokerSeatResult,
+  PokerSeatControls
+} from './components'
 
 export interface PokerSeatProps {
   idPrefix: string
@@ -13,6 +18,7 @@ export interface PokerSeatProps {
   buttonIndex: number
   currentToAct: number | null
   highlightSet: Set<string>
+  displayName?: string
   // Equity display options
   showPerSeatEquity?: boolean
   equityWinPct?: number | null
@@ -27,11 +33,20 @@ export interface PokerSeatProps {
   visibleHoleCount?: number // 0..2
   // force face-down regardless of visible count
   forceFaceDown?: boolean
+  // hide stack row inside seat container (for external placement)
+  hideStackRow?: boolean
+  // seating controls
+  canControlSeat?: boolean
+  onSitHere?: (seatIndex: number) => void
+  mySeatIndex?: number | null
+  // Equity and results data
+  equity?: { winPct: number[]; tiePct: number[]; running: boolean } | null
+  winnersSet?: Set<number>
+  showdownText?: string
+  // Drag system
+  dragSystem?: any
+  reservedExpiresAtMs?: number | null
 }
-
-const CARD_HEIGHT_PX = 140
-const EQUITY_LINE_HEIGHT_PX = 24
-const RESULT_LINE_HEIGHT_PX = 24
 
 export function PokerSeat(props: PokerSeatProps) {
   const {
@@ -51,10 +66,26 @@ export function PokerSeat(props: PokerSeatProps) {
     containerStyle,
     visibleHoleCount = 2,
     forceFaceDown = false,
+    hideStackRow = false,
+    canControlSeat = false,
+    onSitHere,
+    mySeatIndex = null,
+    equity,
+    winnersSet,
+    showdownText,
+    reservedExpiresAtMs = null,
   } = props
 
   const outline = seatIndex === currentToAct ? '2px solid #ffd54f' : undefined
-  const scaledCardHeight = Math.ceil(CARD_HEIGHT_PX * seatCardScale) + 2
+  const isYourSeat = (mySeatIndex != null) && (mySeatIndex === seatIndex)
+  const glow = isYourSeat ? '0 0 10px rgba(43, 168, 116, 0.8), 0 0 18px rgba(255,213,79,0.5)' : undefined
+
+  // Enhanced styling for current action
+  const currentActionStyle = seatIndex === currentToAct ? {
+    boxShadow: '0 0 15px rgba(255, 213, 79, 0.8), 0 0 25px rgba(255, 213, 79, 0.4)',
+    border: '2px solid #ffd54f',
+    background: 'rgba(255, 213, 79, 0.1)'
+  } : {}
 
   const baseStyle: CSSProperties = {
     position: 'relative',
@@ -64,74 +95,81 @@ export function PokerSeat(props: PokerSeatProps) {
     background: 'rgba(0,0,0,0.18)',
     outline,
     outlineOffset: 2,
+    boxShadow: glow,
     // width intentionally not set; pass via containerStyle if needed (horseshoe)
+    ...currentActionStyle
   }
 
   return (
     <div id={`${idPrefix}-${seatIndex}`} style={{ ...baseStyle, ...containerStyle }}>
-      {seatIndex === buttonIndex && (
-        <div
-          id={`${idPrefix}-dealer-${seatIndex}`}
-          title="Dealer Button"
-          style={{
-            position: 'absolute',
-            bottom: 6,
-            left: 6,
-            width: 20,
-            height: 20,
-            borderRadius: '50%',
-            display: 'grid',
-            placeItems: 'center',
-            fontSize: 12,
-            fontWeight: 800,
-            background: '#ffd54f',
-            color: '#1a1a1a',
-            boxShadow: '0 1px 6px rgba(0,0,0,0.4)',
-            border: '1px solid rgba(0,0,0,0.3)',
-            zIndex: 2
-          }}
-        >
-          D
-        </div>
-      )}
-      <div
-        id={`${idPrefix}-cards-${seatIndex}`}
-        style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center', height: scaledCardHeight }}
-      >
-        {!seat.hasFolded && seat.hole.slice(0, 2).map((c, k) => (
-          <div key={`${handId ?? 'H'}-${seatIndex}-${k}-${c.rank}-${c.suit}`} style={{ transform: `scale(${seatCardScale})`, transformOrigin: 'center' }}>
-            <Card3D card={c as any} highlight={highlightSet.has(`S${seatIndex}-${k}`)} faceDown={forceFaceDown || k >= (visibleHoleCount ?? 2)} />
-          </div>
-        ))}
-      </div>
-      <div id={`${idPrefix}-label-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}>
-        Seat {seatIndex}{seatIndex === buttonIndex ? ' (BTN)' : ''}{seat.hasFolded ? ' · Folded' : ''}{seat.isAllIn ? ' · All-in' : ''}
-      </div>
-      <div id={`${idPrefix}-stack-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-        <span>Stack:</span>
-        <ChipStack amount={seat.stack} />
-        <span style={{ opacity: 0.9 }}>({seat.stack})</span>
-      </div>
-      {/* <div id={`${idPrefix}-bets-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.9 }}> */}
-        {/* <span style={{ marginRight: 6 }}>In pot:</span>
-        <ChipStack amount={seat.totalCommitted} />
-        <span style={{ marginLeft: 6, opacity: 0.9 }}>({seat.totalCommitted})</span> */}
-      {/* </div> */}
-      {showPerSeatEquity && (
-        <div id={`${idPrefix}-equity-${seatIndex}`} style={{ textAlign: 'center', fontSize: 12, opacity: 0.85, minHeight: EQUITY_LINE_HEIGHT_PX }}>
-          {(equityWinPct != null && equityTiePct != null && !seat.hasFolded && seat.hole.length === 2) ? (
-            <Fragment>
-              {equityWinPct.toFixed(1)}% win • {equityTiePct.toFixed(1)}% tie {equityRunning ? ' (…)' : ''}
-            </Fragment>
-          ) : ''}
-        </div>
-      )}
-      <div
-        id={`${idPrefix}-result-${seatIndex}`}
-        style={{ textAlign: 'center', minHeight: RESULT_LINE_HEIGHT_PX, fontWeight: 700, color: resultText === 'Winner' ? '#ffd54f' : undefined }}
-      >
-        {resultText || ''}
-      </div>
+      <PokerSeatDealerButton
+        seatIndex={seatIndex}
+        buttonIndex={buttonIndex}
+        idPrefix={idPrefix}
+      />
+      
+      <PokerSeatCards
+        seatIndex={seatIndex}
+        handId={handId}
+        seatCardScale={seatCardScale}
+        hole={seat.hole}
+        hasFolded={seat.hasFolded}
+        highlightSet={highlightSet}
+        visibleHoleCount={visibleHoleCount}
+        forceFaceDown={forceFaceDown}
+        idPrefix={idPrefix}
+      />
+      
+      <PokerSeatInfo
+        seatIndex={seatIndex}
+        buttonIndex={buttonIndex}
+        currentToAct={currentToAct}
+        hasFolded={seat.hasFolded}
+        isAllIn={seat.isAllIn}
+        isCPU={seat.isCPU}
+        displayName={props.displayName}
+        mySeatIndex={mySeatIndex}
+        idPrefix={idPrefix}
+        reservedExpiresAtMs={reservedExpiresAtMs}
+      />
+      
+      <PokerSeatStack
+        seatIndex={seatIndex}
+        stack={seat.stack}
+        hideStackRow={hideStackRow}
+        idPrefix={idPrefix}
+      />
+      
+      <PokerSeatEquity
+        seatIndex={seatIndex}
+        hasFolded={seat.hasFolded}
+        holeLength={seat.hole.length}
+        equity={equity}
+        showPerSeatEquity={showPerSeatEquity}
+        equityWinPct={equityWinPct}
+        equityTiePct={equityTiePct}
+        equityRunning={equityRunning}
+        idPrefix={idPrefix}
+      />
+      
+      <PokerSeatResult
+        seatIndex={seatIndex}
+        hasFolded={seat.hasFolded}
+        holeLength={seat.hole.length}
+        resultText={resultText}
+        showdownText={showdownText}
+        winnersSet={winnersSet}
+        idPrefix={idPrefix}
+      />
+      
+      <PokerSeatControls
+        seatIndex={seatIndex}
+        isCPU={seat.isCPU}
+        canControlSeat={canControlSeat}
+        mySeatIndex={mySeatIndex}
+        onSitHere={onSitHere}
+        idPrefix={idPrefix}
+      />
     </div>
   )
 }
