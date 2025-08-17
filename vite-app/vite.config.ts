@@ -30,7 +30,7 @@ function readVersion(): string {
 }
 
 export default defineConfig(({ mode }) => ({
-  base: '/montecarlo/',
+  base: mode === 'development' ? '/' : '/montecarlo/',
   server: {
     watch: {
       usePolling: true,

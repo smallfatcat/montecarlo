@@ -120,6 +120,18 @@ generate_component_versions() {
         if [[ -f "$BUILD_INFO_FILE" ]]; then
             cp "$BUILD_INFO_FILE" "vite-app/BUILD_INFO"
             echo "Copied BUILD_INFO to vite-app for frontend access"
+            
+            # Also copy to public directory for development server access
+            if [[ -d "vite-app/public" ]]; then
+                cp "$BUILD_INFO_FILE" "vite-app/public/BUILD_INFO"
+                echo "Copied BUILD_INFO to vite-app/public for development access"
+            fi
+        fi
+        
+        # Also copy VERSION file to public directory for development server access
+        if [[ -d "vite-app/public" ]]; then
+            cp "vite-app/VERSION" "vite-app/public/VERSION"
+            echo "Copied VERSION to vite-app/public for development access"
         fi
     fi
 }
