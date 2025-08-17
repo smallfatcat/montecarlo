@@ -1,0 +1,465 @@
+
+🚀 STARTING ADVANCED TEXAS HOLD'EM SIMULATION 🚀
+
+
+--- ROUND 1 ---
+Player 4 calls 20
+
+--- ROUND 2 ---
+Player 5 calls 20
+
+--- ROUND 3 ---
+Player 6 calls 20
+
+--- ROUND 4 ---
+Player 1 calls 20
+
+--- ROUND 5 ---
+Player 2 checks
+
+--- ROUND 6 ---
+Player 3 raises to 68
+
+--- ROUND 7 ---
+Player 4 calls 58
+
+--- ROUND 8 ---
+Player 5 folds
+
+--- ROUND 9 ---
+Player 6 calls 58
+
+--- ROUND 10 ---
+Player 1 calls 58
+
+================================================================================
+GAME STATE - Street: PREFLOP
+Active Player: Player 2 (Seat 1)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |   922 |         78 |        78 | Active
+   1 | Player 2  |   980 |         20 |        20 | Active
+   2 | Player 3  |   922 |         78 |        78 | Active
+   3 | Player 4  |   922 |         78 |        78 | Active
+   4 | Player 5  |   980 |         20 |        20 | Folded
+   5 | Player 6  |   922 |         78 |        78 | Active
+
+MAIN POT: 352
+
+SIDE POTS:
+  Side Pot 1: 120 (Eligible: Player 1, Player 2, Player 3, Player 4, Player 6)
+  Side Pot 2: 232 (Eligible: Player 1, Player 3, Player 4, Player 6)
+TOTAL POT: 704
+================================================================================
+
+--- ROUND 11 ---
+Player 2 calls 58
+
+✅ Street PREFLOP complete, moving to next street
+
+🏁 SIMULATION COMPLETE - 11 rounds played 🏁
+
+================================================================================
+GAME STATE - Street: FLOP
+Active Player: Player 2 (Seat 1)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |   922 |          0 |        78 | Active
+   1 | Player 2  |   922 |          0 |        78 | Active
+   2 | Player 3  |   922 |          0 |        78 | Active
+   3 | Player 4  |   922 |          0 |        78 | Active
+   4 | Player 5  |   980 |          0 |        20 | Folded
+   5 | Player 6  |   922 |          0 |        78 | Active
+
+MAIN POT: 410
+
+SIDE POTS:
+  Side Pot 1: 120 (Eligible: Player 1, Player 2, Player 3, Player 4, Player 6)
+  Side Pot 2: 290 (Eligible: Player 1, Player 2, Player 3, Player 4, Player 6)
+TOTAL POT: 820
+================================================================================
+
+💰 FINAL CHIP COUNTS AFTER POT DISTRIBUTION:
+Player 1: 1086 chips
+Player 2: 1086 chips
+Player 3: 1086 chips
+Player 4: 1086 chips
+Player 5: 980 chips
+Player 6: 1086 chips
+
+🎲 DEMONSTRATING ALL-IN SCENARIO 🎲
+
+Initial state:
+
+================================================================================
+GAME STATE - Street: PREFLOP
+Active Player: Player 4 (Seat 3)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |    50 |          0 |         0 | Active
+   1 | Player 2  |    80 |         20 |        20 | Active
+   2 | Player 3  |   190 |         10 |        10 | Active
+   3 | Player 4  |   150 |          0 |         0 | Active
+   4 | Player 5  |   300 |          0 |         0 | Active
+   5 | Player 6  |   250 |          0 |         0 | Active
+
+MAIN POT: 30
+
+SIDE POTS:
+  Side Pot 1: 20 (Eligible: Player 2, Player 3)
+  Side Pot 2: 10 (Eligible: Player 2)
+TOTAL POT: 60
+================================================================================
+
+Simulating betting rounds...
+
+Player 3 raises to 100
+Player 1 goes all-in with 50
+Player 2 calls 100
+Player 4 raises to 150
+Player 5 calls 150
+Player 6 calls 150
+
+After betting round:
+
+================================================================================
+GAME STATE - Street: PREFLOP
+Active Player: Player 4 (Seat 3)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |     0 |         50 |        50 | Active
+   1 | Player 2  |     0 |        100 |       100 | Active
+   2 | Player 3  |    90 |        110 |       110 | Active
+   3 | Player 4  |     0 |        150 |       150 | Active
+   4 | Player 5  |   150 |        150 |       150 | All-In
+   5 | Player 6  |   100 |        150 |       150 | Active
+
+MAIN POT: 710
+
+SIDE POTS:
+  Side Pot 1: 300 (Eligible: Player 1, Player 2, Player 3, Player 4, Player 5, Player 6)
+  Side Pot 2: 250 (Eligible: Player 2, Player 3, Player 4, Player 5, Player 6)
+  Side Pot 3: 40 (Eligible: Player 3, Player 4, Player 5, Player 6)
+  Side Pot 4: 120 (Eligible: Player 4, Player 5, Player 6)
+TOTAL POT: 1420
+================================================================================
+
+Side pot breakdown:
+  Side Pot 1: 300 chips (Eligible: Player 1, Player 2, Player 3, Player 4, Player 5, Player 6)
+  Side Pot 2: 250 chips (Eligible: Player 2, Player 3, Player 4, Player 5, Player 6)
+  Side Pot 3: 40 chips (Eligible: Player 3, Player 4, Player 5, Player 6)
+  Side Pot 4: 120 chips (Eligible: Player 4, Player 5, Player 6)
+
+🔍 DEMONSTRATING BETTING VALIDATION 🔍
+
+Testing various betting scenarios:
+
+1. Testing check validation:
+   Player 4 trying to check: Invalid - Cannot check, must call or raise
+
+2. Testing bet validation:
+   Player 4 trying to bet 30: Invalid - Cannot bet when there is a bet to call, use raise instead
+
+3. Testing raise validation:
+   Player 4 trying to raise 30: Valid - OK
+
+4. Testing minimum raise validation:
+   Player 4 trying to raise 5: Invalid - Raise must be at least 20
+
+5. Testing call validation:
+   Player 4 trying to call: Valid - OK
+
+🧪 COMPREHENSIVE TESTING SUITE 🧪
+
+📊 TEST 1: Multiple All-Ins with Side Pots
+Initial state:
+
+================================================================================
+GAME STATE - Street: PREFLOP
+Active Player: Player 4 (Seat 3)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |    30 |          0 |         0 | Active
+   1 | Player 2  |    40 |         20 |        20 | Active
+   2 | Player 3  |   110 |         10 |        10 | Active
+   3 | Player 4  |   200 |          0 |         0 | Active
+   4 | Player 5  |   300 |          0 |         0 | Active
+   5 | Player 6  |   500 |          0 |         0 | Active
+
+MAIN POT: 30
+
+SIDE POTS:
+  Side Pot 1: 20 (Eligible: Player 2, Player 3)
+  Side Pot 2: 10 (Eligible: Player 2)
+TOTAL POT: 60
+================================================================================
+Player 2 called 60 (went all-in)
+Player 4 raised to 120
+Player 5 called 120
+Player 6 raised to 200
+Player 3 went all-in
+Player 2 is already all-in from previous call
+Player 4 called 200
+Player 5 called 200
+Player 6 called 200
+
+After complex betting:
+
+================================================================================
+GAME STATE - Street: PREFLOP
+Active Player: Player 4 (Seat 3)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |     0 |         30 |        30 | Active
+   1 | Player 2  |     0 |         60 |        60 | Active
+   2 | Player 3  |     0 |        120 |       120 | Active
+   3 | Player 4  |     0 |        200 |       200 | Active
+   4 | Player 5  |    90 |        210 |       210 | Active
+   5 | Player 6  |   290 |        210 |       210 | Active
+
+MAIN POT: 830
+
+SIDE POTS:
+  Side Pot 1: 180 (Eligible: Player 1, Player 2, Player 3, Player 4, Player 5, Player 6)
+  Side Pot 2: 150 (Eligible: Player 2, Player 3, Player 4, Player 5, Player 6)
+  Side Pot 3: 240 (Eligible: Player 3, Player 4, Player 5, Player 6)
+  Side Pot 4: 240 (Eligible: Player 4, Player 5, Player 6)
+  Side Pot 5: 20 (Eligible: Player 5, Player 6)
+TOTAL POT: 1660
+================================================================================
+
+💰 Final chip counts after pot distribution:
+Player 1: 168 chips
+Player 2: 198 chips
+Player 3: 258 chips
+Player 4: 338 chips
+Player 5: 438 chips
+Player 6: 638 chips
+
+🔄 TEST 2: Street Progression and Betting Reset
+Preflop state:
+
+================================================================================
+GAME STATE - Street: PREFLOP
+Active Player: Player 4 (Seat 3)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |  1000 |          0 |         0 | Active
+   1 | Player 2  |   980 |         20 |        20 | Active
+   2 | Player 3  |   990 |         10 |        10 | Active
+   3 | Player 4  |  1000 |          0 |         0 | Active
+   4 | Player 5  |  1000 |          0 |         0 | Active
+   5 | Player 6  |  1000 |          0 |         0 | Active
+
+MAIN POT: 30
+
+SIDE POTS:
+  Side Pot 1: 20 (Eligible: Player 2, Player 3)
+  Side Pot 2: 10 (Eligible: Player 2)
+TOTAL POT: 60
+================================================================================
+
+Preflop complete, moving to flop:
+
+================================================================================
+GAME STATE - Street: FLOP
+Active Player: Player 2 (Seat 1)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |   980 |          0 |        20 | Active
+   1 | Player 2  |   980 |          0 |        20 | Active
+   2 | Player 3  |   980 |          0 |        20 | Active
+   3 | Player 4  |   980 |          0 |        20 | Active
+   4 | Player 5  |   980 |          0 |        20 | Active
+   5 | Player 6  |   980 |          0 |        20 | Active
+
+MAIN POT: 120
+
+SIDE POTS:
+  Side Pot 1: 120 (Eligible: Player 1, Player 2, Player 3, Player 4, Player 5, Player 6)
+TOTAL POT: 240
+================================================================================
+
+Flop complete, moving to turn:
+
+================================================================================
+GAME STATE - Street: TURN
+Active Player: Player 2 (Seat 1)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |   880 |          0 |       120 | Active
+   1 | Player 2  |   880 |          0 |       120 | Active
+   2 | Player 3  |   940 |          0 |        60 | Active
+   3 | Player 4  |   880 |          0 |       120 | Active
+   4 | Player 5  |   880 |          0 |       120 | Active
+   5 | Player 6  |   880 |          0 |       120 | Active
+
+MAIN POT: 660
+
+SIDE POTS:
+  Side Pot 1: 360 (Eligible: Player 1, Player 2, Player 3, Player 4, Player 5, Player 6)
+  Side Pot 2: 300 (Eligible: Player 1, Player 2, Player 4, Player 5, Player 6)
+TOTAL POT: 1320
+================================================================================
+
+⚠️ TEST 3: Edge Cases and Error Conditions
+Testing edge cases:
+
+1. Player with 0 chips:
+   All-in with 0 chips: Invalid - No chips to bet
+
+2. Folded player trying to call: Invalid - Player cannot act
+
+3. All-in player trying to raise: Invalid - Not enough chips
+
+4. Bet below big blind: Invalid - Cannot bet when there is a bet to call, use raise instead
+
+5. Bet above chip count: Invalid - Cannot bet when there is a bet to call, use raise instead
+
+🎯 TEST 4: Button Movement and Blind Rotation
+Initial button position:
+Button: Player 1
+Big Blind: Player 2
+Small Blind: Player 3
+
+After moving button:
+Button: Player 2
+Big Blind: Player 3
+Small Blind: Player 4
+
+New game with moved button:
+
+================================================================================
+GAME STATE - Street: PREFLOP
+Active Player: Player 5 (Seat 4)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |  1000 |          0 |         0 | Active
+   1 | Player 2  |   980 |          0 |         0 | Active
+   2 | Player 3  |   970 |         20 |        20 | Active
+   3 | Player 4  |   990 |         10 |        10 | Active
+   4 | Player 5  |  1000 |          0 |         0 | Active
+   5 | Player 6  |  1000 |          0 |         0 | Active
+
+MAIN POT: 30
+
+SIDE POTS:
+  Side Pot 1: 20 (Eligible: Player 3, Player 4)
+  Side Pot 2: 10 (Eligible: Player 3)
+TOTAL POT: 60
+================================================================================
+
+🔄 TEST 5: Hand Reset Functionality
+Initial hand state:
+
+================================================================================
+GAME STATE - Street: PREFLOP
+Active Player: Player 4 (Seat 3)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |  1000 |          0 |         0 | Active
+   1 | Player 2  |   980 |         20 |        20 | Active
+   2 | Player 3  |   990 |         10 |        10 | Active
+   3 | Player 4  |  1000 |          0 |         0 | Active
+   4 | Player 5  |  1000 |          0 |         0 | Active
+   5 | Player 6  |  1000 |          0 |         0 | Active
+
+MAIN POT: 30
+
+SIDE POTS:
+  Side Pot 1: 20 (Eligible: Player 2, Player 3)
+  Side Pot 2: 10 (Eligible: Player 2)
+TOTAL POT: 60
+================================================================================
+
+After some actions:
+
+================================================================================
+GAME STATE - Street: PREFLOP
+Active Player: Player 4 (Seat 3)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |  1000 |          0 |         0 | Folded
+   1 | Player 2  |   980 |         20 |        20 | Active
+   2 | Player 3  |   990 |         10 |        10 | Active
+   3 | Player 4  |   980 |         20 |        20 | Active
+   4 | Player 5  |   950 |         50 |        50 | Active
+   5 | Player 6  |   950 |         50 |        50 | Active
+
+MAIN POT: 150
+
+SIDE POTS:
+  Side Pot 1: 50 (Eligible: Player 2, Player 3, Player 4, Player 5, Player 6)
+  Side Pot 2: 40 (Eligible: Player 2, Player 4, Player 5, Player 6)
+  Side Pot 3: 60 (Eligible: Player 5, Player 6)
+TOTAL POT: 300
+================================================================================
+
+After hand reset:
+
+================================================================================
+GAME STATE - Street: PREFLOP
+Active Player: Player 4 (Seat 3)
+================================================================================
+
+PLAYER STATUS:
+Seat | Name      | Chips | Street Bet | Total Bet | Status
+-----|-----------|-------|------------|-----------|--------
+   0 | Player 1  |  1000 |          0 |         0 | Active
+   1 | Player 2  |   960 |         20 |        20 | Active
+   2 | Player 3  |   980 |         10 |        10 | Active
+   3 | Player 4  |   980 |          0 |         0 | Active
+   4 | Player 5  |   950 |          0 |         0 | Active
+   5 | Player 6  |   950 |          0 |         0 | Active
+
+MAIN POT: 30
+
+SIDE POTS:
+  Side Pot 1: 20 (Eligible: Player 2, Player 3)
+  Side Pot 2: 10 (Eligible: Player 2)
+TOTAL POT: 60
+================================================================================
+
+⚡ TEST 6: Performance Test with Many Rounds
+Running 100 betting rounds...
+✅ Completed 13 rounds in 0ms
+Final pot: 2259
+Side pots: 0
+
+🎉 ALL TESTS COMPLETED! 🎉
