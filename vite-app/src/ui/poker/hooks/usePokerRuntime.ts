@@ -7,7 +7,8 @@ import type { HistoryEvent } from '../../../poker/history'
 export type RuntimeLike = {
   beginHand: () => void
   act: (action: BettingAction) => void
-  setAutoPlay: (v: boolean) => void
+  setSeatAutoPlay: (seatIndex: number, enabled: boolean) => void
+  isSeatAutoPlayEnabled: (seatIndex: number) => boolean
   sit?: (seatIndex: number, name: string) => void
   leave?: () => void
   reset?: () => void
@@ -21,7 +22,8 @@ export function usePokerRuntime(
   setTable: (table: PokerTableState | ((prev: PokerTableState) => PokerTableState)) => void,
   setPlayerNames: (names: Array<string | null> | ((prev: Array<string | null>) => Array<string | null>)) => void,
   setMySeatIndex: (seatIndex: number | null) => void,
-  setAutoPlay: (auto: boolean) => void,
+  setAutoplayForSeat: (seatIndex: number, enabled: boolean) => void,
+  clearAutoplayOnLeave: () => void,
 ) {
   const runtimeRef = useRef<RuntimeLike | null>(null)
   const lastRemoteAutoRef = useRef<boolean | null>(null)
@@ -32,7 +34,8 @@ export function usePokerRuntime(
     setTable,
     setPlayerNames,
     setMySeatIndex,
-    setAutoPlay,
+    setAutoplayForSeat,
+    clearAutoplayOnLeave,
   })
 
   // Update refs when callbacks change
@@ -42,7 +45,8 @@ export function usePokerRuntime(
       setTable,
       setPlayerNames,
       setMySeatIndex,
-      setAutoPlay,
+      setAutoplayForSeat,
+      clearAutoplayOnLeave,
     }
   })
 
@@ -95,7 +99,19 @@ export function usePokerRuntime(
       if ((window as any)?.__pokerReserved) delete (window as any).__pokerReserved[m.seatIndex]
     },
     onYouSeatChange: (seatIndex: number | null) => callbacksRef.current.setMySeatIndex(seatIndex),
-    onAutoplay: (auto: boolean) => { lastRemoteAutoRef.current = auto; callbacksRef.current.setAutoPlay(auto) },
+    onAutoplay: (seatIndex: number, auto: boolean) => { 
+      // Only process autoplay events for seats that this client controls
+      const currentSeatIndex = (runtimeRef.current as any)?.['mySeatIndexLocal'] ?? null
+      if (seatIndex === currentSeatIndex) {
+        lastRemoteAutoRef.current = auto
+        // Update the client's autoplay state to match the server
+        if (auto) {
+          callbacksRef.current.setAutoplayForSeat(seatIndex, true)
+        } else {
+          callbacksRef.current.setAutoplayForSeat(seatIndex, false)
+        }
+      }
+    },
   }), [])
 
   const resetRuntime = useCallback(() => {
@@ -113,7 +129,13 @@ export function usePokerRuntime(
     const cb = createRuntimeCallbacks()
     const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
     const rt = new PokerRuntime({ seats: numPlayers, cpuSeats, startingStack }, cb as any)
-    runtimeRef.current = rt as unknown as RuntimeLike
+    runtimeRef.current = {
+      beginHand: () => rt.beginHand(),
+      act: (action: BettingAction) => rt.act(action),
+      setSeatAutoPlay: (seatIndex: number, enabled: boolean) => rt.setSeatAutoPlay(seatIndex, enabled),
+      isSeatAutoPlayEnabled: (seatIndex: number) => rt.isSeatAutoPlayEnabled(seatIndex),
+      dispose: () => rt.dispose(),
+    } as RuntimeLike
   }, [numPlayers, startingStack, createRuntimeCallbacks])
 
   // Initialize runtime once and bridge state changes to React
@@ -131,7 +153,13 @@ export function usePokerRuntime(
     } else {
       const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
       const rt = new PokerRuntime({ seats: numPlayers, cpuSeats, startingStack }, cb as any)
-      runtimeRef.current = rt as unknown as RuntimeLike
+      runtimeRef.current = {
+        beginHand: () => rt.beginHand(),
+        act: (action: BettingAction) => rt.act(action),
+        setSeatAutoPlay: (seatIndex: number, enabled: boolean) => rt.setSeatAutoPlay(seatIndex, enabled),
+        isSeatAutoPlayEnabled: (seatIndex: number) => rt.isSeatAutoPlayEnabled(seatIndex),
+        dispose: () => rt.dispose(),
+      } as RuntimeLike
       // Local runtime has no concept of remote seating; treat seat 0 as the player's seat
       callbacksRef.current.setMySeatIndex(0)
     }

@@ -54,11 +54,14 @@ export declare const C2S: {
     }>;
     setAuto: z.ZodObject<{
         tableId: z.ZodDefault<z.ZodString>;
+        seatIndex: z.ZodNumber;
         auto: z.ZodBoolean;
     }, "strip", z.ZodTypeAny, {
         tableId: string;
+        seatIndex: number;
         auto: boolean;
     }, {
+        seatIndex: number;
         auto: boolean;
         tableId?: string | undefined;
     }>;
@@ -96,19 +99,19 @@ export declare const C2S: {
     }, {
         tableId?: string | undefined;
     }>;
-    identify: z.ZodDefault<z.ZodObject<{
+    identify: z.ZodObject<{
         token: z.ZodOptional<z.ZodString>;
-        name: z.ZodOptional<z.ZodString>;
+        name: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        name?: string | undefined;
+        name: string;
         token?: string | undefined;
     }, {
-        name?: string | undefined;
+        name: string;
         token?: string | undefined;
-    }>>;
-    joinLobby: z.ZodDefault<z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>>;
-    listTables: z.ZodDefault<z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>>;
-    createTable: z.ZodDefault<z.ZodObject<{
+    }>;
+    joinLobby: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+    listTables: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+    createTable: z.ZodObject<{
         tableId: z.ZodOptional<z.ZodString>;
         seats: z.ZodOptional<z.ZodNumber>;
         startingStack: z.ZodOptional<z.ZodNumber>;
@@ -120,7 +123,7 @@ export declare const C2S: {
         tableId?: string | undefined;
         seats?: number | undefined;
         startingStack?: number | undefined;
-    }>>;
+    }>;
 };
 export declare const S2C: {
     ready: z.ZodObject<{

@@ -4,7 +4,8 @@ export function createServerRuntimeTable(io, tableId, opts) {
     const startingStack = opts?.startingStack ?? 5000;
     const cpuSeats = Array.from({ length: seats }, (_, i) => i);
     let lastState = null;
-    let autoPlay = false;
+    // Track autoplay per client per seat
+    const clientAutoplay = new Map(); // playerId -> Set of seat indices with autoplay enabled
     const room = `table:${tableId}`;
     // Seat ownership map playerId -> seat index
     const seatOwners = new Map();
@@ -13,7 +14,14 @@ export function createServerRuntimeTable(io, tableId, opts) {
     const pendingReleases = new Map();
     const playersInRoom = new Set();
     const reservedBySeat = new Map(); // seatIndex -> reservation
-    let runtime = new PokerRuntime({ seats, cpuSeats, startingStack }, {
+    const shouldAutoplaySeat = (seatIndex) => {
+        for (const [, seatSet] of clientAutoplay.entries()) {
+            if (seatSet.has(seatIndex))
+                return true;
+        }
+        return false;
+    };
+    let runtime = new PokerRuntime({ seats, cpuSeats, startingStack, shouldAutoplaySeat }, {
         onState: (s) => {
             lastState = s;
             io.to(room).emit('state', s);
@@ -68,11 +76,6 @@ export function createServerRuntimeTable(io, tableId, opts) {
         socket.join(room);
         if (lastState)
             socket.emit('state', lastState);
-        // Always send current autoplay state on join
-        try {
-            socket.emit('autoplay', { auto: autoPlay });
-        }
-        catch { }
         // If this socket has an identified playerId and that player already owns a seat, inform them
         try {
             const pid = socket.data?.playerId || null;
@@ -186,16 +189,49 @@ export function createServerRuntimeTable(io, tableId, opts) {
                 return { ok: false, error: e?.message || 'act_failed' };
             }
         },
-        setAuto(auto) {
-            autoPlay = !!auto;
+        // Remove legacy global autoplay behavior
+        setAuto(_auto) { },
+        getAuto() { return false; },
+        // New per-client per-seat autoplay functions
+        setClientSeatAuto(playerId, seatIndex, enabled) {
+            if (enabled) {
+                const seatSet = clientAutoplay.get(playerId) || new Set();
+                seatSet.add(seatIndex);
+                clientAutoplay.set(playerId, seatSet);
+            }
+            else {
+                const seatSet = clientAutoplay.get(playerId);
+                if (seatSet) {
+                    seatSet.delete(seatIndex);
+                    if (seatSet.size === 0) {
+                        clientAutoplay.delete(playerId);
+                    }
+                }
+            }
+            // Re-arm timers so runtime reevaluates current toAct autoplay conditions
             try {
-                runtime.setAutoPlay?.(autoPlay);
+                runtime.rearmTimers?.();
             }
             catch { }
-            // Emit to everyone including sender so all clients get a consistent event
-            io.in(room).emit('autoplay', { auto: autoPlay });
+            // Only emit to the specific client, not broadcast to all
+            const clientSocket = Array.from(io.sockets.sockets.values()).find(s => s.data?.playerId === playerId);
+            if (clientSocket) {
+                clientSocket.emit('seat_autoplay', { playerId, seatIndex, enabled });
+            }
         },
-        getAuto() { return autoPlay; },
+        getClientSeatAuto(playerId, seatIndex) {
+            const seatSet = clientAutoplay.get(playerId);
+            return seatSet?.has(seatIndex) ?? false;
+        },
+        // Check if a seat should act automatically (for any client)
+        shouldSeatAutoPlay(seatIndex) {
+            for (const [playerId, seatSet] of clientAutoplay.entries()) {
+                if (seatSet.has(seatIndex)) {
+                    return true;
+                }
+            }
+            return false;
+        },
         getState() { return lastState; },
         addClient,
         removeClient,
@@ -301,7 +337,7 @@ export function createServerRuntimeTable(io, tableId, opts) {
                 runtime.dispose?.();
             }
             catch { }
-            runtime = new PokerRuntime({ seats, cpuSeats, startingStack }, {
+            runtime = new PokerRuntime({ seats, cpuSeats, startingStack, shouldAutoplaySeat }, {
                 onState: (s) => {
                     lastState = s;
                     io.to(room).emit('state', s);
@@ -351,10 +387,10 @@ export function createServerRuntimeTable(io, tableId, opts) {
                     catch { }
                 },
             });
-            autoPlay = false;
+            // Clear all client autoplay settings on reset
+            clientAutoplay.clear();
             lastState = runtime['state'];
             io.to(room).emit('state', lastState);
-            io.in(room).emit('autoplay', { auto: autoPlay });
             try {
                 opts?.onSummaryChange?.(getSummary());
             }

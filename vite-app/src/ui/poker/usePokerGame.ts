@@ -21,8 +21,10 @@ export function usePokerGame() {
     setNumPlayers,
     startingStack,
     setStartingStack,
-    autoPlay,
-    setAutoPlay,
+    mySeatAutoplay,
+    isAutoplayEnabled,
+    setAutoplayForSeat,
+    clearAutoplayOnLeave,
     hideHoleCardsUntilShowdown,
     setHideHoleCardsUntilShowdown,
     playerNames,
@@ -77,7 +79,8 @@ export function usePokerGame() {
     setTable,
     setPlayerNames,
     setMySeatIndex,
-    setAutoPlay,
+    setAutoplayForSeat,
+    clearAutoplayOnLeave,
   )
 
   // Game flow
@@ -104,7 +107,12 @@ export function usePokerGame() {
     eventQueue,
     setTable,
     setRevealed,
-    setAutoPlay,
+    // Create a wrapper for backward compatibility with usePokerReplay
+    (auto: boolean) => {
+      if (mySeatIndex !== null) {
+        setAutoplayForSeat(mySeatIndex, auto)
+      }
+    },
   )
 
   // Seating management
@@ -116,6 +124,7 @@ export function usePokerGame() {
     mySeatIndex,
     table,
     runtimeRef,
+    clearAutoplayOnLeave,
   )
 
   // Betting actions
@@ -150,13 +159,19 @@ export function usePokerGame() {
 
   // Reflect autoplay toggle into runtime, but avoid echoing remote-origin changes
   useEffect(() => {
-    if (lastRemoteAutoRef.current === autoPlay) {
+    if (lastRemoteAutoRef.current === (mySeatAutoplay !== null)) {
       // Consumed a remote update; do not echo back
       lastRemoteAutoRef.current = null
       return
     }
-    runtimeRef.current?.setAutoPlay(autoPlay)
-  }, [autoPlay])
+    
+    // Always update runtime - both local and remote runtime implement the same interface
+    // Remote runtime (websocket server) will send the request to the server
+    if (mySeatIndex !== null) {
+      const enabled = mySeatAutoplay === mySeatIndex
+      runtimeRef.current?.setSeatAutoPlay(mySeatIndex, enabled)
+    }
+  }, [mySeatAutoplay, mySeatIndex])
 
   // Staged hole reveal whenever a new hand begins
   useEffect(() => {
@@ -182,8 +197,10 @@ export function usePokerGame() {
     // Actions
     beginHand,
     dealNext,
-    autoPlay,
-    setAutoPlay,
+    mySeatAutoplay,
+    isAutoplayEnabled,
+    setAutoplayForSeat,
+    clearAutoplayOnLeave,
     available,
     fold,
     check,

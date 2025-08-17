@@ -141,8 +141,8 @@ async function buildServer() {
       if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid join' }))
       const t = getTable(p.data.tableId as any)
       t.addClient(socket)
-      // include current autoplay state alongside state snapshot
-      ack?.({ ok: true, state: t.getState(), auto: t.getAuto?.() })
+      // include only state snapshot; autoplay is client-owned UI now
+      ack?.({ ok: true, state: t.getState() })
     })
 
     socket.on('begin', (payload: unknown, ack?: (resp: unknown) => void) => {
@@ -187,9 +187,13 @@ async function buildServer() {
       const p = C2S.setAuto.safeParse(payload)
       if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid setAuto' }))
       const t = getTable(p.data.tableId as any)
-      t.setAuto(p.data.auto)
-      // echo back state and current autoplay value; other clients receive room broadcast from setAuto
-      ack?.({ ok: true, state: t.getState(), auto: t.getAuto?.() })
+      const pid = ((socket as any).data?.playerId as string | undefined) || socket.id
+      
+      // Use the new per-client per-seat autoplay system
+      t.setClientSeatAuto(pid, p.data.seatIndex, p.data.auto)
+      
+      // echo back state and current autoplay value for the specific seat
+      ack?.({ ok: true, state: t.getState(), auto: t.getClientSeatAuto(pid, p.data.seatIndex) })
     })
 
     socket.on('reset', (payload: unknown, ack?: (resp: unknown) => void) => {
@@ -197,7 +201,7 @@ async function buildServer() {
       if (!p.success) return ack?.(S2C.error.parse({ message: 'invalid reset' }))
       const t = getTable(p.data.tableId as any)
       t.reset()
-      ack?.({ ok: true, state: t.getState(), auto: t.getAuto?.() })
+      ack?.({ ok: true, state: t.getState() })
     })
 
     socket.on('echo', (payload: unknown, ack?: (resp: unknown) => void) => {

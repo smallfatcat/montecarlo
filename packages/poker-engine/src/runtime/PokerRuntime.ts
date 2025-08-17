@@ -32,12 +32,16 @@ export interface RuntimeOptions {
   seats: number
   cpuSeats: number[]
   startingStack: number
+  // When provided, this callback decides if a human seat should be auto-driven
+  // by the engine (per-seat autoplay). If omitted, human seats will never auto-act.
+  shouldAutoplaySeat?: (seatIndex: number) => boolean
 }
 
 type TimerId = number | null
 
 export class PokerRuntime {
   private state: PokerTableState
+  // Deprecated: global autoplay flag; prefer shouldAutoplaySeat callback for human seats
   private autoPlay: boolean = false
   private timers: { cpu: TimerId; player: TimerId; autoDeal: TimerId; watchdog: TimerId } = {
     cpu: null,
@@ -47,10 +51,12 @@ export class PokerRuntime {
   }
   private readonly cb: RuntimeCallbacks
   private delayBumpOnceMs: number = 0
+  private readonly shouldAutoplaySeatFn: (seatIndex: number) => boolean
 
   constructor(opts: RuntimeOptions, cb: RuntimeCallbacks) {
     this.state = createInitialPokerTable(opts.seats, opts.cpuSeats, opts.startingStack)
     this.cb = cb
+    this.shouldAutoplaySeatFn = typeof opts.shouldAutoplaySeat === 'function' ? opts.shouldAutoplaySeat : () => false
     if (CONFIG.poker.random?.useSeeded) {
       const base = CONFIG.poker.random.seed ?? 1
       const rng = makeXorShift32(((base * 0x9E3779B1) >>> 0))
@@ -61,6 +67,9 @@ export class PokerRuntime {
 
   dispose() { this.clearAllTimers() }
   setAutoPlay(v: boolean) { this.autoPlay = v; this.armTimers() }
+  // Public method for hosts (e.g., server) to force a timer reevaluation when external
+  // conditions change (like toggling per-seat autoplay preferences)
+  rearmTimers() { this.armTimers() }
 
   /**
    * Toggle whether a given seat should be driven by CPU logic.
@@ -158,12 +167,11 @@ export class PokerRuntime {
     const s = this.state
     if (s.status === 'hand_over') {
       if (s.gameOver) return
-      if (this.autoPlay) {
-        const bump = this.delayBumpOnceMs
-        this.delayBumpOnceMs = 0
-        const delay = CONFIG.pokerAutoplay.autoDealDelayMs + (CONFIG.poker.animations?.chipFlyDurationMs ?? 0) + bump
-        this.timers.autoDeal = setTimeout(() => this.beginHand(), delay) as unknown as number
-      }
+      // Always auto-deal the next hand; per-seat autoplay only affects per-turn actions
+      const bump = this.delayBumpOnceMs
+      this.delayBumpOnceMs = 0
+      const delay = CONFIG.pokerAutoplay.autoDealDelayMs + (CONFIG.poker.animations?.chipFlyDurationMs ?? 0) + bump
+      this.timers.autoDeal = setTimeout(() => this.beginHand(), delay) as unknown as number
       return
     }
     if (s.status !== 'in_hand') return
@@ -192,7 +200,8 @@ export class PokerRuntime {
       }, delay + 1200) as unknown as number
     }
     const schedulePlayer = () => {
-      if (!this.autoPlay) return
+      // Only schedule human-seat autoplay if host indicates this seat should auto-act
+      if (!this.shouldAutoplaySeatFn(toAct)) return
       const bump = this.delayBumpOnceMs
       this.delayBumpOnceMs = 0
       const delay = CONFIG.pokerAutoplay.playerActionDelayMs + bump

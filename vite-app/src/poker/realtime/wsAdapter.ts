@@ -10,7 +10,7 @@ export type RuntimeCallbacks = {
   onHandSetup?: (setup: any) => void
   onSeatUpdate?: (m: { seatIndex: number; isCPU: boolean; playerId: string | null; playerName: string | null }) => void
   onYouSeatChange?: (seatIndex: number | null) => void
-  onAutoplay?: (auto: boolean) => void
+  onAutoplay?: (seatIndex: number, auto: boolean) => void
   onSeatReserved?: (m: { seatIndex: number; playerName: string | null; expiresAt: number }) => void
   onSeatReservationCleared?: (m: { seatIndex: number }) => void
 }
@@ -52,7 +52,6 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
           socket?.emit('join', { tableId }, (ack2: any) => {
             console.log('[wsAdapter] join ack', ack2)
             if (ack2?.state) cb.onState(ack2.state)
-            if (typeof ack2?.auto === 'boolean') cb.onAutoplay?.(ack2.auto)
           })
         })
       } catch (e) {
@@ -60,7 +59,6 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
         socket?.emit('join', { tableId }, (ack2: any) => {
           console.log('[wsAdapter] join ack', ack2)
           if (ack2?.state) cb.onState(ack2.state)
-          if (typeof ack2?.auto === 'boolean') cb.onAutoplay?.(ack2.auto)
         })
       }
     })
@@ -75,7 +73,7 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
     })
     socket.on('error', (err) => console.error('[client] error', err))
     socket.on('state', (s: PokerTableState) => { console.log('[wsAdapter] state', { handId: s.handId, street: s.street, toAct: s.currentToAct }); cb.onState(s) })
-    socket.on('autoplay', (m: any) => { try { if (typeof m?.auto === 'boolean') cb.onAutoplay?.(m.auto) } catch {} })
+    // Autoplay state is client-owned UI; server no longer broadcasts autoplay
     socket.on('hand_start', (m: any) => cb.onHandStart?.(m.handId, m.buttonIndex, m.smallBlind, m.bigBlind))
     socket.on('post_blind', (m: any) => cb.onPostBlind?.(m.seat, m.amount))
     socket.on('hand_setup', (m: any) => cb.onHandSetup?.(m))
@@ -103,11 +101,23 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
     socket?.emit('act', { tableId, action })
   }
 
-  function setAutoPlay(v: boolean) {
-    console.log('[wsAdapter] setAuto', v)
-    socket?.emit('setAuto', { tableId, auto: v }, (ack: any) => {
-      try { if (typeof ack?.auto === 'boolean') cb.onAutoplay?.(ack.auto) } catch {}
+  function setSeatAutoPlay(seatIndex: number, enabled: boolean) {
+    console.log('[wsAdapter] setSeatAuto', { seatIndex, enabled })
+    // Use the updated setAuto endpoint with per-seat autoplay
+    socket?.emit('setAuto', { tableId, seatIndex, auto: enabled }, (ack: any) => {
+      try { 
+        if (typeof ack?.auto === 'boolean') {
+          // Emit the new per-seat autoplay event
+          cb.onAutoplay?.(seatIndex, ack.auto)
+        }
+      } catch {}
     })
+  }
+
+  function isSeatAutoPlayEnabled(_seatIndex: number): boolean {
+    // For remote runtime, we don't have local state - this would need server support
+    // For now, return false as we can't know the current state
+    return false
   }
 
   function sit(seatIndex: number, name: string) {
@@ -131,7 +141,7 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
   }
 
   connect()
-  return { beginHand, act, setAutoPlay, sit, leave, reset, dispose }
+  return { beginHand, act, setSeatAutoPlay, isSeatAutoPlayEnabled, sit, leave, reset, dispose }
 }
 
 

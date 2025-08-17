@@ -6,7 +6,7 @@ import { PokerTableHorseshoeView } from './PokerTableHorseshoeView'
 import { PokerTableHorseshoeControls } from './PokerTableHorseshoeControls'
 
 export function PokerTableHorseshoe() {
-  const { table, revealed, dealNext, autoPlay, setAutoPlay, available, fold, check, call, bet, raise, hideHoleCardsUntilShowdown, setHideHoleCardsUntilShowdown, review, reviewNextStep, reviewPrevStep, endReview, sit, leave, mySeatIndex, playerNames, renameCurrentPlayer, resetGame } = usePokerGameContext()
+  const { table, revealed, dealNext, isAutoplayEnabled, setAutoplayForSeat, available, fold, check, call, bet, raise, hideHoleCardsUntilShowdown, setHideHoleCardsUntilShowdown, review, reviewNextStep, reviewPrevStep, endReview, sit, leave, mySeatIndex, playerNames, renameCurrentPlayer, resetGame } = usePokerGameContext()
   const { equity, run: runEquity, running: equityRunning } = useEquity()
 
   const community = table.community
@@ -133,8 +133,12 @@ export function PokerTableHorseshoe() {
     <div style={{ display: 'flex' }}>
       <PokerTableHorseshoeControls
         table={table}
-        autoPlay={autoPlay}
-        onToggleAutoPlay={setAutoPlay}
+        autoPlay={mySeatIndex !== null ? isAutoplayEnabled(mySeatIndex) : false}
+        onToggleAutoPlay={(enabled: boolean) => {
+          if (mySeatIndex !== null) {
+            setAutoplayForSeat(mySeatIndex, enabled)
+          }
+        }}
         onDealNext={dealNext}
         onResetGame={resetGame}
         available={available}

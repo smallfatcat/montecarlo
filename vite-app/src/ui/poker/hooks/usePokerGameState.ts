@@ -10,18 +10,36 @@ export function usePokerGameState() {
     const cpuSeats = Array.from({ length: Math.max(0, 6 - 1) }, (_, i) => i + 1)
     return createInitialPokerTable(6, cpuSeats, startingStack)
   })
-  const [autoPlay, setAutoPlay] = useState<boolean>(false)
+  // Track autoplay per seat - each client only knows their own seat's setting
+  const [mySeatAutoplay, setMySeatAutoplay] = useState<number | null>(null) // seatIndex where autoplay is enabled, or null if disabled
   const [hideHoleCardsUntilShowdown, setHideHoleCardsUntilShowdown] = useState<boolean>(false)
   const [playerNames, setPlayerNames] = useState<Array<string | null>>(() => Array.from({ length: 9 }, () => null))
   const [mySeatIndex, setMySeatIndex] = useState<number | null>(null)
   const [clearing, setClearing] = useState<boolean>(false)
 
   const resetGameState = () => {
-    setAutoPlay(false)
+    setMySeatAutoplay(null)
     setTable(() => {
       const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
       return createInitialPokerTable(numPlayers, cpuSeats, startingStack)
     })
+  }
+
+  // Helper to check if autoplay is enabled for a specific seat
+  const isAutoplayEnabled = (seatIndex: number) => mySeatAutoplay === seatIndex
+
+  // Helper to enable/disable autoplay for a specific seat
+  const setAutoplayForSeat = (seatIndex: number, enabled: boolean) => {
+    if (enabled) {
+      setMySeatAutoplay(seatIndex)
+    } else {
+      setMySeatAutoplay(null)
+    }
+  }
+
+  // Helper to clear autoplay when leaving a seat
+  const clearAutoplayOnLeave = () => {
+    setMySeatAutoplay(null)
   }
 
   return {
@@ -32,8 +50,10 @@ export function usePokerGameState() {
     setNumPlayers,
     startingStack,
     setStartingStack,
-    autoPlay,
-    setAutoPlay,
+    mySeatAutoplay,
+    isAutoplayEnabled,
+    setAutoplayForSeat,
+    clearAutoplayOnLeave,
     hideHoleCardsUntilShowdown,
     setHideHoleCardsUntilShowdown,
     playerNames,

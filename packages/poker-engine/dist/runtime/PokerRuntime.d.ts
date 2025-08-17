@@ -29,6 +29,7 @@ export interface RuntimeOptions {
     seats: number;
     cpuSeats: number[];
     startingStack: number;
+    shouldAutoplaySeat?: (seatIndex: number) => boolean;
 }
 export declare class PokerRuntime {
     private state;
@@ -36,9 +37,11 @@ export declare class PokerRuntime {
     private timers;
     private readonly cb;
     private delayBumpOnceMs;
+    private readonly shouldAutoplaySeatFn;
     constructor(opts: RuntimeOptions, cb: RuntimeCallbacks);
     dispose(): void;
     setAutoPlay(v: boolean): void;
+    rearmTimers(): void;
     /**
      * Toggle whether a given seat should be driven by CPU logic.
      * When set to false, the runtime will not schedule an automatic CPU action when it is this seat's turn.
