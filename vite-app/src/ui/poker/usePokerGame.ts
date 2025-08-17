@@ -70,7 +70,6 @@ export function usePokerGame() {
   // Runtime management
   const {
     runtimeRef,
-    lastRemoteAutoRef,
     resetRuntime,
   } = usePokerRuntime(
     numPlayers,
@@ -157,16 +156,8 @@ export function usePokerGame() {
     }
   }, [eventQueue.clearAll])
 
-  // Reflect autoplay toggle into runtime, but avoid echoing remote-origin changes
+  // Reflect autoplay toggle into server via runtime
   useEffect(() => {
-    if (lastRemoteAutoRef.current === (mySeatAutoplay !== null)) {
-      // Consumed a remote update; do not echo back
-      lastRemoteAutoRef.current = null
-      return
-    }
-    
-    // Always update runtime - both local and remote runtime implement the same interface
-    // Remote runtime (websocket server) will send the request to the server
     if (mySeatIndex !== null) {
       const enabled = mySeatAutoplay === mySeatIndex
       runtimeRef.current?.setSeatAutoPlay(mySeatIndex, enabled)

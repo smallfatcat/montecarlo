@@ -10,7 +10,6 @@ export type RuntimeCallbacks = {
   onHandSetup?: (setup: any) => void
   onSeatUpdate?: (m: { seatIndex: number; isCPU: boolean; playerId: string | null; playerName: string | null }) => void
   onYouSeatChange?: (seatIndex: number | null) => void
-  onAutoplay?: (seatIndex: number, auto: boolean) => void
   onSeatReserved?: (m: { seatIndex: number; playerName: string | null; expiresAt: number }) => void
   onSeatReservationCleared?: (m: { seatIndex: number }) => void
 }
@@ -103,15 +102,7 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
 
   function setSeatAutoPlay(seatIndex: number, enabled: boolean) {
     console.log('[wsAdapter] setSeatAuto', { seatIndex, enabled })
-    // Use the updated setAuto endpoint with per-seat autoplay
-    socket?.emit('setAuto', { tableId, seatIndex, auto: enabled }, (ack: any) => {
-      try { 
-        if (typeof ack?.auto === 'boolean') {
-          // Emit the new per-seat autoplay event
-          cb.onAutoplay?.(seatIndex, ack.auto)
-        }
-      } catch {}
-    })
+    socket?.emit('setAuto', { tableId, seatIndex, auto: enabled }, (_ack: any) => {})
   }
 
   function isSeatAutoPlayEnabled(_seatIndex: number): boolean {

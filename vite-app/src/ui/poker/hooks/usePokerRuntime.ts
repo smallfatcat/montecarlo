@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react'
 import type { PokerTableState, BettingAction } from '../../../poker/types'
-import { PokerRuntime } from '../../../poker/runtime/PokerRuntime'
+// Local runtime removed for WS-only mode
 import { createRealtimeRuntimeAdapter } from '../../../poker/realtime/wsAdapter'
 import type { HistoryEvent } from '../../../poker/history'
 
@@ -26,7 +26,7 @@ export function usePokerRuntime(
   clearAutoplayOnLeave: () => void,
 ) {
   const runtimeRef = useRef<RuntimeLike | null>(null)
-  const lastRemoteAutoRef = useRef<boolean | null>(null)
+  // WS-only mode: no remote autoplay broadcasting, no local mirror needed
   
   // Store callback functions in refs to prevent infinite re-renders
   const callbacksRef = useRef({
@@ -99,77 +99,32 @@ export function usePokerRuntime(
       if ((window as any)?.__pokerReserved) delete (window as any).__pokerReserved[m.seatIndex]
     },
     onYouSeatChange: (seatIndex: number | null) => callbacksRef.current.setMySeatIndex(seatIndex),
-    onAutoplay: (seatIndex: number, auto: boolean) => { 
-      // Only process autoplay events for seats that this client controls
-      const currentSeatIndex = (runtimeRef.current as any)?.['mySeatIndexLocal'] ?? null
-      if (seatIndex === currentSeatIndex) {
-        lastRemoteAutoRef.current = auto
-        // Update the client's autoplay state to match the server
-        if (auto) {
-          callbacksRef.current.setAutoplayForSeat(seatIndex, true)
-        } else {
-          callbacksRef.current.setAutoplayForSeat(seatIndex, false)
-        }
-      }
-    },
   }), [])
 
   const resetRuntime = useCallback(() => {
-    const wsUrl = (import.meta as any).env?.VITE_WS_URL as string | undefined
-    if (wsUrl) {
-      // Ask server to reset table in place
-      if (runtimeRef.current?.reset) {
-        runtimeRef.current.reset()
-      }
-      return
+    // WS-only: ask server to reset table in place
+    if (runtimeRef.current?.reset) {
+      runtimeRef.current.reset()
     }
-    // Local-only reset: Dispose runtime and re-create in local mode
-    try { runtimeRef.current?.dispose() } catch {}
-    runtimeRef.current = null
-    const cb = createRuntimeCallbacks()
-    const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
-    const rt = new PokerRuntime({ seats: numPlayers, cpuSeats, startingStack }, cb as any)
-    runtimeRef.current = {
-      beginHand: () => rt.beginHand(),
-      act: (action: BettingAction) => rt.act(action),
-      setSeatAutoPlay: (seatIndex: number, enabled: boolean) => rt.setSeatAutoPlay(seatIndex, enabled),
-      isSeatAutoPlayEnabled: (seatIndex: number) => rt.isSeatAutoPlayEnabled(seatIndex),
-      dispose: () => rt.dispose(),
-    } as RuntimeLike
-  }, [numPlayers, startingStack, createRuntimeCallbacks])
+  }, [])
 
   // Initialize runtime once and bridge state changes to React
   useEffect(() => {
     if (runtimeRef.current) return
     const cb = createRuntimeCallbacks()
     const wsUrl = (import.meta as any).env?.VITE_WS_URL as string | undefined
-    if (wsUrl) {
-      let tableId: string | undefined
-      try {
-        const h = typeof window !== 'undefined' ? window.location.hash : ''
-        if (h.startsWith('#poker/')) tableId = h.slice('#poker/'.length)
-      } catch {}
-      runtimeRef.current = createRealtimeRuntimeAdapter(wsUrl, cb as any, tableId)
-    } else {
-      const cpuSeats = Array.from({ length: Math.max(0, numPlayers - 1) }, (_, i) => i + 1)
-      const rt = new PokerRuntime({ seats: numPlayers, cpuSeats, startingStack }, cb as any)
-      runtimeRef.current = {
-        beginHand: () => rt.beginHand(),
-        act: (action: BettingAction) => rt.act(action),
-        setSeatAutoPlay: (seatIndex: number, enabled: boolean) => rt.setSeatAutoPlay(seatIndex, enabled),
-        isSeatAutoPlayEnabled: (seatIndex: number) => rt.isSeatAutoPlayEnabled(seatIndex),
-        dispose: () => rt.dispose(),
-      } as RuntimeLike
-      // Local runtime has no concept of remote seating; treat seat 0 as the player's seat
-      callbacksRef.current.setMySeatIndex(0)
-    }
+    let tableId: string | undefined
+    try {
+      const h = typeof window !== 'undefined' ? window.location.hash : ''
+      if (h.startsWith('#poker/')) tableId = h.slice('#poker/'.length)
+    } catch {}
+    runtimeRef.current = createRealtimeRuntimeAdapter(wsUrl!, cb as any, tableId)
     // start first hand is driven by UI control (Deal button)
     return () => { runtimeRef.current?.dispose(); runtimeRef.current = null }
   }, [numPlayers, startingStack, createRuntimeCallbacks])
 
   return {
     runtimeRef,
-    lastRemoteAutoRef,
     resetRuntime,
   }
 }
