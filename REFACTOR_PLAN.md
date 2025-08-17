@@ -125,7 +125,7 @@ This document tracks the implementation of a comprehensive refactor to improve t
 
 ## Phase 3: Integration & Refactoring
 
-### 3.1 Component Migration
+### 3.1 Component Migration ✅ COMPLETED
 - [x] Update existing poker components to use design system
   - [x] PokerInlineControls - Replaced inline styles with Card component
   - [x] PokerTableHorseshoeControls - Replaced inline styles with Button, Input, Badge, Card components
@@ -150,7 +150,21 @@ This document tracks the implementation of a comprehensive refactor to improve t
 
 ### 3.2 Advanced Features
 
-### 3.2B Poker Lobby Design System Integration ✅
+### 3.2A Poker Inline Controls Schema Lock ✅ COMPLETED
+- Adopt a strict nine-rect schema for the control box, defined only in `vite-app/public/horseshoe-layout.json` under `controlsChildren`.
+- Supported keys:
+  - `checkBtn`, `callBtn`, `foldBtn`, `betBtn`, `raiseBtn`
+  - `betBox` (label + input combined)
+  - `potSlider`, `stackSlider`
+  - `stackLabel`
+- Removed legacy/unused keys and paths: `betLabel`, `betInput`, `potSliderLabel`, `stackSliderLabel`.
+- Import/export now sanitize to the nine keys only.
+- UI updates aligned to schema:
+  - Compact bet: label on the left of input within `betBox`.
+  - Slider labels removed.
+  - `stackLabel` renders single-line: "Stack: $NNN".
+
+### 3.2B Poker Lobby Design System Integration ✅ COMPLETED
 - [x] Updated `PokerLobbyRefactored.tsx` to use new design system components:
   - Replaced inline styles with CSS classes and design tokens
   - Integrated `Button`, `Card`, `Badge`, `StatusMessage`, and `LoadingSpinner` components
@@ -165,41 +179,54 @@ This document tracks the implementation of a comprehensive refactor to improve t
   - Improved loading states and error handling
   - Consistent spacing and typography using design tokens
   - Status indicators for table states (waiting, in-game, finished)
-- [ ] **Table Filtering & Sorting**
-  - [ ] Status-based filtering
-  - [ ] Player count filtering
-  - [ ] Stake level filtering
-  - [ ] Search functionality
-  
-- [ ] **Enhanced Player Management**
-  - [ ] Player profiles
-  - [ ] Friend system
-  - [ ] Player statistics
-  
-- [ ] **Real-time Features**
-  - [ ] Live updates
-  - [ ] Notifications
-  - [ ] Chat system
-
-### 3.2A Poker Inline Controls Schema Lock ✅
-- Adopt a strict nine-rect schema for the control box, defined only in `vite-app/public/horseshoe-layout.json` under `controlsChildren`.
-- Supported keys:
-  - `checkBtn`, `callBtn`, `foldBtn`, `betBtn`, `raiseBtn`
-  - `betBox` (label + input combined)
-  - `potSlider`, `stackSlider`
-  - `stackLabel`
-- Removed legacy/unused keys and paths: `betLabel`, `betInput`, `potSliderLabel`, `stackSliderLabel`.
-- Import/export now sanitize to the nine keys only.
-- UI updates aligned to schema:
-  - Compact bet: label on the left of input within `betBox`.
-  - Slider labels removed.
-  - `stackLabel` renders single-line: “Stack: $NNN”.
 
 ### 3.3 Performance Optimization
 - [ ] Implement virtual scrolling for large table lists
 - [ ] Add debounced updates
 - [ ] Optimize re-renders
 - [ ] Add connection pooling
+
+## Phase 3B: Blackjack UI Implementation (NEW)
+
+### 3B.1 Blackjack Game Interface
+- [ ] **Blackjack Table Component**
+  - [ ] Card display with proper poker-style layout
+  - [ ] Player controls (hit, stand, double, split)
+  - [ ] Betting interface with chip selection
+  - [ ] Game state management and transitions
+  - [ ] Responsive design using design system components
+
+- [ ] **Game State Management**
+  - [ ] Integrate existing blackjack engine with React state
+  - [ ] Real-time game updates and animations
+  - [ ] Player action handling and validation
+  - [ ] Game history and replay functionality
+
+### 3B.2 Simulation Integration
+- [ ] **Simulation Control Panel**
+  - [ ] Parameter configuration interface
+  - [ ] Simulation execution controls
+  - [ ] Progress display and real-time updates
+  - [ ] Results visualization and analysis
+
+- [ ] **Simulation Runner UI**
+  - [ ] Integrate `useSimulationRunner` hook with components
+  - [ ] Batch simulation management
+  - [ ] Configuration presets and favorites
+  - [ ] Export and sharing capabilities
+
+### 3B.3 Enhanced User Experience
+- [ ] **Accessibility and Polish**
+  - [ ] Screen reader support and ARIA labels
+  - [ ] Keyboard navigation and shortcuts
+  - [ ] High contrast mode support
+  - [ ] Mobile-responsive design
+
+- [ ] **Performance Optimization**
+  - [ ] Component memoization where appropriate
+  - [ ] Efficient re-rendering strategies
+  - [ ] Web Worker integration for heavy computations
+  - [ ] Bundle size optimization
 
 ## Phase 4: Testing & Quality Assurance
 
@@ -321,6 +348,6 @@ This document tracks the implementation of a comprehensive refactor to improve t
 
 ---
 
-**Last Updated**: [Current Date]
-**Next Review**: [Next Week]
-**Status**: Phase 3 In Progress - Design System Integration ✅
+**Last Updated**: December 2024  
+**Next Review**: [Next Week]  
+**Status**: Phase 3A Complete - Design System Integration ✅, Phase 3B In Progress - Blackjack UI Implementation 🚀

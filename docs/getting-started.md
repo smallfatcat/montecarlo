@@ -237,39 +237,20 @@ export function useCustomHook(initialValue: string) {
 }
 ```
 
-### 3. Simulation Runner
+### 3. Simulation Engine
+
+The application includes a high-performance simulation engine for Monte Carlo analysis:
 
 ```typescript
-import { useSimulationRunner } from '../ui/useSimulationRunner'
-
-function SimulationComponent() {
-  const { run, progress, isRunning } = useSimulationRunner()
-  
-  const handleRunSimulation = () => {
-    run({
-      numHands: 10000,
-      numPlayers: 4,
-      deckCount: 6,
-      initialBankrolls: [1000, 1000, 1000, 1000],
-      casinoInitial: 10000,
-      betsBySeat: [10, 10, 10, 10]
-    }, (result) => {
-      console.log('Simulation complete:', result)
-    })
-  }
-  
-  return (
-    <div>
-      <button onClick={handleRunSimulation} disabled={isRunning}>
-        Run Simulation
-      </button>
-      {progress && (
-        <div>Progress: {progress.done}/{progress.total}</div>
-      )}
-    </div>
-  )
-}
+// Note: Simulation runner hook exists but is not currently integrated with UI
+// import { useSimulationRunner } from '../ui/useSimulationRunner'
+// 
+// const { run, progress, isRunning } = useSimulationRunner()
+// 
+// This hook is currently unused and lacks UI integration
 ```
+
+**Status**: Backend simulation engine implemented, UI integration pending.
 
 ### 4. Game Server Integration
 

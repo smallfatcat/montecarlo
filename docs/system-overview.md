@@ -52,11 +52,12 @@ This project delivers a casino game application with poker UI backed by an autho
 
 The application includes a high-performance simulation runner:
 
-- **Pure Function Architecture**: Maximum simulation speed
-- **Web Worker Integration**: Background thread processing
-- **Configurable Parameters**: Adjustable rules, deck counts, and betting
-- **Progress Tracking**: Real-time simulation updates
-- **Performance Optimized**: Designed for high-volume analysis
+- **Backend Engine**: Pure function simulation engine for maximum performance
+- **Web Worker Support**: Background processing capabilities
+- **Monte Carlo Analysis**: High-volume statistical simulations
+- **Status**: Engine implemented, UI integration pending
+
+**Note**: While the simulation engine exists and is fully functional, users cannot currently control or run simulations through the interface.
 
 ### Simulation Use Cases
 

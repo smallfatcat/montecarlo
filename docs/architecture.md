@@ -165,13 +165,15 @@ Game logic has been split into focused hooks:
 
 ### Blackjack Components
 
-Blackjack functionality includes:
+Blackjack functionality is currently implemented as a backend simulation engine:
 
-- **Deck Management**: Card deck handling and shuffling
-- **Hand Evaluation**: Hand scoring and game logic
-- **Strategy Engine**: Basic strategy implementation
-- **Table Management**: Game table state
-- **Simulation**: High-speed Monte Carlo simulations
+- **Deck Management**: Card deck handling and shuffling (backend only)
+- **Hand Evaluation**: Hand scoring and game logic (backend only)
+- **Strategy Engine**: Basic strategy implementation (backend only)
+- **Table Management**: Game table state (backend only)
+- **Simulation Engine**: High-speed Monte Carlo simulations (backend only)
+
+**Note**: Blackjack currently lacks a user interface. The simulation engine exists but is not accessible through the UI. Users cannot currently run simulations or interact with blackjack games.
 
 ## Configuration Management
 
@@ -219,19 +221,23 @@ WebSocket communication is handled through:
 
 The application includes a pure function simulation runner for maximum performance:
 
-- **useSimulationRunner**: React hook for managing simulation execution
+- **useSimulationRunner**: React hook for managing simulation execution (currently unused)
 - **Web Worker Integration**: Offloads computation to background threads
 - **Progress Tracking**: Real-time simulation progress updates
 - **Configurable Parameters**: Adjustable simulation settings
 - **Performance Optimized**: Pure functions for maximum speed
 
+**Note**: The simulation runner hook exists but is not currently integrated with any user interface. Users cannot currently control or run simulations through the UI.
+
 ### Simulation Features
 
-- **Blackjack Simulations**: High-volume hand simulations
-- **Configurable Rules**: Adjustable house rules and deck counts
-- **Bankroll Tracking**: Player and casino bankroll management
-- **Bet Management**: Configurable betting strategies
-- **Performance Monitoring**: Real-time progress and completion tracking
+- **Blackjack Simulations**: High-volume hand simulations (backend only)
+- **Configurable Rules**: Adjustable house rules and deck counts (backend only)
+- **Bankroll Tracking**: Player and casino bankroll management (backend only)
+- **Bet Management**: Configurable betting strategies (backend only)
+- **Performance Monitoring**: Real-time progress and completion tracking (backend only)
+
+**Note**: All simulation features are currently backend-only. The simulation engine exists but lacks a user interface for configuration and execution.
 
 ## Error Handling
 

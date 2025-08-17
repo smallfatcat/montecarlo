@@ -5,8 +5,8 @@ A casino game application built with React, TypeScript, and Node.js, featuring r
 ## 🎯 Current Features
 
 - **Poker**: Texas Hold'em with real-time multiplayer via WebSocket server
-- **Blackjack**: Single-player with configurable rules and strategies
-- **High-Speed Simulations**: Monte Carlo analysis using Web Workers
+- **Blackjack**: Backend simulation engine (no UI currently)
+- **High-Speed Simulations**: Monte Carlo analysis engine (backend only, UI pending)
 - **Real-time Multiplayer**: Authoritative game server with Socket.IO
 - **Modern UI**: React-based interface with responsive design
 
@@ -59,11 +59,12 @@ npm run dev:backend     # Backend only
 - CPU players for single-player games
 - Configurable table layouts
 
-### Blackjack (Single-player)
-- Standard rules with house rule options
+### Blackjack (Backend Engine Only)
+- Simulation engine with standard rules and house rule options
 - Multi-deck shoe management
 - Basic strategy implementation
 - High-volume Monte Carlo simulations
+- **Note**: Currently lacks user interface - engine only accessible programmatically
 
 ## 🔧 Development
 
