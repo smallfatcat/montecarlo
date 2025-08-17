@@ -126,7 +126,7 @@ export function PokerTableHorseshoe() {
   } : null
 
   const viewRef = useRef<{ exportLayoutToJson: () => void; resetLayout: () => void } | null>(null)
-  const [editLayoutMode, setEditLayoutMode] = useState<boolean>(false)
+  const [editLayoutMode] = useState<boolean>(false)
 
   const SIDEBAR_WIDTH = 220
   return (
@@ -141,18 +141,11 @@ export function PokerTableHorseshoe() {
         }}
         onDealNext={dealNext}
         onResetGame={resetGame}
-        available={available}
-        onFold={fold}
-        onCheck={check}
-        onCall={call}
-        onBet={bet}
-        onRaise={raise}
+        
         hideHoleCardsUntilShowdown={hideHoleCardsUntilShowdown}
         onToggleHideHoleCards={setHideHoleCardsUntilShowdown}
-        onExportLayout={() => viewRef.current?.exportLayoutToJson()}
-        onResetLayout={() => viewRef.current?.resetLayout()}
-        editLayoutMode={editLayoutMode}
-        onToggleEditLayout={setEditLayoutMode}
+        
+        
         onOpenHistory={() => { window.location.hash = '#poker-history' }}
         onOpenLobby={() => { window.location.hash = '#lobby' }}
         reviewInfo={review ? { handId: review.handId, step: review.step, total: review.actions.length } : null}
