@@ -28,8 +28,8 @@ const VersionDisplay: React.FC = () => {
     const loadVersionInfo = async () => {
       try {
         // First try to load from BUILD_INFO file if it exists
-        console.log('[VersionDisplay] Attempting to load BUILD_INFO from /BUILD_INFO');
-        const response = await fetch('/BUILD_INFO');
+        console.log('[VersionDisplay] Attempting to load BUILD_INFO from ./BUILD_INFO');
+        const response = await fetch('./BUILD_INFO');
         
         if (response.ok) {
           const text = await response.text();

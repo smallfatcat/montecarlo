@@ -5,8 +5,8 @@ export function Landing() {
   const [version, setVersion] = useState('v0.3.0')
   
   useEffect(() => {
-    // Try to load version from BUILD_INFO
-    fetch('/BUILD_INFO')
+              // Try to load version from BUILD_INFO
+          fetch('./BUILD_INFO')
       .then(response => response.ok ? response.text() : null)
       .then(text => {
         if (text) {

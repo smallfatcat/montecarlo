@@ -260,8 +260,8 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
     
     // Try to load layout from file with a small delay to ensure dev server is ready
     const loadLayout = () => {
-      console.log('[PokerTableLayout] Attempting to load layout from /horseshoe-layout.json')
-      fetch('/horseshoe-layout.json')
+      console.log('[PokerTableLayout] Attempting to load layout from ./horseshoe-layout.json')
+      fetch('./horseshoe-layout.json')
         .then(response => {
           console.log('[PokerTableLayout] Response status:', response.status, response.statusText)
           if (!response.ok) {
