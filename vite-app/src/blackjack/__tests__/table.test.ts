@@ -1,17 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import type { Card } from '../types'
+import { createInitialTable, startTableRound, getSeatAvailableActions, getActiveSeat, seatHit, seatStand, seatDouble, seatSplit, type TableState } from '../table'
 import { createShoe } from '../deck'
-import {
-  createInitialTable,
-  startTableRound,
-  seatHit,
-  seatStand,
-  seatDouble,
-  seatSplit,
-  getSeatAvailableActions,
-  type TableState,
-} from '../table'
-import { shouldReshuffle } from '../../ui/useTableGame_removed'
+import { suggestAction, type SuggestedAction } from '../strategy'
+import { simulateSession } from '../simulate'
 
 const C = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit })
 const D = (cards: Card[]): Card[] => [...cards]
@@ -185,13 +177,6 @@ describe('multi-seat table (multi-player scenarios)', () => {
 })
 
 describe('integration-like behaviors', () => {
-  it('shouldReshuffle returns true at <=20% shoe remaining and false otherwise', () => {
-    // 6 decks -> 312 cards; 20% cutoff -> 62 (floor(312*0.2))
-    expect(shouldReshuffle(6, undefined)).toBe(true)
-    expect(shouldReshuffle(6, Array.from({ length: 63 }, () => C('2', 'Clubs')))).toBe(false)
-    expect(shouldReshuffle(6, Array.from({ length: 62 }, () => C('2', 'Clubs')))).toBe(true)
-  })
-
   it('multi-seat mixed outcomes: one busts, one wins, dealer stands', () => {
     let table: TableState = createInitialTable(2, [])
     const deck = D([

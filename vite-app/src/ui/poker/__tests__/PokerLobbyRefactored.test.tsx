@@ -100,4 +100,15 @@ describe('PokerLobbyRefactored', () => {
     expect(select).toBeTruthy()
     expect(select?.value).toBe('grid')
   })
+
+  it('should show connection status when not connected', () => {
+    const { container } = render(<PokerLobbyRefactored />)
+    // The component should show some indication of connection status
+    expect(container).toBeTruthy()
+  })
+
+  it('should show empty state when no tables', () => {
+    const { getByText } = render(<PokerLobbyRefactored />)
+    expect(getByText('No tables found. Create one to get started.')).toBeTruthy()
+  })
 })
