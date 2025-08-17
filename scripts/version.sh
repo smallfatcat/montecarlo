@@ -59,7 +59,8 @@ generate_semver() {
     # Read version from root package.json
     local package_version="0.0.0"
     if [[ -f "package.json" ]]; then
-        package_version=$(node -e "console.log(require('./package.json').version)")
+        local root_path=$(realpath ".")
+        package_version=$(node -e "console.log(require('$root_path/package.json').version)")
     fi
     
     # Add build number
@@ -83,7 +84,8 @@ generate_component_versions() {
     for pkg in packages/*/; do
         if [[ -f "$pkg/package.json" ]]; then
             local pkg_name=$(basename "$pkg")
-            local pkg_version=$(node -e "console.log(require('$pkg/package.json').version)")
+            local pkg_path=$(realpath "$pkg")
+            local pkg_version=$(node -e "console.log(require('$pkg_path/package.json').version)")
             local pkg_build_version="$pkg_version-build.$BUILD_NUMBER"
             
             # Create version file
@@ -96,7 +98,8 @@ generate_component_versions() {
     for app in apps/*/; do
         if [[ -f "$app/package.json" ]]; then
             local app_name=$(basename "$app")
-            local app_version=$(node -e "console.log(require('$app/package.json').version)")
+            local app_path=$(realpath "$app")
+            local app_version=$(node -e "console.log(require('$app_path/package.json').version)")
             local app_build_version="$app_version-build.$BUILD_NUMBER"
             
             # Create version file
@@ -107,10 +110,17 @@ generate_component_versions() {
     
     # Generate version file for vite-app
     if [[ -f "vite-app/package.json" ]]; then
-        local vite_version=$(node -e "console.log(require('./vite-app/package.json').version)")
+        local vite_path=$(realpath "vite-app")
+        local vite_version=$(node -e "console.log(require('$vite_path/package.json').version)")
         local vite_build_version="$vite_version-build.$BUILD_NUMBER"
         echo "$vite_build_version" > "vite-app/VERSION"
         echo "Generated VERSION file for vite-app: $vite_build_version"
+        
+        # Also copy BUILD_INFO to vite-app for frontend access
+        if [[ -f "$BUILD_INFO_FILE" ]]; then
+            cp "$BUILD_INFO_FILE" "vite-app/BUILD_INFO"
+            echo "Copied BUILD_INFO to vite-app for frontend access"
+        fi
     fi
 }
 
@@ -207,8 +217,22 @@ main() {
         "generate"|"gen")
             log_info "Generating version information..."
             get_git_info
-            generate_component_versions
+            
+            # Check if we need to regenerate (avoid redundant generation)
+            # Skip this check if FORCE_GENERATE is set (useful for deployment)
+            if [[ "${FORCE_GENERATE:-}" != "true" && -f "$BUILD_INFO_FILE" ]]; then
+                local existing_build_date=$(grep "^BUILD_DATE=" "$BUILD_INFO_FILE" | cut -d= -f2 2>/dev/null || echo "")
+                local existing_commit=$(grep "^BUILD_COMMIT=" "$BUILD_INFO_FILE" | cut -d= -f2 2>/dev/null || echo "")
+                
+                if [[ "$existing_commit" == "$COMMIT_HASH" && "$existing_build_date" != "" ]]; then
+                    log_info "Version information is already current for commit $COMMIT_HASH"
+                    show_version_info
+                    return 0
+                fi
+            fi
+            
             generate_build_info
+            generate_component_versions
             generate_version_header
             show_version_info
             log_success "Version generation complete!"

@@ -69,7 +69,7 @@ npm run dev:backend     # Backend only
 ## 🔧 Development
 
 ```bash
-# Build all packages
+# Build all packages (with automatic version generation)
 npm run build:all
 
 # Run tests
@@ -80,7 +80,21 @@ npm run typecheck
 
 # Clean rebuild
 npm run rebuild
+
+# Build with explicit version generation
+npm run build:with-version
 ```
+
+### 🆕 Automatic Version Generation
+
+The build process now automatically generates version information after every build:
+
+- **VERSION files** for each component with build metadata
+- **BUILD_INFO** file with comprehensive build details
+- **Smart caching** to avoid redundant generation
+- **Git integration** for accurate build numbers and commit tracking
+
+See [Building with Automatic Version Generation](./docs/BUILD_WITH_VERSION.md) for details.
 
 ## 📦 Project Structure
 
