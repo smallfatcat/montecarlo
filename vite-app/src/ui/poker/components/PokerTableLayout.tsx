@@ -257,55 +257,92 @@ export function PokerTableLayout({ editLayoutMode, onLayoutChange, children }: P
 
   useEffect(() => {
     let applied = false
-    fetch('./horseshoe-layout.json')
-      .then(r => r.ok ? r.json() : null)
-      .then((data) => {
-        if (data && typeof data === 'object') {
-          console.log('Layout data loaded:', data) // Debug log
-          const seats = (data as any).seats ?? {}
-          const next: LayoutOverrides = {
-            seats: typeof seats === 'object' && seats ? seats : {},
-            board: (data as any).board,
-            pot: (data as any).pot,
-            showdown: (data as any).showdown,
-            bets: (data as any).bets ?? {},
-            stacks: (data as any).stacks ?? {},
-            controls: (data as any).controls ?? {},
-            controlsChildren: sanitizeControlsChildren((data as any).controlsChildren ?? {}),
-            controlsBox: (data as any).controlsBox ?? {},
+    
+    // Try to load layout from file with a small delay to ensure dev server is ready
+    const loadLayout = () => {
+      console.log('[PokerTableLayout] Attempting to load layout from /horseshoe-layout.json')
+      fetch('/horseshoe-layout.json')
+        .then(response => {
+          console.log('[PokerTableLayout] Response status:', response.status, response.statusText)
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
           }
-          
-          console.log('Processed layout overrides:', next) // Debug log
-          console.log('Controls section:', next.controls) // Debug log
-          console.log('ControlsBox section:', next.controlsBox) // Debug log
-
-          defaultFromFileRef.current = next
-          setLayoutOverrides(next)
-          currentLayoutRef.current = next
-          onLayoutChange(next)
-          applied = true
-        }
-      })
-      .catch((error) => {
-        if (!applied) {
-          console.warn('Failed to load layout from file, using defaults:', error)
-          // Set a minimal default layout to ensure seats are visible
-          const defaultLayout: LayoutOverrides = {
-            seats: {},
-            board: undefined,
-            pot: undefined,
-            showdown: undefined,
-            bets: {},
-            stacks: {},
-            controls: undefined,
-            controlsChildren: {},
-            controlsBox: undefined,
+          console.log('[PokerTableLayout] About to parse JSON...')
+          // Log the first 200 characters of the response to debug
+          return response.text().then(text => {
+            console.log('[PokerTableLayout] Response text (first 200 chars):', text.substring(0, 200))
+            try {
+              return JSON.parse(text)
+            } catch (parseError) {
+              console.error('[PokerTableLayout] JSON parse failed, response starts with:', text.substring(0, 50))
+              throw parseError
+            }
+          })
+        })
+        .then((data) => {
+          console.log('[PokerTableLayout] JSON parsed successfully, data type:', typeof data, 'keys:', data ? Object.keys(data) : 'null')
+          console.log('[PokerTableLayout] Raw data:', data)
+          if (data && typeof data === 'object') {
+            console.log('[PokerTableLayout] Layout data loaded successfully')
+            const seats = (data as any).seats ?? {}
+            const next: LayoutOverrides = {
+              seats: typeof seats === 'object' && seats ? seats : {},
+              board: (data as any).board,
+              pot: (data as any).pot,
+              showdown: (data as any).showdown,
+              bets: (data as any).bets ?? {},
+              stacks: (data as any).stacks ?? {},
+              controls: (data as any).controls ?? {},
+              controlsChildren: sanitizeControlsChildren((data as any).controlsChildren ?? {}),
+              controlsBox: (data as any).controlsBox ?? {},
+            }
+            
+            defaultFromFileRef.current = next
+            setLayoutOverrides(next)
+            currentLayoutRef.current = next
+            onLayoutChange(next)
+            applied = true
+          } else {
+            console.log('[PokerTableLayout] Data validation failed - data:', data, 'type:', typeof data)
+            throw new Error('Invalid layout data format')
           }
-          setLayoutOverrides(defaultLayout)
-          currentLayoutRef.current = defaultLayout
-          onLayoutChange(defaultLayout)
-        }
-      })
+        })
+        .catch((parseError) => {
+          console.error('[PokerTableLayout] JSON parsing error:', parseError)
+          throw parseError
+        })
+        .catch((error) => {
+          if (!applied) {
+            // Only log as info in development, warn in production
+            if (import.meta.env.DEV) {
+              console.info('[PokerTableLayout] Using default layout (layout file not available or invalid)')
+            } else {
+              console.warn('[PokerTableLayout] Failed to load layout from file, using defaults:', error)
+            }
+            
+            // Set a minimal default layout to ensure seats are visible
+            const defaultLayout: LayoutOverrides = {
+              seats: {},
+              board: undefined,
+              pot: undefined,
+              showdown: undefined,
+              bets: {},
+              stacks: {},
+              controls: undefined,
+              controlsChildren: {},
+              controlsBox: undefined,
+            }
+            setLayoutOverrides(defaultLayout)
+            currentLayoutRef.current = defaultLayout
+            onLayoutChange(defaultLayout)
+          }
+        })
+    }
+    
+    // Small delay to ensure dev server is ready
+    const timer = setTimeout(loadLayout, 100)
+    
+    return () => clearTimeout(timer)
   }, [onLayoutChange])
 
   const exportLayoutToJson = () => {
