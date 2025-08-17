@@ -38,7 +38,7 @@
 
 .error-boundary__details {
   border: 1px solid var(--color-neutral-300);
-  border-radius: var(--border-radius-md);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 

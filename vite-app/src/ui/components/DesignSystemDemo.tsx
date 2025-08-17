@@ -350,9 +350,9 @@ export function DesignSystemDemo() {
                   <div className="design-system-demo__color-swatch" style={{ backgroundColor: 'var(--color-warning-500)' }}>
                     <span>Warning 500</span>
                   </div>
-                  <div className="design-system-demo__color-swatch" style={{ backgroundColor: 'var(--color-danger-500)' }}>
-                    <span>Danger 500</span>
-                  </div>
+                                  <div className="design-system-demo__color-swatch" style={{ backgroundColor: 'var(--color-error-500)' }}>
+                  <span>Error 500</span>
+                </div>
                   <div className="design-system-demo__color-swatch" style={{ backgroundColor: 'var(--color-neutral-500)' }}>
                     <span>Neutral 500</span>
                   </div>

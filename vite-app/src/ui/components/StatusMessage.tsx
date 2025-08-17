@@ -20,37 +20,37 @@ const statusConfig = {
   success: {
     icon: '✅',
     color: 'success',
-    bgColor: 'var(--color-success-50)',
-    borderColor: 'var(--color-success-200)',
-    textColor: 'var(--color-success-800)'
+    bgColor: 'var(--color-neutral-800)',
+    borderColor: 'var(--color-success-500)',
+    textColor: 'var(--color-neutral-50)'
   },
   warning: {
     icon: '⚠️',
     color: 'warning',
-    bgColor: 'var(--color-warning-50)',
-    borderColor: 'var(--color-warning-200)',
-    textColor: 'var(--color-warning-800)'
+    bgColor: 'var(--color-neutral-800)',
+    borderColor: 'var(--color-warning-500)',
+    textColor: 'var(--color-neutral-50)'
   },
   error: {
     icon: '❌',
     color: 'danger',
-    bgColor: 'var(--color-danger-50)',
-    borderColor: 'var(--color-danger-200)',
-    textColor: 'var(--color-danger-800)'
+    bgColor: 'var(--color-neutral-800)',
+    borderColor: 'var(--color-error-500)',
+    textColor: 'var(--color-neutral-50)'
   },
   info: {
     icon: 'ℹ️',
     color: 'info',
-    bgColor: 'var(--color-info-50)',
-    borderColor: 'var(--color-info-200)',
-    textColor: 'var(--color-info-800)'
+    bgColor: 'var(--color-neutral-800)',
+    borderColor: 'var(--color-primary-500)',
+    textColor: 'var(--color-neutral-50)'
   },
   loading: {
     icon: '⏳',
     color: 'info',
-    bgColor: 'var(--color-info-50)',
-    borderColor: 'var(--color-info-200)',
-    textColor: 'var(--color-info-800)'
+    bgColor: 'var(--color-neutral-800)',
+    borderColor: 'var(--color-primary-500)',
+    textColor: 'var(--color-neutral-50)'
   }
 }
 

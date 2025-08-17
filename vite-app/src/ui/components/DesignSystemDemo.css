@@ -11,7 +11,7 @@
 }
 
 /* Demo Header */
-.demo-header {
+.design-system-demo__header {
   text-align: center;
   margin-bottom: var(--space-12);
   padding: var(--space-8) var(--space-6);
@@ -23,7 +23,7 @@
   overflow: hidden;
 }
 
-.demo-header::before {
+.design-system-demo__header::before {
   content: '';
   position: absolute;
   top: 0;
@@ -34,7 +34,7 @@
   opacity: 0.4;
 }
 
-.demo-header::after {
+.design-system-demo__header::after {
   content: '';
   position: absolute;
   top: 0;
@@ -45,7 +45,7 @@
   pointer-events: none;
 }
 
-.demo-header h1 {
+.design-system-demo__header h1 {
   font-size: var(--font-size-4xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-poker-orange);
@@ -56,7 +56,7 @@
   letter-spacing: 0.02em;
 }
 
-.demo-header p {
+.design-system-demo__header p {
   font-size: var(--font-size-lg);
   color: var(--color-poker-lavender);
   margin: 0;
@@ -69,7 +69,7 @@
 }
 
 /* Demo Sections */
-.demo-section {
+.design-system-demo__section {
   margin-bottom: var(--space-12);
   background: rgba(26, 46, 26, 0.8);
   border-radius: var(--radius-xl);
@@ -79,7 +79,7 @@
   backdrop-filter: blur(10px);
 }
 
-.demo-section h2 {
+.design-system-demo__section h2 {
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-poker-orange);
@@ -90,7 +90,7 @@
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7), 0 0 15px rgba(255, 140, 0, 0.2);
 }
 
-.demo-section h3 {
+.design-system-demo__section h3 {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
   color: var(--color-neutral-200);
@@ -98,7 +98,7 @@
   text-align: center;
 }
 
-.demo-section h4 {
+.design-system-demo__section h4 {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-neutral-200);
@@ -106,14 +106,14 @@
 }
 
 /* Demo Grid */
-.demo-grid {
+.design-system-demo__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: var(--space-8);
   margin-top: var(--space-6);
 }
 
-.demo-item {
+.design-system-demo__component {
   display: flex;
   flex-direction: column;
   background: linear-gradient(135deg, var(--color-poker-felt) 0%, var(--color-poker-table) 100%);
@@ -125,25 +125,25 @@
 }
 
 /* Ensure poker table cards maintain their dark theme */
-.demo-item .poker-table-card {
+.design-system-demo__component .poker-table-card {
   background: linear-gradient(135deg, var(--color-poker-table) 0%, var(--color-poker-table-light) 100%) !important;
   border-color: var(--color-poker-table-border) !important;
 }
 
-.demo-item:hover {
+.design-system-demo__component:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-xl);
   border-color: var(--color-poker-green);
 }
 
 /* Color Palette */
-.color-palette {
+.design-system-demo__color-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-4);
 }
 
-.color-swatch {
+.design-system-demo__color-swatch {
   height: 100px;
   border-radius: var(--radius-lg);
   display: flex;
@@ -160,7 +160,7 @@
   overflow: hidden;
 }
 
-.color-swatch::before {
+.design-system-demo__color-swatch::before {
   content: '';
   position: absolute;
   top: 0;
@@ -172,11 +172,11 @@
   transition: transform 0.6s;
 }
 
-.color-swatch:hover::before {
+.design-system-demo__color-swatch:hover::before {
   transform: translateX(100%);
 }
 
-.color-swatch span {
+.design-system-demo__color-swatch span {
   background-color: rgba(0, 0, 0, 0.3);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
@@ -185,13 +185,13 @@
 }
 
 /* Spacing Demo */
-.spacing-demo {
+.design-system-demo__spacing-examples {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.spacing-item {
+.design-system-demo__spacing-examples > div {
   background: linear-gradient(135deg, var(--color-poker-green) 0%, var(--color-primary-600) 100%);
   color: white;
   padding: var(--space-3);
@@ -204,13 +204,28 @@
   transition: all var(--transition-fast);
 }
 
-.spacing-item:hover {
+.design-system-demo__spacing-examples > div:hover {
   transform: scale(1.02);
   box-shadow: var(--shadow-md);
 }
 
+/* Examples styling */
+.design-system-demo__examples {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.design-system-demo__examples > div {
+  margin-bottom: var(--space-4);
+}
+
+.design-system-demo__examples > div:last-child {
+  margin-bottom: 0;
+}
+
 /* Button Groups */
-.button-group {
+.design-system-demo__examples .button-group {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
@@ -219,83 +234,12 @@
 }
 
 /* Badge Groups */
-.badge-group {
+.design-system-demo__examples .badge-group {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
   justify-content: center;
-}
-
-/* Responsive Demo */
-.responsive-demo {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--space-8);
-  margin-top: var(--space-8);
-}
-
-.responsive-item {
-  background: linear-gradient(135deg, rgba(26, 61, 26, 0.8) 0%, rgba(45, 90, 45, 0.8) 100%);
-  padding: var(--space-6);
-  border-radius: var(--radius-xl);
-  border: 2px solid var(--color-poker-green);
-  box-shadow: var(--shadow-lg);
-  transition: all var(--transition-normal);
-  position: relative;
-  overflow: hidden;
-}
-
-.responsive-item::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-  transform: rotate(45deg);
-  transition: all 0.6s;
-}
-
-.responsive-item:hover::before {
-  transform: rotate(45deg) scale(1.2);
-}
-
-.responsive-item h4 {
-  color: var(--color-poker-orange);
-  margin-bottom: var(--space-3);
-  text-align: center;
-  font-size: var(--font-size-xl);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
-}
-
-.responsive-item p {
-  color: var(--color-neutral-300);
-  margin: 0;
-  font-size: var(--font-size-base);
-  text-align: center;
-  line-height: var(--line-height-relaxed);
-}
-
-/* Demo Item Enhancements */
-.demo-item > * {
-  margin-bottom: var(--space-4);
-}
-
-.demo-item > *:last-child {
-  margin-bottom: 0;
-}
-
-/* Special Poker Section */
-.demo-section:has(.poker-table-card) {
-  background: linear-gradient(135deg, rgba(15, 26, 15, 0.95) 0%, rgba(26, 46, 26, 0.95) 100%);
-  border: 2px solid var(--color-poker-gold);
-}
-
-.demo-section:has(.poker-table-card) h2 {
-  color: var(--color-poker-gold);
-  border-color: var(--color-poker-gold);
 }
 
 /* Responsive Design */
@@ -304,13 +248,8 @@
     padding: var(--space-4);
   }
   
-  .demo-grid {
+  .design-system-demo__grid {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: var(--space-6);
-  }
-  
-  .responsive-demo {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: var(--space-6);
   }
 }
@@ -320,43 +259,38 @@
     padding: var(--space-3);
   }
   
-  .demo-header {
+  .design-system-demo__header {
     margin-bottom: var(--space-8);
     padding: var(--space-6) var(--space-4);
   }
   
-  .demo-header h1 {
+  .design-system-demo__header h1 {
     font-size: var(--font-size-3xl);
   }
   
-  .demo-header p {
+  .design-system-demo__header p {
     font-size: var(--font-size-base);
   }
   
-  .demo-section {
+  .design-system-demo__section {
     margin-bottom: var(--space-8);
     padding: var(--space-6);
   }
   
-  .demo-section h2 {
+  .design-system-demo__section h2 {
     font-size: var(--font-size-2xl);
   }
   
-  .demo-grid {
+  .design-system-demo__grid {
     grid-template-columns: 1fr;
     gap: var(--space-6);
   }
   
-  .color-palette {
+  .design-system-demo__color-grid {
     grid-template-columns: 1fr;
   }
   
-  .responsive-demo {
-    grid-template-columns: 1fr;
-    gap: var(--space-6);
-  }
-  
-  .demo-item {
+  .design-system-demo__component {
     padding: var(--space-4);
   }
 }
@@ -366,23 +300,23 @@
     padding: var(--space-2);
   }
   
-  .button-group,
-  .badge-group {
+  .design-system-demo__examples .button-group,
+  .design-system-demo__examples .badge-group {
     flex-direction: column;
     align-items: stretch;
   }
   
-  .button-group > *,
-  .badge-group > * {
+  .design-system-demo__examples .button-group > *,
+  .design-system-demo__examples .badge-group > * {
     width: 100%;
     text-align: center;
   }
   
-  .demo-item {
+  .design-system-demo__component {
     padding: var(--space-3);
   }
   
-  .color-swatch {
+  .design-system-demo__color-swatch {
     height: 80px;
   }
 }
@@ -416,8 +350,8 @@
 }
 
 /* Utility classes */
-.ml-2 {
-  margin-left: var(--space-2);
+.mt-2 {
+  margin-top: var(--space-2);
 }
 
 /* Custom scrollbar for the demo */
@@ -439,3 +373,4 @@
 .design-system-demo::-webkit-scrollbar-thumb:hover {
   background: var(--color-poker-gold);
 }
+
