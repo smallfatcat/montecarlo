@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { canEditConfig, resizePreserveNumbers } from '../../ui/useTableGame'
+import { canEditConfig, resizePreserveNumbers } from '../../ui/useTableGame_removed'
 import type { TableStatus } from '../table'
 
 describe('UI state helpers', () => {

@@ -11,7 +11,7 @@ import {
   getSeatAvailableActions,
   type TableState,
 } from '../table'
-import { shouldReshuffle } from '../../ui/useTableGame'
+import { shouldReshuffle } from '../../ui/useTableGame_removed'
 
 const C = (rank: Card['rank'], suit: Card['suit']): Card => ({ rank, suit })
 const D = (cards: Card[]): Card[] => [...cards]

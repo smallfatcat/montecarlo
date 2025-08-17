@@ -1,5 +1,4 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Table } from './Table'
 import { CONFIG } from '../config'
 import { DeckGallery } from './DeckGallery'
 import { PokerTableHorseshoe } from './poker/PokerTableHorseshoe'
@@ -29,7 +28,7 @@ export function App() {
   const showPokerTest = hash === '#poker-test'
   const showPokerHistory = hash === '#poker-history'
   const showPokerLayoutEditor = hash === '#poker-layout-editor'
-  const showBlackjack = hash === '#blackjack'
+  const showBlackjack = false
   const showPokerLobby = hash === '#lobby' || hash === '#poker-lobby'
   const showDesignSystem = hash === '#design-system'
   const pokerTableId = showPoker && hash.startsWith('#poker/') ? hash.slice('#poker/'.length) : 'table-1'
@@ -56,7 +55,7 @@ export function App() {
       <PokerTableHorseshoe />
     </PokerGameProvider>
   )
-  else if (showBlackjack) content = <Table />
+  else if (showBlackjack) content = null as any
   else content = <Landing />
 
 
