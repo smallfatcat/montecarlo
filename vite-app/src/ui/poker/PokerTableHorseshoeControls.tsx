@@ -29,6 +29,7 @@ export function PokerTableHorseshoeControls(props: {
   variant?: 'toolbar' | 'sidebar'
   sidebarWidth?: number
   hasHumanPlayers?: boolean
+  canEnableAutoplay?: (seatIndex: number) => boolean
 }) {
   const {
     table,
@@ -48,6 +49,7 @@ export function PokerTableHorseshoeControls(props: {
     onRenameMe,
     onLeaveSeat,
     hasHumanPlayers,
+    canEnableAutoplay,
   } = props
 
   // Removed bet sizing control from sidebar
@@ -94,7 +96,13 @@ export function PokerTableHorseshoeControls(props: {
       )}
       
       <label className="control-label">
-        <input type="checkbox" checked={autoPlay} onChange={(e) => onToggleAutoPlay(e.target.checked)} /> 
+        <input 
+          type="checkbox" 
+          checked={autoPlay} 
+          onChange={(e) => onToggleAutoPlay(e.target.checked)}
+          disabled={mySeatIndex !== null && canEnableAutoplay && !canEnableAutoplay(mySeatIndex!)}
+          title={mySeatIndex !== null && canEnableAutoplay && !canEnableAutoplay(mySeatIndex!) ? 'Cannot enable autoplay: no human players at table' : 'Enable automatic play for your seat'}
+        /> 
         Autoplay
       </label>
       

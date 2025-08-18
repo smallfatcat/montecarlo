@@ -29,12 +29,19 @@ export function usePokerGameState() {
   const isAutoplayEnabled = (seatIndex: number) => mySeatAutoplay === seatIndex
 
   // Helper to enable/disable autoplay for a specific seat
-  const setAutoplayForSeat = (seatIndex: number, enabled: boolean) => {
+  const setAutoplayForSeat = (seatIndex: number, enabled: boolean): boolean => {
     if (enabled) {
-      setMySeatAutoplay(seatIndex)
+      // Only enable autoplay if there are human players at the table
+      if (hasHumanPlayers()) {
+        setMySeatAutoplay(seatIndex)
+      } else {
+        console.log('Cannot enable autoplay: no human players at table')
+        return false // Indicate that autoplay was not enabled
+      }
     } else {
       setMySeatAutoplay(null)
     }
+    return true // Indicate success
   }
 
   // Helper to clear autoplay when leaving a seat
@@ -57,6 +64,12 @@ export function usePokerGameState() {
       return true // Autoplay was disabled
     }
     return false // No change
+  }
+
+  // Helper to check if autoplay can be enabled for a specific seat
+  const canEnableAutoplay = (seatIndex: number): boolean => {
+    // Check if the seat is valid and there are human players
+    return seatIndex >= 0 && seatIndex < table.seats.length && hasHumanPlayers()
   }
 
   return {
@@ -83,5 +96,6 @@ export function usePokerGameState() {
     resetGameState,
     hasHumanPlayers,
     checkAndDisableAutoplayIfNoHumans,
+    canEnableAutoplay,
   }
 }

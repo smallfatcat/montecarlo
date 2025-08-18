@@ -6,7 +6,7 @@ import { PokerTableHorseshoeView } from './PokerTableHorseshoeView'
 import { PokerTableHorseshoeControls } from './PokerTableHorseshoeControls'
 
 export function PokerTableHorseshoe() {
-  const { table, revealed, dealNext, isAutoplayEnabled, setAutoplayForSeat, available, fold, check, call, bet, raise, hideHoleCardsUntilShowdown, setHideHoleCardsUntilShowdown, review, reviewNextStep, reviewPrevStep, endReview, sit, leave, mySeatIndex, playerNames, renameCurrentPlayer, resetGame, hasHumanPlayers } = usePokerGameContext()
+  const { table, revealed, dealNext, isAutoplayEnabled, setAutoplayForSeat, available, fold, check, call, bet, raise, hideHoleCardsUntilShowdown, setHideHoleCardsUntilShowdown, review, reviewNextStep, reviewPrevStep, endReview, sit, leave, mySeatIndex, playerNames, renameCurrentPlayer, resetGame, hasHumanPlayers, canEnableAutoplay } = usePokerGameContext()
   const { equity, run: runEquity, running: equityRunning } = useEquity()
 
   const community = table.community
@@ -146,6 +146,7 @@ export function PokerTableHorseshoe() {
         onToggleHideHoleCards={setHideHoleCardsUntilShowdown}
         
         hasHumanPlayers={hasHumanPlayers()}
+        canEnableAutoplay={canEnableAutoplay}
         
         onOpenHistory={() => { window.location.hash = '#poker-history' }}
         onOpenLobby={() => { window.location.hash = '#lobby' }}

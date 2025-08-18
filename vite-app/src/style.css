@@ -303,6 +303,17 @@ h1 {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
+/* Disabled autoplay checkbox styling */
+.control-label input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.control-label input[type="checkbox"]:disabled + span {
+  opacity: 0.5;
+  color: var(--muted);
+}
+
 .hand--active { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 12px; }
 
 .logo {
