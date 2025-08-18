@@ -1,0 +1,239 @@
+---
+description: Project-wide rules, context, and workflows for the Poker-focused app (frontend in vite-app, backend in apps/game-server) with seeded deterministic engine
+globs: ["**/*.{js,ts,tsx,jsx}", "**/*.md", ".cursor/rules/*.mdc"]
+related_docs: ["docs/system-overview.md", "docs/poker-realtime-usage.md"]
+---
+
+# Monte Carlo Project Rules
+
+@context {
+    "type": "project_rules",
+    "project": "montecarlo",
+    "domain": ["poker", "realtime-multiplayer", "monte carlo"],
+    "languages": ["javascript", "typescript"],
+    "runtime_targets": ["browser", "node"],
+    "primary_goal": "Authoritative multiplayer Poker app with a deterministic, seeded engine; Blackjack simulation remains backend-only for now",
+    "format_version": "1.0.0",
+    "last_updated": "2025-08-18"
+}
+
+## Objectives
+
+- Deliver stable real-time multiplayer Poker via Socket.IO with an authoritative backend.
+- Keep the engine (`packages/poker-engine`) pure and deterministic with seeded shuffles per hand.
+- Frontend (`vite-app`) renders Poker UI, manages local UX, and connects to `apps/game-server` via `VITE_WS_URL`.
+- Support high-speed local analysis (e.g., equity worker) without impacting UI responsiveness.
+
+## Architecture Principles
+
+@rules [
+    {
+        "id": "pure_core_engine",
+        "severity": "error",
+        "description": "Core Poker engine functions must be pure: no I/O, no timers, no global state, no in-place mutation of inputs."
+    },
+    {
+        "id": "determinism_with_seed",
+        "severity": "error",
+        "description": "Given the same initial state, config, and RNG seed, results must be reproducible bit-for-bit."
+    },
+    {
+        "id": "state_immutability",
+        "severity": "error",
+        "description": "Do not mutate input state objects; always return new state structures or use structural sharing."
+    },
+    {
+        "id": "layer_separation",
+        "severity": "warning",
+        "description": "Keep layers separate: `packages/poker-engine` (engine), `vite-app/src/poker` (game flow/helpers), `vite-app/src/ui/poker` (UI), `vite-app/src/workers` (equity), `apps/game-server` (authoritative server)."
+    },
+    {
+        "id": "config_first",
+        "severity": "warning",
+        "description": "Game variations are explicit in config: blinds, blind increases, rake percent/cap, RNG seed/per-hand increment."
+    },
+    {
+        "id": "authoritative_server",
+        "severity": "error",
+        "description": "Poker gameplay state is owned by `apps/game-server`. Client may optimistically render but server is the source of truth."
+    },
+    {
+        "id": "protocol_validation",
+        "severity": "warning",
+        "description": "All inbound/outbound messages are validated (e.g., with Zod) and mapped to shared types in `packages/shared`."
+    }
+]
+
+## Randomness and Reproducibility
+
+@rules [
+    {
+        "id": "seedable_prng",
+        "severity": "error",
+        "description": "Use a seedable PRNG for deck shuffles. Preferred: xorshift32 or equivalent wrapped behind a minimal RNG interface."
+    },
+    {
+        "id": "no_ambient_math_random",
+        "severity": "error",
+        "description": "Do not call `Math.random()` inside the engine. Thread RNG explicitly or derive per-hand RNG from base seed + increment."
+    },
+    {
+        "id": "rng_interface",
+        "severity": "warning",
+        "description": "RNG interface should expose `next()` returning a float in [0,1) and optionally `nextInt(max)`; avoid leaking implementation details."
+    },
+    {
+        "id": "per_hand_seed_derivation",
+        "severity": "info",
+        "description": "Derive per-hand seed as `baseSeed + (handId * perHandIncrement)` to keep sessions reproducible while varying hands."
+    },
+    {
+        "id": "ui_randomness",
+        "severity": "info",
+        "description": "UI-only animations may use `Math.random()` but must not affect gameplay outcomes."
+    }
+]
+
+## Performance Guidelines
+
+@rules [
+    {
+        "id": "hot_path_allocations",
+        "severity": "warning",
+        "description": "Avoid per-iteration allocations in hot loops; reuse buffers or preallocate where it doesn't violate purity."
+    },
+    {
+        "id": "logging_in_hot_paths",
+        "severity": "error",
+        "description": "Do not log from hot paths. Aggregate counters/metrics and log only outside the inner loop."
+    },
+    {
+        "id": "batch_ui_updates",
+        "severity": "warning",
+        "description": "Batch UI updates (`requestAnimationFrame`) and decouple from engine ticks. Use Web Workers for heavy computations (e.g., equity)."
+    },
+    {
+        "id": "benchmark_targets",
+        "severity": "info",
+        "description": "Track hands/sec and equity samples/sec under realistic configs."
+    },
+    {
+        "id": "network_health",
+        "severity": "info",
+        "description": "Throttle or coalesce client emits; avoid spamming server with duplicate actions. Reconnect with polling fallback if needed."
+    }
+]
+
+## API Conventions
+
+@format {
+    "engine": {
+        "createInitial_signature": "(numSeats, cpuSeats, startingStack, shoe?) => PokerTableState",
+        "startHand_signature": "(state) => PokerTableState",
+        "applyAction_signature": "(state, action) => PokerTableState",
+        "settleAndEnd_signature": "(state) => PokerTableState",
+        "computePots_signature": "(state) => Array<{ amount: number; eligibleSeatIdxs: number[] }>",
+        "evaluateHand_signature": "evaluateSeven(cards[7]) => EvaluatedHand",
+        "immutability": true
+    },
+    "types": {
+        "PokerTableState": "Complete state for a Hold'em table (seats, pot, community, deck, button)",
+        "BettingAction": "fold | check | call | bet(amount) | raise(to)",
+        "Rng": "Seedable RNG with next()"
+    }
+}
+
+## Testing Strategy
+
+@rules [
+    {
+        "id": "deterministic_tests",
+        "severity": "error",
+        "description": "Unit tests fix seeds to assert deterministic shuffles and repeatable showdowns."
+    },
+    {
+        "id": "invariant_tests",
+        "severity": "warning",
+        "description": "Add invariants: no input mutation; chip conservation (stacks + pots) holds; blinds and rake deductions are consistent."
+    },
+    {
+        "id": "property_tests",
+        "severity": "info",
+        "description": "Property tests: side pot construction matches commitments; winner determination consistent with hand evaluator; remainder distribution follows dealer-left order."
+    }
+]
+
+## Code Style and Types
+
+@rules [
+    {
+        "id": "explicit_public_types",
+        "severity": "warning",
+        "description": "Public engine APIs must have explicit types (TypeScript) or JSDoc annotations (JavaScript)."
+    },
+    {
+        "id": "naming_clarity",
+        "severity": "warning",
+        "description": "Prefer descriptive names over abbreviations. Avoid single-letter variables except in well-scoped loops."
+    },
+    {
+        "id": "control_flow_guard_clauses",
+        "severity": "info",
+        "description": "Use guard clauses for edge cases to keep nesting shallow."
+    }
+]
+
+## Directory and File Conventions
+
+@options {
+    "recommended_layout": {
+        "packages/poker-engine": "Pure engine and types (deterministic state transitions)",
+        "packages/shared": "Shared types and message contracts",
+        "vite-app/src/poker": "Flow helpers, client-side utilities (no gameplay authority)",
+        "vite-app/src/ui/poker": "React UI components and hooks",
+        "vite-app/src/workers": "Web Workers (e.g., equityMonteCarlo)",
+        "apps/game-server": "Fastify + Socket.IO authoritative server",
+        "docs": "Architecture and operations docs"
+    }
+}
+
+## Workflows
+
+@examples {
+    "wire_new_server_event": [
+        "Update `apps/game-server` to emit validated event",
+        "Update `vite-app/src/poker/realtime/wsAdapter.ts` to handle and map to callbacks",
+        "Add UI reaction in `vite-app/src/ui/poker`"
+    ],
+    "enable_seeded_shuffles": [
+        "Set `CONFIG.poker.random.useSeeded = true` and choose `seed` and `perHandIncrement`",
+        "Verify deterministic hands via tests and reproducible replays"
+    ],
+    "deploy_lan": [
+        "Start backend in `apps/game-server` with `.env` (HOST, PORT, FRONTEND_ORIGINS)",
+        "Start frontend in `vite-app` with `.env.local` setting `VITE_WS_URL`",
+        "Open the SPA and verify connection and event flow"
+    ]
+}
+
+## Validation
+
+@validation {
+    "required": [
+        "Frontmatter must be present and valid",
+        "Core Poker engine remains pure and deterministic with seeded RNG",
+        "No UI or I/O inside engine",
+        "No `Math.random` calls under `packages/poker-engine/**/*`",
+        "Server validates messages and is authoritative",
+        "Tests cover deterministic behavior with fixed seeds"
+    ],
+    "recommended": [
+        "Benchmarks demonstrate hands/sec and equity samples/sec",
+        "Public APIs documented with types/JSDoc",
+        "UI updates are batched and decoupled from engine loop"
+    ]
+}
+
+@version "1.0.0"
+@last_updated "2025-08-18"
+

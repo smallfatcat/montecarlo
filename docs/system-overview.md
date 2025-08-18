@@ -1,6 +1,6 @@
 ### System Overview
 
-This project delivers a casino game application with poker UI backed by an authoritative realtime server, plus high-speed simulation capabilities for both poker and blackjack. The frontend renders game tables and user interactions; the backend enforces game rules and streams state over WebSockets.
+This project delivers a casino game application with a poker UI backed by an authoritative realtime server, plus high-speed simulation capabilities for both poker and blackjack. The frontend currently renders poker tables and user interactions; the backend enforces game rules and streams state over WebSockets. Blackjack is implemented as a backend simulation engine only and does not yet have a UI.
 
 ---
 
@@ -8,8 +8,8 @@ This project delivers a casino game application with poker UI backed by an autho
 
 - Frontend (`vite-app/`)
   - React + Vite SPA.
-  - Renders poker and blackjack tables, captures user actions (deal, bet, fold).
-  - High-speed simulation runner for Monte Carlo analysis.
+  - Renders poker tables and captures user actions (deal, bet, fold).
+  - High-speed simulation runner available as a hook; UI integration pending.
   - Connects to the backend via Socket.IO using `VITE_WS_URL` (ws/wss).
 
 - Backend (`apps/game-server/`)
@@ -39,12 +39,12 @@ This project delivers a casino game application with poker UI backed by an autho
 - CPU players for single-player games
 
 ### Blackjack
-- Standard blackjack rules with configurable house rules
-- Multi-deck shoe management
-- Basic strategy implementation
-- High-speed Monte Carlo simulations
-- Bankroll tracking and analysis
-- **Note**: Currently single-player only (no multiplayer server support)
+- Standard blackjack rules with configurable house rules (backend engine)
+- Multi-deck shoe management (backend engine)
+- Basic strategy implementation (backend engine)
+- High-speed Monte Carlo simulations (backend engine)
+- Bankroll tracking and analysis (backend engine)
+- **Note**: Backend-only at this time (no UI or multiplayer server support)
 
 ---
 
@@ -55,7 +55,7 @@ The application includes a high-performance simulation runner:
 - **Backend Engine**: Pure function simulation engine for maximum performance
 - **Web Worker Support**: Background processing capabilities
 - **Monte Carlo Analysis**: High-volume statistical simulations
-- **Status**: Engine implemented, UI integration pending
+- **Status**: Engine implemented; UI to control and visualize simulations is pending
 
 **Note**: While the simulation engine exists and is fully functional, users cannot currently control or run simulations through the interface.
 

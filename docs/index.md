@@ -6,8 +6,8 @@ This index provides an overview of all available documentation and their current
 
 ### Project Overview
 - **[README.md](../README.md)** - Main project description and quick start guide
-- **[IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)** - Current feature implementation status
-- **[REFACTOR_PLAN.md](../REFACTOR_PLAN.md)** - Development roadmap and progress tracking
+- **[PHASE_1_COMPLETION_SUMMARY.md](../PHASE_1_COMPLETION_SUMMARY.md)** - Zustand implementation summary
+- **[PHASE_2_COMPLETION_SUMMARY.md](../PHASE_2_COMPLETION_SUMMARY.md)** - Design system implementation summary
 
 ### Phase Completion Summaries
 - **[PHASE_1_COMPLETION_SUMMARY.md](../PHASE_1_COMPLETION_SUMMARY.md)** - Zustand state management implementation
@@ -23,33 +23,32 @@ This index provides an overview of all available documentation and their current
 
 ### Implementation Details
 - **[poker-realtime-usage.md](poker-realtime-usage.md)** - Multiplayer poker implementation guide
+- **[BUILD_WITH_VERSION.md](BUILD_WITH_VERSION.md)** - Building with automatic version generation
 - **[VERSIONING.md](VERSIONING.md)** - Version management and release process
 - **[chip-animation-flow.md](chip-animation-flow.md)** - Chip animation system design
 
 ## 🔄 Recent Updates
 
-### December 2024 - Documentation Accuracy Update
-- **Updated**: architecture.md, getting-started.md, system-overview.md, README.md
-- **Created**: IMPLEMENTATION_STATUS.md - New comprehensive status tracking
-- **Updated**: REFACTOR_PLAN.md - Added Phase 3B for blackjack UI
-- **Focus**: Clarified backend-only features vs. user-facing features
+### August 2025 - Documentation Accuracy Update
+- **Updated**: architecture.md, getting-started.md, system-overview.md, README.md, VERSIONING.md, BUILD_WITH_VERSION.md
+- **Focus**: Clarified backend-only features vs. user-facing features; added automatic version generation docs and endpoints
 
 ### Key Changes Made
-1. **Clarified Blackjack Status**: Backend engine exists, UI missing
-2. **Updated Simulation Features**: Hook exists but not integrated with UI
-3. **Added Implementation Tracking**: Clear status of all features
-4. **Updated Development Roadmap**: Added Phase 3B for blackjack implementation
+1. **Clarified Blackjack Status**: Backend engine exists, no UI yet
+2. **Simulation Features**: Engine implemented; UI control pending
+3. **Versioning Docs**: Added comprehensive versioning and build info
+4. **Build Docs**: Added automatic version generation and deployment notes
 
 ## 📋 Documentation Status
 
 | Document | Status | Last Updated | Notes |
 |----------|--------|--------------|-------|
-| README.md | ✅ Current | Dec 2024 | Reflects actual project state |
-| IMPLEMENTATION_STATUS.md | ✅ New | Dec 2024 | Comprehensive feature tracking |
-| REFACTOR_PLAN.md | ✅ Current | Dec 2024 | Updated with Phase 3B |
-| architecture.md | ✅ Current | Dec 2024 | Clarified backend vs. UI features |
-| getting-started.md | ✅ Current | Dec 2024 | Removed non-existent UI examples |
-| system-overview.md | ✅ Current | Dec 2024 | Updated simulation capabilities |
+| README.md | ✅ Current | Aug 2025 | Reflects actual project state |
+| architecture.md | ✅ Current | Aug 2025 | Clarified backend vs. UI features |
+| getting-started.md | ✅ Current | Aug 2025 | Verified workflows |
+| system-overview.md | ✅ Current | Aug 2025 | Updated simulation capabilities |
+| VERSIONING.md | ✅ Current | Aug 2025 | Includes build metadata format |
+| BUILD_WITH_VERSION.md | ✅ Current | Aug 2025 | Auto version gen + endpoints |
 | PHASE_1_COMPLETION_SUMMARY.md | ✅ Current | Dec 2024 | Zustand implementation complete |
 | PHASE_2_COMPLETION_SUMMARY.md | ✅ Current | Dec 2024 | Design system implementation complete |
 
@@ -87,6 +86,6 @@ This index provides an overview of all available documentation and their current
 
 ---
 
-**Last Updated**: December 2024  
-**Documentation Status**: 90% Accurate, 10% Needs Updates  
-**Next Review**: When Phase 3B implementation begins
+**Last Updated**: August 2025  
+**Documentation Status**: 100% Current for listed docs  
+**Next Review**: When Blackjack UI implementation begins
