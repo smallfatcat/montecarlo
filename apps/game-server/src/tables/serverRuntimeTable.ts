@@ -36,7 +36,7 @@ export interface TableApi {
   handleDisconnect(playerId: string): void
 }
 
-export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, opts?: { seats?: number; startingStack?: number; onSummaryChange?: (summary: any) => void; disconnectGraceMs?: number }): TableApi {
+export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, opts?: { seats?: number; startingStack?: number; onSummaryChange?: (summary: any) => void; disconnectGraceMs?: number; publisher?: { handStarted: (p: { tableId: string; handId: number; buttonIndex: number; smallBlind: number; bigBlind: number }) => Promise<void>; action: (p: { tableId: string; handId: number; order: number; seatIndex: number; street: any; type: string; amount?: number; playerToken?: string }) => Promise<void>; handEnded?: (p: { tableId: string; handId: number; board: string[]; results: Array<{ seatIndex: number; playerToken?: string; delta: number }> }) => Promise<void>; seat?: (p: { tableId: string; seatIndex: number; playerToken: string; playerName: string }) => Promise<void>; unseat?: (p: { tableId: string; seatIndex: number; playerToken: string }) => Promise<void>; deal?: (p: { tableId: string; handId: number; street: any; cards: string[] }) => Promise<void>; } }): TableApi {
   const seats = opts?.seats ?? 6
   const startingStack = opts?.startingStack ?? 5000
   const cpuSeats = Array.from({ length: seats }, (_, i) => i)
@@ -61,24 +61,57 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
     return false
   }
 
+  let actionOrder = 0
   let runtime = new PokerRuntime({ seats, cpuSeats, startingStack, shouldAutoplaySeat }, {
     onState: (s) => {
+      const prev = lastState
+      const transitionedToEnd = (prev?.status === 'in_hand' && s.status === 'hand_over')
       lastState = s
       io.to(room).emit('state', s)
       try { console.log('[server-runtime] state', { handId: s.handId, street: s.street, toAct: s.currentToAct }) } catch {}
       try { opts?.onSummaryChange?.(getSummary()) } catch {}
+      if (transitionedToEnd) {
+        try {
+          const toCode = (c: any) => `${c.rank}${c.suit[0]}`
+          const board = (s.community || []).map(toCode)
+          const results = [] as Array<{ seatIndex: number; playerToken?: string; delta: number }>
+          const prevSeats = (prev as any)?.seats || []
+          for (let i = 0; i < s.seats.length; i += 1) {
+            const before = prevSeats[i]?.stack ?? s.seats[i].stack
+            const after = s.seats[i].stack
+            const delta = after - before
+            if (delta !== 0) {
+              // Try to find a player token that owns this seat
+              let ownerToken: string | undefined = undefined
+              for (const [pid, idx] of seatOwners.entries()) { if (idx === i) { ownerToken = pid; break } }
+              results.push({ seatIndex: i, playerToken: ownerToken, delta })
+            }
+          }
+          opts?.publisher?.handEnded?.({ tableId, handId: s.handId, board, results })
+        } catch {}
+      }
     },
     onAction: (handId, seat, action, toCall, street) => {
       io.to(room).emit('action', { handId, seat, action, toCall, street })
       try { console.log('[server-runtime] action', { handId, seat, action: action.type, toCall, street }) } catch {}
+      try {
+        actionOrder += 1
+        const type = (action as any)?.type || 'unknown'
+        const amount = (type === 'bet' || type === 'raise') ? (action as any)?.amount ?? undefined : (type === 'call' ? toCall : undefined)
+        let playerToken: string | undefined = undefined
+        try { for (const [pid, idx] of seatOwners.entries()) { if (idx === seat) { playerToken = pid; break } } } catch {}
+        opts?.publisher?.action?.({ tableId, handId, order: actionOrder, seatIndex: seat, street: street as any, type, amount, playerToken })
+      } catch {}
     },
     onDeal: (handId, street, cardCodes) => {
       io.to(room).emit('deal', { handId, street, cards: cardCodes })
       try { console.log('[server-runtime] deal', { handId, street, cards: cardCodes.join(' ') }) } catch {}
+      try { opts?.publisher?.deal?.({ tableId, handId, street: street as any, cards: cardCodes }) } catch {}
     },
     onHandStart: (handId, buttonIndex, smallBlind, bigBlind) => {
       io.to(room).emit('hand_start', { handId, buttonIndex, smallBlind, bigBlind })
       try { console.log('[server-runtime] hand_start', { handId, buttonIndex, smallBlind, bigBlind }) } catch {}
+      try { actionOrder = 0; opts?.publisher?.handStarted?.({ tableId, handId, buttonIndex, smallBlind, bigBlind }) } catch {}
     },
     onPostBlind: (seat, amount) => {
       // Attach to last known hand id if available
@@ -247,6 +280,7 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
       if (pending) { try { clearTimeout(pending) } catch {}; pendingReleases.delete(playerId) }
       try { (runtime as any).setSeatCpu?.(seatIndex, false) } catch {}
       io.to(room).emit('seat_update', { seatIndex, isCPU: false, playerId, playerName: name })
+      try { opts?.publisher?.seat?.({ tableId, seatIndex, playerToken: playerId, playerName: name }) } catch {}
       try { opts?.onSummaryChange?.(getSummary()) } catch {}
       return { ok: true }
     },
@@ -263,6 +297,7 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
       playerNames.delete(playerId)
       try { (runtime as any).setSeatCpu?.(seatIdx, true) } catch {}
       io.to(room).emit('seat_update', { seatIndex: seatIdx, isCPU: true, playerId: null, playerName: null })
+      try { opts?.publisher?.unseat?.({ tableId, seatIndex: seatIdx, playerToken: playerId }) } catch {}
       try { opts?.onSummaryChange?.(getSummary()) } catch {}
       return { ok: true }
     },

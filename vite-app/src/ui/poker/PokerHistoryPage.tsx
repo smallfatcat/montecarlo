@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useMyRecentHands } from './hooks/useConvexHistory'
 import { usePokerGameContext } from './PokerGameContext'
 import { buildTableFrom } from '../../poker/history'
 import type { HistoryEvent } from '../../poker/history'
@@ -6,6 +7,7 @@ import { PokerTableHorseshoeView } from './PokerTableHorseshoeView'
 import { evaluateSeven } from '../../poker/handEval'
 import { __test__finalizeShowdown } from '../../poker/flow'
 import { PREDEFINED_HAND_HISTORIES } from '../../poker/predefinedHands'
+import { ConvexHistoryDebug } from './ConvexHistoryDebug'
 
 function download(text: string, filename: string) {
   const blob = new Blob([text], { type: 'application/json;charset=utf-8' })
@@ -23,10 +25,16 @@ export function PokerHistoryPage() {
   const { histories } = usePokerGameContext()
   const [selected, setSelected] = useState<number | null>(null)
   const [step, setStep] = useState<number>(0)
+  const { hands } = useMyRecentHands(10)
+
+  const convexSummaries = useMemo(() => {
+    // Map Convex hands to a minimal structure similar to existing history summaries
+    return (hands || []).map((h: any) => ({ handId: h.handSeq, events: [] as any[] }))
+  }, [hands])
 
   const sorted = useMemo(() => {
-    return [...PREDEFINED_HAND_HISTORIES, ...histories].sort((a, b) => (a.handId - b.handId))
-  }, [histories])
+    return [...PREDEFINED_HAND_HISTORIES, ...histories, ...convexSummaries].sort((a, b) => (a.handId - b.handId))
+  }, [histories, convexSummaries])
 
   const selectedHistory = useMemo(() => {
     if (selected == null) return null
@@ -206,6 +214,7 @@ export function PokerHistoryPage() {
             </div>
           </div>
         ) : null}
+        <ConvexHistoryDebug />
       </div>
     </div>
   )

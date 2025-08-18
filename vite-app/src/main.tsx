@@ -2,11 +2,15 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './style.css'
 import { App } from './ui/App'
+import { ConvexProvider } from 'convex/react'
+import { convex } from './convexClient'
 import { CONFIG } from './config'
 
 ReactDOM.createRoot(document.getElementById('app')!).render(
   <React.StrictMode>
-    <App />
+    <ConvexProvider client={convex}>
+      <App />
+    </ConvexProvider>
   </React.StrictMode>
 )
 
