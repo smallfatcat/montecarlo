@@ -1,105 +1,144 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useMyRecentHands } from './hooks/useConvexHistory'
-import { usePokerGameContext } from './PokerGameContext'
-import { buildTableFrom } from '../../poker/history'
-import type { HistoryEvent } from '../../poker/history'
+import { useQuery } from 'convex/react'
+import { api } from 'app-convex/_generated/api'
+import type { Id } from 'app-convex/_generated/dataModel'
 import { PokerTableHorseshoeView } from './PokerTableHorseshoeView'
 import { evaluateSeven } from '../../poker/handEval'
-import { __test__finalizeShowdown } from '../../poker/flow'
-import { PREDEFINED_HAND_HISTORIES } from '../../poker/predefinedHands'
-import { ConvexHistoryDebug } from './ConvexHistoryDebug'
+import type { PokerTableState, SeatState, Pot, RulesNoLimit } from '../../poker/types'
+import type { Card } from '../../blackjack/types'
 
-function download(text: string, filename: string) {
-  const blob = new Blob([text], { type: 'application/json;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+// Helper function to convert card codes to readable format
+const fromCode = (code: string): Card => ({ 
+  rank: code.slice(0, code.length - 1) as any, 
+  suit: ({ C: 'Clubs', D: 'Diamonds', H: 'Hearts', S: 'Spades' } as any)[code.slice(-1)] 
+})
+
+// Helper function to build table state from Convex data
+const buildTableFromConvex = (hand: any, actions: any[]): PokerTableState => {
+  // Create a basic table structure that matches PokerTableState
+  const table: PokerTableState = {
+    handId: hand.handSeq,
+    status: 'hand_over',
+    seats: [] as SeatState[],
+    community: [] as Card[],
+    deck: [], // Empty deck for history view
+    street: 'showdown',
+    currentToAct: null,
+    lastAggressorIndex: null,
+    betToCall: 0,
+    lastRaiseAmount: 0,
+    buttonIndex: hand.buttonIndex,
+    pot: { main: 0 } as Pot,
+    rules: { smallBlind: 25, bigBlind: 50 } as RulesNoLimit,
+  }
+
+  // Process actions to build the game state
+  let currentBoard: Card[] = []
+  let seatStates = new Map<number, SeatState>()
+  
+  for (const action of actions) {
+    if (action.street === 'preflop') {
+      // Initialize seats for preflop actions
+      if (!seatStates.has(action.seatIndex)) {
+        seatStates.set(action.seatIndex, {
+          seatIndex: action.seatIndex,
+          isCPU: false,
+          hole: [], // We don't have hole cards in Convex data
+          stack: 1000, // Default starting stack
+          committedThisStreet: 0,
+          totalCommitted: 0,
+          hasFolded: false,
+          isAllIn: false,
+        })
+      }
+    }
+  }
+
+  // Convert board cards
+  if (hand.board && hand.board.length > 0) {
+    currentBoard = hand.board.map(fromCode)
+  }
+
+  // Build results summary
+  const results = hand.results || []
+  results.forEach((result: any) => {
+    if (!seatStates.has(result.seatIndex)) {
+      seatStates.set(result.seatIndex, {
+        seatIndex: result.seatIndex,
+        isCPU: false,
+        hole: [],
+        stack: 1000 + result.delta, // Starting stack + delta
+        committedThisStreet: 0,
+        totalCommitted: 0,
+        hasFolded: false,
+        isAllIn: false,
+      })
+    }
+  })
+
+  // Convert to array and sort by seat index
+  table.seats = Array.from(seatStates.values()).sort((a, b) => a.seatIndex - b.seatIndex)
+  table.community = currentBoard
+  
+  // Calculate pot from results
+  const totalPot = results.reduce((sum: number, r: any) => sum + Math.abs(r.delta), 0) / 2
+  table.pot = { main: totalPot }
+
+  return table
 }
 
 export function PokerHistoryPage() {
-  const { histories } = usePokerGameContext()
-  const [selected, setSelected] = useState<number | null>(null)
-  const [step, setStep] = useState<number>(0)
-  const { hands } = useMyRecentHands(10)
+  const [selectedHandId, setSelectedHandId] = useState<string | null>(null)
+  
+  // Fetch recent hands from Convex
+  const recentHands = useQuery(api.history.listRecentHands, { 
+    paginationOpts: { numItems: 50, cursor: null } 
+  })
+  
+  // Fetch selected hand details
+  const handDetail = useQuery(
+    api.history.getHandDetail, 
+    selectedHandId ? { handId: (selectedHandId as unknown as Id<'hands'>) } : 'skip'
+  )
 
-  const convexSummaries = useMemo(() => {
-    // Map Convex hands to a minimal structure similar to existing history summaries
-    return (hands || []).map((h: any) => ({ handId: h.handSeq, events: [] as any[] }))
-  }, [hands])
+  const selectedHand = useMemo(() => {
+    if (!handDetail) return null
+    return handDetail.hand
+  }, [handDetail])
 
-  const sorted = useMemo(() => {
-    return [...PREDEFINED_HAND_HISTORIES, ...histories, ...convexSummaries].sort((a, b) => (a.handId - b.handId))
-  }, [histories, convexSummaries])
+  const selectedActions = useMemo(() => {
+    if (!handDetail) return []
+    return handDetail.actions || []
+  }, [handDetail])
 
-  const selectedHistory = useMemo(() => {
-    if (selected == null) return null
-    return sorted.find((h) => h.handId === selected) ?? null
-  }, [selected, sorted])
+  const tableState = useMemo(() => {
+    if (!selectedHand || !selectedActions) return null
+    return buildTableFromConvex(selectedHand, selectedActions)
+  }, [selectedHand, selectedActions])
 
-  const actions = useMemo(() => {
-    if (!selectedHistory) return [] as Array<Extract<HistoryEvent, { type: 'action' }>>
-    return selectedHistory.events.filter((e) => (e as any).type === 'action') as Array<Extract<HistoryEvent, { type: 'action' }>>
-  }, [selectedHistory])
-
-  const setup = useMemo(() => {
-    if (!selectedHistory) return null as (Extract<HistoryEvent, { type: 'hand_setup' }> | null)
-    return selectedHistory.events.find((e) => (e as any).type === 'hand_setup') as Extract<HistoryEvent, { type: 'hand_setup' }> | undefined || null
-  }, [selectedHistory])
-
-  const clampedStep = Math.max(0, Math.min(step, actions.length))
-
-  const previewState = useMemo(() => {
-    if (!selectedHistory) return null
-    if (!setup) return null
-    const built = buildTableFrom(setup, actions, clampedStep)
-    // Derive board from recorded deal_* events up to current step to ensure correct board visibility
-    const fromCode = (code: string) => ({ rank: code.slice(0, code.length - 1) as any, suit: ({ C: 'Clubs', D: 'Diamonds', H: 'Hearts', S: 'Spades' } as any)[code.slice(-1)] })
-    let processedActions = 0
-    const board: any[] = []
-    for (const e of selectedHistory.events) {
-      const t = (e as any).type
-      if (t === 'action') {
-        processedActions += 1
-        if (processedActions > clampedStep) break
-      } else if (t === 'deal_flop' && processedActions <= clampedStep) {
-        const codes = (e as any).cards || []
-        board.push(...codes.map(fromCode))
-      } else if (t === 'deal_turn' && processedActions <= clampedStep) {
-        const codes = (e as any).cards || []
-        board.push(...codes.map(fromCode))
-      } else if (t === 'deal_river' && processedActions <= clampedStep) {
-        const codes = (e as any).cards || []
-        board.push(...codes.map(fromCode))
-      }
-    }
-    const withBoard = board.length > (built.community?.length || 0) ? { ...built, community: board as any } : built
-    // If we've stepped through all actions and have a full board, show resolved showdown state
-    const fullBoard = (withBoard.community?.length ?? 0) >= 5
-    const atEnd = clampedStep >= actions.length
-    if (atEnd && fullBoard) {
-      return __test__finalizeShowdown(withBoard)
-    }
-    return withBoard
-  }, [selectedHistory, setup, actions, clampedStep])
-
-  const winnersSet = useMemo(() => {
-    if (!previewState) return undefined
-    if (previewState.status !== 'hand_over') return undefined
-    const community = previewState.community
-    const contenders = previewState.seats.filter((s) => !s.hasFolded && s.hole.length === 2).length
-    const winners = new Set<number>()
+  const winnersSet = useMemo((): Set<number> | undefined => {
+    if (!tableState) return undefined
+    if (tableState.status !== 'hand_over') return undefined
+    
+    const community = tableState.community
+    const contenders = tableState.seats.filter((s) => !s.hasFolded && s.hole.length === 2).length
+    
     if (community.length < 5 || contenders <= 1) {
-      previewState.seats.forEach((s, i) => { if (!s.hasFolded && s.hole.length > 0) winners.add(i) })
+      const winners = new Set<number>()
+      tableState.seats.forEach((s, i) => { 
+        if (!s.hasFolded && s.hole.length > 0) winners.add(i) 
+      })
       return winners
     }
-    const classOrder: Record<string, number> = { high_card:0,pair:1,two_pair:2,three_kind:3,straight:4,flush:5,full_house:6,four_kind:7,straight_flush:8 } as const as any
+
+    // Evaluate hands if we have a full board
+    const classOrder: Record<string, number> = { 
+      high_card: 0, pair: 1, two_pair: 2, three_kind: 3, straight: 4, 
+      flush: 5, full_house: 6, four_kind: 7, straight_flush: 8 
+    } as const as any
+    
     let best: { classIdx: number; ranks: number[] } | null = null
-    previewState.seats.forEach((s) => {
+    tableState.seats.forEach((s) => {
       if (s.hasFolded || s.hole.length !== 2) return
       const ev = evaluateSeven([...(s.hole as any), ...(community as any)])
       const score = { classIdx: classOrder[(ev as any).class], ranks: (ev as any).ranks }
@@ -116,8 +155,11 @@ export function PokerHistoryPage() {
         }
       }
     })
-    if (!best) return winners
-    previewState.seats.forEach((s, i) => {
+    
+    if (!best) return new Set()
+    
+    const winners = new Set<number>()
+    tableState.seats.forEach((s, i) => {
       if (s.hasFolded || s.hole.length !== 2) return
       const ev = evaluateSeven([...(s.hole as any), ...(community as any)])
       const score = { classIdx: classOrder[(ev as any).class], ranks: (ev as any).ranks }
@@ -125,96 +167,201 @@ export function PokerHistoryPage() {
       if (equal) winners.add(i)
     })
     return winners
-  }, [previewState])
+  }, [tableState])
 
-  // Reset step when switching selected hand
+  // Reset when switching selected hand
   useEffect(() => {
-    setStep(0)
-  }, [selected])
+    // Reset any state when switching hands
+  }, [selectedHandId])
+
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString()
+  }
+
+  const formatBoard = (board: string[]) => {
+    if (!board || board.length === 0) return 'No board'
+    return board.join(' ')
+  }
+
+  const formatResults = (results: any[]) => {
+    if (!results || results.length === 0) return 'No results'
+    return results
+      .filter((r: any) => r.delta !== 0)
+      .map((r: any) => `Seat ${r.seatIndex} ${r.delta > 0 ? '+' : ''}${r.delta}`)
+      .join(' • ')
+  }
 
   return (
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 12 }}>
-      <div style={{ display: 'grid', gap: 8, alignContent: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16 }}>
+      {/* Left sidebar - Hand list */}
+      <div style={{ display: 'grid', gap: 12, alignContent: 'start' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={() => { window.location.hash = '#poker' }}>Back to Table</button>
-          <button onClick={() => download(JSON.stringify(histories, null, 2), 'poker-hand-histories.json')}>Export JSON</button>
         </div>
-        <div style={{ fontWeight: 700 }}>Hands</div>
-        <div style={{ maxHeight: 520, overflowY: 'auto', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8 }}>
-          {sorted.length === 0 ? (
-            <div style={{ padding: 8, opacity: 0.8 }}>No hands recorded yet</div>
+        
+        <div style={{ fontWeight: 700, fontSize: 18 }}>Game History</div>
+        
+        <div style={{ 
+          maxHeight: 600, 
+          overflowY: 'auto', 
+          border: '1px solid rgba(255,255,255,0.14)', 
+          borderRadius: 8,
+          background: 'rgba(0,0,0,0.12)'
+        }}>
+          {!recentHands || recentHands.page.length === 0 ? (
+            <div style={{ padding: 16, opacity: 0.8, textAlign: 'center' }}>
+              No games recorded yet
+            </div>
           ) : (
-            sorted.map((h) => (
-              <div key={h.handId}
-                   onClick={() => setSelected(h.handId)}
-                   style={{ padding: 8, cursor: 'pointer', background: selected === h.handId ? 'rgba(255,213,79,0.15)' : undefined }}>
-                <div style={{ fontWeight: 700 }}>Hand #{h.handId}</div>
-                <div style={{ opacity: 0.85, fontSize: 12 }}>{h.events?.length ?? 0} events</div>
+            recentHands.page.map((hand: any) => (
+              <div 
+                key={hand._id}
+                onClick={() => setSelectedHandId(hand._id)}
+                style={{ 
+                  padding: 12, 
+                  cursor: 'pointer', 
+                  borderBottom: '1px solid rgba(255,255,255,0.1)',
+                  background: selectedHandId === hand._id ? 'rgba(255,213,79,0.15)' : 'transparent',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <div style={{ fontWeight: 700, fontSize: 14 }}>
+                  Hand #{hand.handSeq}
+                </div>
+                <div style={{ opacity: 0.7, fontSize: 12, marginTop: 4 }}>
+                  {formatTime(hand.startedAt)}
+                </div>
+                {hand.endedAt && (
+                  <div style={{ opacity: 0.6, fontSize: 11, marginTop: 2 }}>
+                    Duration: {Math.round((hand.endedAt - hand.startedAt) / 1000)}s
+                  </div>
+                )}
               </div>
             ))
           )}
         </div>
       </div>
-      <div>
+
+      {/* Right side - Hand details and table view */}
+      <div style={{ display: 'grid', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontWeight: 700 }}>Details</div>
-          {selected != null && (
-            <div style={{ opacity: 0.85 }}>Hand #{selected}</div>
+          <div style={{ fontWeight: 700, fontSize: 18 }}>Hand Details</div>
+          {selectedHand && (
+            <div style={{ opacity: 0.85 }}>Hand #{selectedHand.handSeq}</div>
           )}
         </div>
-        <div style={{ marginTop: 8 }}>
-          {previewState ? (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <button onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={clampedStep <= 0}>&laquo; Prev</button>
-                <button onClick={() => setStep((s) => Math.min(actions.length, s + 1))} disabled={clampedStep >= actions.length}>Next &raquo;</button>
-                <span style={{ opacity: 0.85 }}>Step {clampedStep}/{actions.length}</span>
-              </div>
+
+        {selectedHand && tableState ? (
+          <>
+            {/* Table visualization */}
+            <div style={{ 
+              border: '1px solid rgba(255,255,255,0.14)', 
+              borderRadius: 8, 
+              padding: 16,
+              background: 'rgba(0,0,0,0.12)'
+            }}>
               <PokerTableHorseshoeView
-                table={previewState}
-                revealed={{ holeCounts: Array.from({ length: Math.max(6, previewState.seats.length) }, () => 2), boardCount: previewState.community.length }}
+                table={tableState}
+                revealed={{ 
+                  holeCounts: Array.from({ length: Math.max(6, tableState.seats.length) }, () => 2), 
+                  boardCount: tableState.community.length 
+                }}
                 hideHoleCardsUntilShowdown={false}
-                // Pass winnersSet so result labels show correctly on preview
                 winnersSet={winnersSet}
               />
-            </>
-          ) : (
-            <div style={{ opacity: 0.8 }}>Select a hand to view details</div>
-          )}
-        </div>
-        {selectedHistory ? (
-          <div style={{ marginTop: 12, minHeight: 200, width: 780, border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8, padding: 8, background: 'rgba(0,0,0,0.12)', overflowX: 'hidden' }}>
-            <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 12, display: 'grid', gap: 4, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-              {selectedHistory.events.map((e, i) => (
-                <div key={i}>
-                  {(() => {
-                    const ts = new Date((e as any).ts || Date.now()).toLocaleTimeString()
-                    switch ((e as any).type) {
-                      case 'hand_start': return `${ts} • Start BTN ${(e as any).buttonIndex} blinds ${(e as any).smallBlind}/${(e as any).bigBlind}`
-                      case 'post_blind': return `${ts} • Seat ${(e as any).seat} posts ${ (e as any).amount }`
-                      case 'deal_flop': return `${ts} • Flop ${((e as any).cards || []).join(' ')}`
-                      case 'deal_turn': return `${ts} • Turn ${((e as any).cards || []).join(' ')}`
-                      case 'deal_river': return `${ts} • River ${((e as any).cards || []).join(' ')}`
-                      case 'action': {
-                        const a = e as any
-                        return `${ts} • Seat ${a.seat} ${a.action}${a.amount != null ? ' ' + a.amount : ''} (toCall ${a.toCall})`
-                      }
-                      case 'showdown': return `${ts} • Showdown ${ (e as any).summary }`
-                      case 'results': {
-                        const rs = (e as any).perSeat || []
-                        const parts = rs.filter((x: any) => x.delta !== 0).map((x: any) => `Seat ${x.seat} ${x.delta > 0 ? '+' : ''}${x.delta}${x.revealed ? ` (${x.revealed})` : ''}`)
-                        return `${ts} • Result ${parts.join(' • ')}`
-                      }
-                      case 'hand_end': return `${ts} • End`
-                      default: return `${ts} • ${JSON.stringify(e)}`
-                    }
-                  })()}
-                </div>
-              ))}
             </div>
+
+            {/* Hand information */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '1fr 1fr', 
+              gap: 16 
+            }}>
+              <div style={{ 
+                border: '1px solid rgba(255,255,255,0.14)', 
+                borderRadius: 8, 
+                padding: 16,
+                background: 'rgba(0,0,0,0.12)'
+              }}>
+                <div style={{ fontWeight: 700, marginBottom: 12 }}>Game Info</div>
+                <div style={{ display: 'grid', gap: 8, fontSize: 14 }}>
+                  <div><strong>Started:</strong> {formatTime(selectedHand.startedAt)}</div>
+                  {selectedHand.endedAt && (
+                    <div><strong>Ended:</strong> {formatTime(selectedHand.endedAt)}</div>
+                  )}
+                  <div><strong>Button:</strong> Seat {selectedHand.buttonIndex}</div>
+                  <div><strong>Board:</strong> {formatBoard(selectedHand.board)}</div>
+                  <div><strong>Pot:</strong> ${tableState.pot.main}</div>
+                </div>
+              </div>
+
+              <div style={{ 
+                border: '1px solid rgba(255,255,255,0.14)', 
+                borderRadius: 8, 
+                padding: 16,
+                background: 'rgba(0,0,0,0.12)'
+              }}>
+                <div style={{ fontWeight: 700, marginBottom: 12 }}>Results</div>
+                <div style={{ fontSize: 14 }}>
+                  {formatResults(selectedHand.results)}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions log */}
+            <div style={{ 
+              border: '1px solid rgba(255,255,255,0.14)', 
+              borderRadius: 8, 
+              padding: 16,
+              background: 'rgba(0,0,0,0.12)'
+            }}>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>Actions</div>
+              <div style={{ 
+                maxHeight: 300, 
+                overflowY: 'auto',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                fontSize: 12
+              }}>
+                {selectedActions.length === 0 ? (
+                  <div style={{ opacity: 0.8 }}>No actions recorded</div>
+                ) : (
+                  selectedActions.map((action: any, i: number) => (
+                    <div key={i} style={{ 
+                      padding: 4, 
+                      borderBottom: '1px solid rgba(255,255,255,0.1)',
+                      display: 'grid',
+                      gridTemplateColumns: 'auto 1fr auto',
+                      gap: 12,
+                      alignItems: 'center'
+                    }}>
+                      <span style={{ opacity: 0.7, minWidth: 60 }}>
+                        {action.street}
+                      </span>
+                      <span>
+                        Seat {action.seatIndex} {action.type}
+                        {action.amount && ` $${action.amount}`}
+                      </span>
+                      <span style={{ opacity: 0.6, fontSize: 11 }}>
+                        {formatTime(action._creationTime)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div style={{ 
+            opacity: 0.8, 
+            textAlign: 'center', 
+            padding: 40,
+            border: '1px solid rgba(255,255,255,0.14)', 
+            borderRadius: 8,
+            background: 'rgba(0,0,0,0.12)'
+          }}>
+            Select a hand to view details
           </div>
-        ) : null}
-        <ConvexHistoryDebug />
+        )}
       </div>
     </div>
   )

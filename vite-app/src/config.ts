@@ -138,6 +138,8 @@ export const CONFIG = {
   ui: {
     defaultView: 'flat' as 'multi' | 'flat',
     enableFaceImages: false as boolean, // when true, attempts to load /face/<suit>_<rank>.png
+    enableCardBackImage: true as boolean, // when true, uses /cardback/default.png instead of CSS gradient
+    cardBackImage: 'default.png' as string, // filename of the card back image to use
   },
   rules: {
     dealerHitsSoft17: false as boolean, // S17 by default; set true for H17

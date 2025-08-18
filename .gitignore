@@ -152,3 +152,4 @@ apps/game-server/src/assets/images/icons/favicon.ico
 # Package specific build outputs
 packages/shared/dist/
 packages/poker-engine/dist/
+vite-app/public/cardback/*.png

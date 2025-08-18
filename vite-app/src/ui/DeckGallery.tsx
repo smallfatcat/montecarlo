@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { createStandardDeck, type Card } from '../blackjack'
 import { Card3D } from './components/Card3D'
+import { CardBackSelector } from './components/CardBackSelector'
 
 export function DeckGallery() {
   const [faceDown, setFaceDown] = useState(false)
@@ -31,6 +32,8 @@ export function DeckGallery() {
           <span>{scale.toFixed(2)}x</span>
         </label>
       </div>
+      
+      <CardBackSelector />
 
       <div className="deck-grid">
         {deck.map((card) => (

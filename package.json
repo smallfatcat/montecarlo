@@ -5,7 +5,8 @@
   "workspaces": [
     "vite-app",
     "apps/game-server",
-    "packages/*"
+    "packages/*",
+    "convex"
   ],
   "scripts": {
     "dev:all": "concurrently \"npm run dev:convex:up\" \"npm run dev:convex\" \"npm run dev:backend\" \"npm run dev:frontend\"",

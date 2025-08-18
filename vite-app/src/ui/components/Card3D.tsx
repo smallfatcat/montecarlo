@@ -3,9 +3,24 @@ import { CONFIG } from '../../config'
 import type { Card } from '../../blackjack'
 import { SvgPips } from './SvgPips'
 import { FaceArt } from './FaceArt'
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false, flat = false, highlight = false }: { card: Card; faceDown?: boolean; index?: number; enterFromTop?: boolean; flat?: boolean; highlight?: boolean }) {
+  const [cardBackImage, setCardBackImage] = useState(CONFIG.ui.cardBackImage)
+  
+  // Listen for card back changes
+  useEffect(() => {
+    const handleCardBackChange = (event: CustomEvent) => {
+      setCardBackImage(event.detail)
+    }
+    
+    window.addEventListener('cardBackChanged', handleCardBackChange as EventListener)
+    
+    return () => {
+      window.removeEventListener('cardBackChanged', handleCardBackChange as EventListener)
+    }
+  }, [])
+  
   const suit = suitSymbol(card.suit)
   const isRed = card.suit === 'Hearts' || card.suit === 'Diamonds'
   const rank = card.rank
@@ -50,7 +65,20 @@ export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false
         initial={{ rotateY: faceDown ? 0 : 180 }}
         animate={{ rotateY: faceDown ? 0 : 180 }}
         transition={{ duration: CONFIG.animation.cardFlipDurationSec }}
-      />
+      >
+        {CONFIG.ui.enableCardBackImage ? (
+          <img
+            src={`/cardback/${cardBackImage}`}
+            alt="Card back"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onError={(e) => { 
+              // Fall back to CSS gradient if image fails to load
+              (e.currentTarget as HTMLImageElement).style.display = 'none';
+              e.currentTarget.parentElement?.classList.add('card__back--fallback');
+            }}
+          />
+        ) : null}
+      </motion.div>
     </motion.div>
   )
 }

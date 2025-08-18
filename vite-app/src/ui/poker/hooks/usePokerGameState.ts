@@ -42,6 +42,23 @@ export function usePokerGameState() {
     setMySeatAutoplay(null)
   }
 
+  // Helper to check if there are any human players at the table
+  const hasHumanPlayers = () => {
+    return playerNames.some((name, index) => {
+      // Check if this seat has a player name (not null) and is not a CPU seat
+      return name !== null && index < table.seats.length && !table.seats[index]?.isCPU
+    })
+  }
+
+  // Helper to automatically disable autoplay if no human players
+  const checkAndDisableAutoplayIfNoHumans = () => {
+    if (mySeatAutoplay !== null && !hasHumanPlayers()) {
+      setMySeatAutoplay(null)
+      return true // Autoplay was disabled
+    }
+    return false // No change
+  }
+
   return {
     // State
     table,
@@ -64,5 +81,7 @@ export function usePokerGameState() {
     setClearing,
     // Actions
     resetGameState,
+    hasHumanPlayers,
+    checkAndDisableAutoplayIfNoHumans,
   }
 }

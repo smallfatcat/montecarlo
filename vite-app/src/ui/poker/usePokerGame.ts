@@ -25,6 +25,8 @@ export function usePokerGame() {
     isAutoplayEnabled,
     setAutoplayForSeat,
     clearAutoplayOnLeave,
+    hasHumanPlayers,
+    checkAndDisableAutoplayIfNoHumans,
     hideHoleCardsUntilShowdown,
     setHideHoleCardsUntilShowdown,
     playerNames,
@@ -164,6 +166,14 @@ export function usePokerGame() {
     }
   }, [mySeatAutoplay, mySeatIndex])
 
+  // Automatically disable autoplay if no human players are at the table
+  useEffect(() => {
+    const wasDisabled = checkAndDisableAutoplayIfNoHumans()
+    if (wasDisabled) {
+      console.log('Autoplay automatically disabled: no human players at table')
+    }
+  }, [table.seats, playerNames, checkAndDisableAutoplayIfNoHumans])
+
   // Staged hole reveal whenever a new hand begins
   useEffect(() => {
     orchestrator.scheduleHoleReveal(table, hideHoleCardsUntilShowdown, mySeatIndex)
@@ -192,6 +202,8 @@ export function usePokerGame() {
     isAutoplayEnabled,
     setAutoplayForSeat,
     clearAutoplayOnLeave,
+    hasHumanPlayers,
+    checkAndDisableAutoplayIfNoHumans,
     available,
     fold,
     check,

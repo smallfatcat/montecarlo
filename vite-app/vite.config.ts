@@ -50,6 +50,11 @@ export default defineConfig(({ mode }) => ({
       }
     }
   },
+  resolve: {
+    alias: {
+      'app-convex': path.resolve(__dirname, '../convex'),
+    },
+  },
   plugins: [
     {
       name: 'restart-on-package-json-change',

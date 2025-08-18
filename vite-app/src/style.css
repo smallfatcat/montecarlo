@@ -177,6 +177,131 @@ h1 {
 .card__rank { font-size: 1.1rem; line-height: 1; display: block; }
 .card__suit { font-size: 0.95rem; line-height: 1; display: block; margin-top: 2px; }
 .card__back { transform: rotateY(180deg); background: conic-gradient(from 45deg, #0d47a1, #1565c0, #1e88e5, #0d47a1); filter: saturate(120%); }
+.card__back--fallback { background: conic-gradient(from 45deg, #0d47a1, #1565c0, #1e88e5, #0d47a1) !important; filter: saturate(120%) !important; }
+
+/* Card Back Selector Styles */
+.card-back-selector {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.card-back-selector h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.card-back-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-back-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.card-back-option:hover {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.card-back-option.selected {
+  border-color: var(--accent);
+  background: rgba(100, 216, 203, 0.2);
+  box-shadow: 0 0 8px rgba(100, 216, 203, 0.4);
+}
+
+.card-back-preview {
+  width: 48px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.card-back-name {
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--text);
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.card-back-upload {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.upload-label {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: #000;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.upload-label:hover {
+  background: #7dd3fc;
+  transform: translateY(-1px);
+}
+
+.card-back-upload small {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.card-back-info {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.card-back-info p {
+  margin: 0.25rem 0;
+}
+
+.card-back-info code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+/* Card Back Cycler Styles */
+.card-back-cycler {
+  display: flex;
+  align-items: center;
+}
+
+.card-back-cycler button {
+  font-size: 0.9rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.card-back-cycler button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
 
 .hand--active { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 12px; }
 

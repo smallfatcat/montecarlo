@@ -3,6 +3,7 @@ import { } from 'react'
 import type { PokerTableState } from '../../poker/types'
 import type { } from '../../poker/types'
 import { Button, Input, Badge, Card } from '../components'
+import { CardBackCycler } from '../components/CardBackCycler'
 import './PokerTableHorseshoeControls.css'
 
 export function PokerTableHorseshoeControls(props: {
@@ -27,6 +28,7 @@ export function PokerTableHorseshoeControls(props: {
   onLeaveSeat?: () => void
   variant?: 'toolbar' | 'sidebar'
   sidebarWidth?: number
+  hasHumanPlayers?: boolean
 }) {
   const {
     table,
@@ -45,6 +47,7 @@ export function PokerTableHorseshoeControls(props: {
     playerNames,
     onRenameMe,
     onLeaveSeat,
+    hasHumanPlayers,
   } = props
 
   // Removed bet sizing control from sidebar
@@ -82,6 +85,8 @@ export function PokerTableHorseshoeControls(props: {
         Deal
       </Button>
       
+      {layoutVariant === 'toolbar' && <CardBackCycler />}
+      
       {onResetGame && (
         <Button variant="secondary" size="sm" onClick={() => onResetGame()}>
           Reset Game
@@ -92,6 +97,12 @@ export function PokerTableHorseshoeControls(props: {
         <input type="checkbox" checked={autoPlay} onChange={(e) => onToggleAutoPlay(e.target.checked)} /> 
         Autoplay
       </label>
+      
+      {!hasHumanPlayers && (
+        <div className="autoplay-warning" style={{ fontSize: '0.8rem', color: 'var(--muted)', fontStyle: 'italic' }}>
+          ⚠️ Autoplay disabled: no human players at table
+        </div>
+      )}
       
       {layoutVariant === 'toolbar' && <span className="control-separator" />}
       
@@ -130,6 +141,8 @@ export function PokerTableHorseshoeControls(props: {
         <input type="checkbox" checked={hideHoleCardsUntilShowdown} onChange={(e) => onToggleHideHoleCards(e.target.checked)} />
         Hide hole cards
       </label>
+      
+      <CardBackCycler />
       {/* Removed bet controls and action buttons for simplified sidebar */}
       {layoutVariant === 'toolbar' && <span className="control-separator" />}
       {/* Removed layout editing controls and export/reset layout buttons */}

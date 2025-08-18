@@ -4,6 +4,7 @@ import cors from '@fastify/cors';
 import { Server as SocketIOServer } from 'socket.io';
 import { C2S, S2C } from './protocol.js';
 import { createServerRuntimeTable } from './tables/serverRuntimeTable.js';
+import { ConvexPublisher } from './ingest/convexPublisher.js';
 import crypto from 'crypto';
 function parseAllowedOrigins() {
     const raw = process.env.FRONTEND_ORIGINS || '';
@@ -75,10 +76,18 @@ async function buildServer() {
     }
     // Single runtime per table id across all connections
     const tables = new Map();
+    // Include /http prefix for self-hosted Convex HTTP routes
+    const convex = new ConvexPublisher({ baseUrl: (process.env.CONVEX_INGEST_URL || '').replace(/\/$/, '') + '/http', secret: process.env.INGEST_SECRET });
     function getTable(tableId) {
         let t = tables.get(tableId);
         if (!t) {
-            t = createServerRuntimeTable(io, tableId, { onSummaryChange: (s) => io.emit('table_update', s) });
+            t = createServerRuntimeTable(io, tableId, { onSummaryChange: (s) => io.emit('table_update', s), publisher: convex.enabled ? {
+                    handStarted: (p) => convex.handStarted(p),
+                    action: (p) => convex.action(p),
+                    seat: (p) => convex.seat?.(p) ?? Promise.resolve(),
+                    unseat: (p) => convex.unseat?.(p) ?? Promise.resolve(),
+                    handEnded: (p) => convex.handEnded?.(p) ?? Promise.resolve(),
+                } : undefined });
             tables.set(tableId, t);
         }
         return t;
@@ -127,7 +136,12 @@ async function buildServer() {
                 return ack?.(S2C.error.parse({ message: 'invalid createTable' }));
             const id = (p.data.tableId && p.data.tableId.length > 0) ? p.data.tableId : `table-${Math.floor(Math.random() * 10000)}`;
             if (!tables.has(id)) {
-                const t = createServerRuntimeTable(io, id, { seats: p.data.seats ?? 6, startingStack: p.data.startingStack ?? 5000, onSummaryChange: (s) => io.emit('table_update', s) });
+                const t = createServerRuntimeTable(io, id, { seats: p.data.seats ?? 6, startingStack: p.data.startingStack ?? 5000, onSummaryChange: (s) => io.emit('table_update', s), publisher: convex.enabled ? {
+                        handStarted: (p) => convex.handStarted(p),
+                        action: (p) => convex.action(p),
+                        seat: (p) => convex.seat?.(p) ?? Promise.resolve(),
+                        unseat: (p) => convex.unseat?.(p) ?? Promise.resolve(),
+                    } : undefined });
                 tables.set(id, t);
             }
             const list = listTableSummaries();
