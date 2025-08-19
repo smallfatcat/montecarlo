@@ -2,17 +2,19 @@
 
 ## Overview
 
-Montecarlo is a casino game application built with a modern, component-based architecture. The application supports both poker and blackjack games with real-time multiplayer capabilities, plus high-speed simulation features.
+Montecarlo is a casino game application built with a modern, modular architecture. The application supports both poker and blackjack games with real-time multiplayer capabilities, plus high-speed simulation features. The codebase follows strict readability standards with single responsibility principles and clear separation of concerns.
 
 ## Architecture Principles
 
 - **Separation of Concerns**: Each component has a single responsibility
+- **Modular Architecture**: Files limited to 200 lines, functions to 50 lines
 - **Component Composition**: Complex UIs are built from smaller, focused components
 - **Type Safety**: Comprehensive TypeScript usage throughout
 - **Performance First**: Optimized rendering and state management with Web Workers
 - **Accessibility**: Built-in support for screen readers and keyboard navigation
 - **Simulation Speed**: Pure function runners for maximum simulation performance
 - **Real-time Communication**: WebSocket-based multiplayer with authoritative server
+- **Code Quality**: Comprehensive readability standards and documentation
 
 ## Project Structure
 
@@ -21,24 +23,93 @@ montecarlo/
 ├── vite-app/                 # Frontend React application
 │   ├── src/
 │   │   ├── ui/              # UI components and hooks
-│   │   │   ├── poker/       # Poker-specific components
-│   │   │   │   ├── components/  # Reusable poker components
-│   │   │   │   ├── hooks/       # Custom poker hooks
-│   │   │   │   └── ...
 │   │   │   ├── components/      # Shared UI components
 │   │   │   ├── hooks/           # Shared UI hooks
 │   │   │   ├── controls/        # Game control components
 │   │   │   └── handLayouts/     # Hand layout components
-│   │   ├── config/          # Configuration files
-│   │   ├── poker/           # Poker game logic
-│   │   ├── blackjack/       # Blackjack game logic
+│   │   ├── config/          # Modular configuration
+│   │   │   ├── index.ts         # Main config aggregator
+│   │   │   ├── poker.config.ts  # Poker-specific configuration
+│   │   │   ├── blackjack.config.ts # Blackjack configuration
+│   │   │   ├── ui.config.ts     # UI configuration
+│   │   │   └── legacy.config.ts # Legacy configuration
+│   │   ├── poker/           # Poker game logic (modular)
+│   │   │   ├── flow/            # Game flow management
+│   │   │   │   ├── gameSetup.ts     # Hand setup and deck preparation
+│   │   │   │   ├── dealing.ts       # Card dealing logic
+│   │   │   │   ├── actionHandling.ts # Player action processing
+│   │   │   │   ├── chipManagement.ts # Betting and chip handling
+│   │   │   │   ├── streetAdvancement.ts # Street progression
+│   │   │   │   └── index.ts         # Barrel exports
+│   │   │   ├── strategy/         # Poker strategy engine
+│   │   │   │   ├── handAnalysis.ts     # Hand strength analysis
+│   │   │   │   ├── preflopAnalysis.ts  # Preflop hand evaluation
+│   │   │   │   ├── bettingStrategy.ts  # Betting decision logic
+│   │   │   │   └── index.ts            # Barrel exports
+│   │   │   ├── handEval/         # Hand evaluation
+│   │   │   │   ├── rankUtils.ts        # Rank and suit utilities
+│   │   │   │   ├── handClassification.ts # Hand classification
+│   │   │   │   └── index.ts            # Barrel exports
+│   │   │   └── predefinedHands/  # Predefined hand histories
+│   │   │       ├── handBuilders.ts      # Hand builder patterns
+│   │   │       └── index.ts             # Barrel exports
+│   │   ├── blackjack/       # Blackjack game logic (modular)
+│   │   │   ├── simulation/       # Simulation engine
+│   │   │   │   ├── simulationEngine.ts  # Core simulation logic
+│   │   │   │   └── index.ts             # Barrel exports
+│   │   │   └── table.ts          # Table state management
+│   │   ├── stores/          # State management (modular)
+│   │   │   ├── lobby/            # Lobby store modules
+│   │   │   │   ├── connectionManager.ts # WebSocket connection
+│   │   │   │   ├── playerManager.ts     # Player management
+│   │   │   │   ├── tableManager.ts      # Table operations
+│   │   │   │   ├── uiManager.ts         # UI state management
+│   │   │   │   └── index.ts             # Barrel exports
+│   │   │   └── index.ts          # Store exports
 │   │   └── workers/         # Web Workers for simulations
+│   │       ├── equity/            # Equity calculation worker
+│   │       │   ├── equityCalculator.ts  # Core calculation logic
+│   │       │   ├── equityWorker.ts      # Worker implementation
+│   │       │   └── index.ts             # Barrel exports
+│   │       └── simWorker.ts       # Simulation worker
 ├── packages/                 # Shared packages
-│   ├── shared/              # Common types and protocols
-│   └── poker-engine/        # Poker game engine
+│   ├── shared/              # Common types and protocols (modular)
+│   │   └── src/
+│   │       └── protocol/         # Protocol schemas
+│   │           ├── common.ts         # Shared types
+│   │           ├── clientToServer.ts # Client message schemas
+│   │           ├── serverToClient.ts # Server message schemas
+│   │           └── index.ts          # Barrel exports
+│   └── poker-engine/        # Poker game engine (modular)
+│       └── src/
+│           ├── flow/             # Game flow management
+│           │   ├── tableCreation.ts    # Table setup
+│           │   ├── handManagement.ts   # Hand lifecycle
+│           │   ├── bettingLogic.ts     # Betting mechanics
+│           │   ├── streetAdvancement.ts # Street progression
+│           │   └── index.ts            # Barrel exports
+│           ├── strategy/          # Strategy engine
+│           │   ├── handAnalysis.ts     # Hand analysis
+│           │   ├── preflopAnalysis.ts  # Preflop evaluation
+│           │   ├── actionSuggestion.ts # Action recommendations
+│           │   └── index.ts            # Barrel exports
+│           └── types.ts           # Core types
 ├── apps/                     # Applications
-│   └── game-server/         # WebSocket game server
-└── docs/                     # Documentation
+│   └── game-server/         # WebSocket game server (modular)
+│       └── src/
+│           ├── config/            # Environment configuration
+│           │   └── env.ts             # Environment parsing
+│           ├── server/              # Server setup
+│           │   ├── http.ts               # HTTP server configuration
+│           │   └── socket.ts             # Socket.IO setup
+│           ├── identity/             # Identity management
+│           │   └── tokenStore.ts         # Token storage
+│           ├── tables/                # Table factory exports
+│           │   └── index.ts             # Barrel exports
+│           ├── sockets/                # Socket event handlers
+│           │   └── handlers.ts             # Event registration
+│           └── index.ts             # Main server orchestration
+└── docs/                     # Project documentation
 ```
 
 ## Game Server Architecture
@@ -67,7 +138,7 @@ The heart of the game server that manages individual poker table instances:
 - **Real-time Broadcasting**: Emits game events to all connected clients
 - **CPU Player Integration**: Seamless integration with AI players
 
-#### Protocol Layer (`protocol.ts`)
+#### Protocol Layer (`packages/shared/src/protocol/`)
 
 Defines the communication contract between client and server:
 
@@ -75,6 +146,7 @@ Defines the communication contract between client and server:
 - **Client-to-Server (C2S)**: Player actions and table management
 - **Server-to-Client (S2C)**: Game state updates and server responses
 - **Type Safety**: Full TypeScript integration with runtime validation
+- **Modular Organization**: Clean separation of protocol concerns
 
 #### Table Management
 
@@ -98,187 +170,108 @@ Defines the communication contract between client and server:
 #### Server-to-Client Events
 
 - **`ready`**: Server ready confirmation
-- **`state`**: Complete table state updates
-- **`action`**: Player action confirmations
-- **`deal`**: Card dealing events
-- **`hand_start`**: New hand initialization
-- **`post_blind`**: Blind posting events
-- **`hand_setup`**: Hand setup information
-- **`seat_update`**: Player seating changes
-- **`autoplay`**: Autoplay state updates
+- **`state`**: Complete table state update
+- **`error`**: Error messages and validation failures
+- **`table_list`**: Available tables for joining
 
-### Security and Validation
+## Frontend Architecture
 
-- **CORS Configuration**: Configurable origin allowlist
-- **Message Validation**: Zod schema validation for all messages
-- **State Authorization**: Players can only act on their turn
-- **Seat Ownership**: Socket-to-seat mapping validation
-- **Environment Security**: Production-ready security defaults
+### Component Organization
 
-### Deployment Configuration
+The frontend follows a modular component architecture:
 
-#### Environment Variables
+- **Domain Separation**: Poker, blackjack, and UI components are clearly separated
+- **Single Responsibility**: Each component has one clear purpose
+- **Composition**: Complex UIs are built from smaller, focused components
+- **Hooks**: Custom hooks encapsulate reusable logic and state management
 
-- **`HOST`**: Server binding address (default: `127.0.0.1`)
-- **`PORT`**: Server port (default: `8080`)
-- **`FRONTEND_ORIGINS`**: Comma-separated allowed origins
-- **`ALLOW_ALL_ORIGINS`**: Development override flag
+### State Management
 
-#### Production Considerations
+The application uses Zustand for state management with a modular approach:
 
-- **HTTPS/WSS**: Secure WebSocket connections
-- **Origin Restriction**: Explicit frontend origin allowlist
-- **Load Balancing**: Multiple server instances
-- **Health Checks**: `/healthz` and `/readyz` endpoints
-- **Logging**: Structured logging for monitoring
+- **Lobby Store**: Manages connection, player, table, and UI state
+- **Connection Manager**: Handles WebSocket connections and reconnection
+- **Player Manager**: Manages player identification and session
+- **Table Manager**: Handles table operations and navigation
+- **UI Manager**: Manages UI state and preferences
 
-## Component Architecture
+### Configuration Management
 
-### Poker Table Components
+Configuration is organized into domain-specific modules:
 
-The poker table has been refactored into focused, reusable components:
+- **Poker Config**: Poker-specific settings and rules
+- **Blackjack Config**: Blackjack-specific settings and rules
+- **UI Config**: UI-related settings and preferences
+- **Legacy Config**: Backward compatibility for existing components
 
-- **PokerTableLayout**: Handles layout management and editing
-- **PokerTableSeats**: Manages individual seat rendering
-- **PokerTableBoard**: Displays community cards
-- **PokerTablePot**: Shows pot and showdown information
-- **PokerTableControls**: Game action controls
-- **PokerTableBettingSpots**: Manages betting positions
-- **PokerTableStacks**: Handles chip stack displays
-- **PokerSeatResult**: Shows individual seat results
-- **PokerSeatEquity**: Displays equity calculations
+## Code Quality Standards
 
-### Hook Architecture
+### File Organization
 
-Game logic has been split into focused hooks:
+- **Maximum File Size**: 200 lines per file
+- **Maximum Function Size**: 50 lines per function
+- **Single Responsibility**: Each file has one clear purpose
+- **Barrel Exports**: Clean import/export patterns
 
-- **usePokerGameState**: Core game state management
-- **usePokerHistory**: Game history tracking
-- **usePokerSettings**: Game settings and preferences
-- **usePokerLayoutEditor**: Layout editing functionality
-- **usePokerGameFlow**: Game flow management
-- **usePokerReplay**: Replay functionality
-- **usePokerRuntime**: Runtime game management
-- **usePokerActions**: Game action handling
-- **usePokerReview**: Game review features
-- **usePokerSeating**: Seating management
+### Module Patterns
 
-### Blackjack Components
+- **Flow Modules**: Game flow management with clear progression
+- **Strategy Modules**: Game strategy with focused analysis
+- **Protocol Modules**: Communication schemas with validation
+- **Server Modules**: Server concerns with clear separation
 
-Blackjack functionality is currently implemented as a backend simulation engine:
+### Documentation Standards
 
-- **Deck Management**: Card deck handling and shuffling (backend only)
-- **Hand Evaluation**: Hand scoring and game logic (backend only)
-- **Strategy Engine**: Basic strategy implementation (backend only)
-- **Table Management**: Game table state (backend only)
-- **Simulation Engine**: High-speed Monte Carlo simulations (backend only)
+- **JSDoc Comments**: All public functions documented
+- **README Files**: Module-level documentation
+- **Inline Comments**: Complex logic explained
+- **Type Definitions**: Comprehensive TypeScript coverage
 
-**Note**: Blackjack currently lacks a user interface. The simulation engine exists but is not accessible through the UI. Users cannot currently run simulations or interact with blackjack games.
+## Performance Considerations
 
-## Configuration Management
+### Web Workers
 
-Configuration has been split into domain-specific files:
+- **Equity Calculations**: CPU-intensive poker calculations
+- **Simulation Engine**: High-speed blackjack simulations
+- **Background Processing**: Non-blocking UI operations
 
-- **game.ts**: Game rules and logic configuration
-- **ui.ts**: UI layout and styling configuration
-- **poker.ts**: Poker-specific configuration
-- **index.ts**: Main configuration export
+### State Management
 
-## State Management
+- **Selective Re-renders**: Only affected components update
+- **Memoization**: Automatic performance optimization
+- **Efficient Updates**: Minimal state mutations
 
-The application uses React's built-in state management with custom hooks:
+### Real-time Communication
 
-1. **Local State**: Component-specific state using `useState`
-2. **Shared State**: Context providers for cross-component state
-3. **Derived State**: Computed values using `useMemo`
-4. **Side Effects**: Managed with `useEffect` and custom hooks
-
-## Real-time Communication
-
-WebSocket communication is handled through:
-
-- **Socket.IO**: For real-time client-server communication
-- **Protocol Schemas**: Zod-based message validation
-- **Connection Management**: Automatic reconnection and fallback
-- **Authoritative Server**: Single source of truth for game state
-- **Event Broadcasting**: Real-time updates to all connected clients
-
-## Performance Optimizations
-
-- **React.memo**: Prevents unnecessary re-renders
-- **useCallback**: Stable function references
-- **useMemo**: Expensive computation caching
-- **Web Workers**: Background processing for simulations
-  - **simWorker**: High-speed blackjack simulations
-  - **equityWorker**: Poker equity calculations
-- **Lazy Loading**: Code splitting for better initial load
-- **Server-side Validation**: Efficient message processing
-- **Room-based Broadcasting**: Targeted event distribution
-
-## Simulation Architecture
-
-### High-Speed Simulation Runner
-
-The application includes a pure function simulation runner for maximum performance:
-
-- **useSimulationRunner**: React hook for managing simulation execution (currently unused)
-- **Web Worker Integration**: Offloads computation to background threads
-- **Progress Tracking**: Real-time simulation progress updates
-- **Configurable Parameters**: Adjustable simulation settings
-- **Performance Optimized**: Pure functions for maximum speed
-
-**Note**: The simulation runner hook exists but is not currently integrated with any user interface. Users cannot currently control or run simulations through the UI.
-
-### Simulation Features
-
-- **Blackjack Simulations**: High-volume hand simulations (backend only)
-- **Configurable Rules**: Adjustable house rules and deck counts (backend only)
-- **Bankroll Tracking**: Player and casino bankroll management (backend only)
-- **Bet Management**: Configurable betting strategies (backend only)
-- **Performance Monitoring**: Real-time progress and completion tracking (backend only)
-
-**Note**: All simulation features are currently backend-only. The simulation engine exists but lacks a user interface for configuration and execution.
-
-## Error Handling
-
-- **Error Boundaries**: React error boundaries for graceful error handling
-- **Performance Monitoring**: Real-time performance metrics
-- **Logging**: Structured logging for debugging
-- **Server-side Validation**: Comprehensive message validation
-- **Connection Recovery**: Automatic reconnection handling
-
-## Accessibility Features
-
-- **ARIA Labels**: Screen reader support
-- **Keyboard Navigation**: Full keyboard support
-- **High Contrast Mode**: Visual accessibility
-- **Focus Management**: Proper focus handling
+- **WebSocket Optimization**: Efficient binary protocols
+- **Message Validation**: Runtime type checking with Zod
+- **Connection Management**: Automatic reconnection and error handling
 
 ## Testing Strategy
 
-- **Unit Tests**: Individual component and hook testing
-- **Integration Tests**: Component interaction testing
-- **Performance Tests**: Rendering and memory usage testing
-- **Protocol Tests**: Message validation testing
-- **Server Tests**: Game logic and state management testing
+### Unit Testing
 
-## Build and Deployment
+- **Component Testing**: Individual component behavior
+- **Store Testing**: State management logic
+- **Utility Testing**: Pure function validation
 
-- **Monorepo**: Single repository with multiple packages
-- **Workspace Management**: npm workspaces for package management
-- **Build Pipeline**: Optimized build process with proper ordering
-- **Development Tools**: Concurrent development servers
-- **GitHub Pages**: Static hosting with proper base path configuration
-- **Server Deployment**: Flexible server deployment options
+### Integration Testing
 
-## Future Improvements
+- **Game Flow**: End-to-end game scenarios
+- **Real-time Communication**: WebSocket message handling
+- **State Synchronization**: Client-server state consistency
 
-- **State Machine**: Implement XState for complex game flows
-- **Virtual Scrolling**: For large game histories
-- **Service Workers**: Offline support and caching
-- **WebAssembly**: Performance-critical game logic
-- **Micro-frontends**: Independent game module deployment
-- **Enhanced Simulations**: More game types and analysis tools
-- **Multi-game Support**: Extend server to support blackjack multiplayer
-- **Scalability**: Horizontal scaling and load balancing
-- **Analytics**: Game performance and player behavior tracking
+## Deployment Architecture
+
+### Development
+
+- **Local Development**: Hot reloading and fast iteration
+- **Monorepo Builds**: Coordinated package development
+- **Environment Configuration**: Flexible local setup
+
+### Production
+
+- **Static Frontend**: Optimized React build
+- **Backend Services**: Scalable Node.js deployment
+- **Real-time Infrastructure**: WebSocket support
+- **Monitoring**: Health checks and performance metrics

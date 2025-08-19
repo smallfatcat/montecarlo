@@ -40,7 +40,7 @@
 When working on poker table components:
 
 ```typescript
-// Import from the component structure
+// Import from the modular component structure
 import { 
   PokerTableLayout,
   PokerTableSeats,
@@ -57,19 +57,15 @@ import {
 
 ### 2. Configuration Changes
 
-Configuration is split by domain:
+Configuration is organized by domain with modular structure:
 
 ```typescript
-// Game rules and logic
-import { GAME_CONFIG } from '../config/game'
+// Domain-specific configuration
+import { POKER_CONFIG } from '../config/poker.config'
+import { BLACKJACK_CONFIG } from '../config/blackjack.config'
+import { UI_CONFIG } from '../config/ui.config'
 
-// UI layout and styling
-import { UI_CONFIG } from '../config/ui'
-
-// Poker-specific settings
-import { POKER_CONFIG } from '../config/poker'
-
-// Main config (combines all)
+// Main config (combines all domains)
 import { CONFIG } from '../config'
 ```
 
@@ -100,267 +96,179 @@ export function useNewFeature() {
 ```typescript
 // vite-app/src/ui/poker/components/index.ts
 export { NewComponent } from './NewComponent'
-
-// vite-app/src/ui/poker/hooks/index.ts
-export { useNewFeature } from './useNewFeature'
 ```
 
-### 4. Testing
+### 4. Working with Modular Architecture
 
+The project follows strict modular patterns:
+
+- **File Size Limit**: Maximum 200 lines per file
+- **Function Size Limit**: Maximum 50 lines per function
+- **Single Responsibility**: Each file has one clear purpose
+- **Barrel Exports**: Clean import/export patterns
+
+#### Example: Adding New Poker Strategy
+
+```typescript
+// vite-app/src/poker/strategy/newStrategy.ts
+export function calculateNewStrategy(/* params */) {
+  // Strategy logic (under 50 lines)
+}
+
+// vite-app/src/poker/strategy/index.ts
+export { calculateNewStrategy } from './newStrategy'
+```
+
+#### Example: Adding New Game Flow
+
+```typescript
+// vite-app/src/poker/flow/newFlow.ts
+export function handleNewFlow(/* params */) {
+  // Flow logic (under 50 lines)
+}
+
+// vite-app/src/poker/flow/index.ts
+export { handleNewFlow } from './newFlow'
+```
+
+## Project Structure
+
+### Frontend (`vite-app/`)
+```
+src/
+├── ui/                    # UI components and hooks
+├── config/                # Modular configuration
+│   ├── index.ts          # Main config aggregator
+│   ├── poker.config.ts   # Poker configuration
+│   ├── blackjack.config.ts # Blackjack configuration
+│   ├── ui.config.ts      # UI configuration
+│   └── legacy.config.ts  # Legacy compatibility
+├── poker/                 # Poker game logic (modular)
+│   ├── flow/             # Game flow management
+│   ├── strategy/          # Strategy engine
+│   ├── handEval/         # Hand evaluation
+│   └── predefinedHands/  # Predefined hands
+├── blackjack/             # Blackjack game logic (modular)
+│   └── simulation/        # Simulation engine
+├── stores/                # State management (modular)
+│   └── lobby/             # Lobby store modules
+└── workers/               # Web Workers for simulations
+    └── equity/            # Equity calculation worker
+```
+
+### Backend (`apps/game-server/`)
+```
+src/
+├── config/                # Environment configuration
+├── server/                # Server setup
+├── identity/              # Identity management
+├── tables/                # Table factory exports
+├── sockets/                # Socket event handlers
+└── index.ts               # Main server orchestration
+```
+
+### Shared Packages (`packages/`)
+```
+packages/
+├── shared/                # Common types and protocols
+│   └── src/protocol/      # Protocol schemas (modular)
+└── poker-engine/          # Poker game engine (modular)
+    └── src/
+        ├── flow/          # Game flow management
+        ├── strategy/       # Strategy engine
+        └── types.ts       # Core types
+```
+
+## Code Quality Standards
+
+### File Organization
+- **Maximum File Size**: 200 lines per file
+- **Maximum Function Size**: 50 lines per function
+- **Single Responsibility**: Each file has one clear purpose
+- **Barrel Exports**: Clean import/export patterns
+
+### Module Patterns
+- **Flow Modules**: Game flow management with clear progression
+- **Strategy Modules**: Game strategy with focused analysis
+- **Protocol Modules**: Communication schemas with validation
+- **Server Modules**: Server concerns with clear separation
+
+### Documentation Standards
+- **JSDoc Comments**: All public functions documented
+- **README Files**: Module-level documentation
+- **Inline Comments**: Complex logic explained
+- **Type Definitions**: Comprehensive TypeScript coverage
+
+## Building and Testing
+
+### Development Build
+```bash
+# Build all packages
+npm run build:all
+
+# Build specific package
+npm run build:shared
+npm run build:poker-engine
+npm run build:game-server
+```
+
+### Testing
 ```bash
 # Run all tests
 npm run test:all
-
-# Watch mode for frontend tests
-npm run test:watch
 
 # Type checking
 npm run typecheck
 ```
 
-## Project Structure
-
-### Frontend (vite-app/)
-
-```
-src/
-├── ui/                    # UI components and hooks
-│   ├── poker/            # Poker-specific UI
-│   │   ├── components/   # Reusable poker components
-│   │   ├── hooks/        # Custom poker hooks
-│   │   └── ...
-│   ├── components/       # Shared UI components
-│   ├── hooks/            # Shared UI hooks
-│   ├── controls/         # Game control components
-│   └── handLayouts/      # Hand layout components
-├── config/               # Configuration files
-├── poker/                # Poker game logic
-├── blackjack/            # Blackjack game logic
-└── workers/              # Web Workers for simulations
+### Clean Rebuild
+```bash
+# Clean rebuild with version generation
+npm run rebuild
 ```
 
-### Backend (apps/game-server/)
+## Common Development Tasks
 
-The game server provides authoritative multiplayer functionality for poker games:
+### Adding New Configuration
+1. Create domain-specific config file in `src/config/`
+2. Export configuration object
+3. Import and combine in main `config/index.ts`
+4. Update types if needed
 
-```
-src/
-├── index.ts              # Main server file with Socket.IO setup
-├── tables/               # Table management and runtime
-│   ├── serverRuntimeTable.ts  # Core table logic and state management
-│   └── inMemoryTable.ts       # Table instance creation
-├── protocol.ts           # Message schemas (imported from shared package)
-└── dev/                  # Development utilities
-```
+### Adding New Game Logic
+1. Create focused module file (under 200 lines)
+2. Implement single responsibility functions (under 50 lines)
+3. Add to appropriate barrel export
+4. Update tests and documentation
 
-**Key Features:**
-- **Real-time Communication**: WebSocket-based multiplayer
-- **Authoritative State**: Single source of truth for game state
-- **Message Validation**: Zod-based protocol validation
-- **Table Management**: Dynamic table creation and management
-- **CPU Integration**: AI players for single-player games
-
-### Shared (packages/)
-
-```
-packages/
-├── shared/               # Common types and protocols
-│   └── src/
-│       └── protocol.ts   # Zod schemas for client-server communication
-└── poker-engine/         # Poker game engine
-```
-
-## Key Concepts
-
-### Component Architecture
-
-- **Single Responsibility**: Each component has one clear purpose
-- **Composition**: Build complex UIs from simple components
-- **Props Interface**: Well-defined component contracts
-- **Reusability**: Components can be used in different contexts
-
-### Hook Architecture
-
-- **Focused Logic**: Each hook handles one aspect of functionality
-- **State Management**: Local state with clear update patterns
-- **Side Effects**: Controlled effect management
-- **Custom Logic**: Encapsulate complex behavior
-
-### Configuration Management
-
-- **Domain Separation**: Different configs for different concerns
-- **Type Safety**: Full TypeScript support
-- **Environment Support**: Development vs production configs
-- **Validation**: Runtime configuration validation
-
-### Simulation Architecture
-
-- **High-Speed Runner**: Pure function simulation for maximum performance
-- **Web Worker Integration**: Background thread processing
-- **Progress Tracking**: Real-time simulation updates
-- **Configurable Parameters**: Adjustable simulation settings
-
-### Multiplayer Architecture
-
-- **Authoritative Server**: Game server enforces all rules
-- **Real-time Protocol**: WebSocket communication with validation
-- **State Synchronization**: Automatic client state updates
-- **Connection Management**: Robust connection handling
-
-## Common Patterns
-
-### 1. Component with Props
-
-```typescript
-interface ComponentProps {
-  value: string
-  onChange: (value: string) => void
-  disabled?: boolean
-}
-
-export function Component({ value, onChange, disabled = false }: ComponentProps) {
-  // Component implementation
-}
-```
-
-### 2. Custom Hook
-
-```typescript
-export function useCustomHook(initialValue: string) {
-  const [value, setValue] = useState(initialValue)
-  
-  const updateValue = useCallback((newValue: string) => {
-    setValue(newValue)
-  }, [])
-  
-  return { value, updateValue }
-}
-```
-
-### 3. Simulation Engine
-
-The application includes a high-performance simulation engine for Monte Carlo analysis:
-
-```typescript
-// Note: Simulation runner hook exists but is not currently integrated with UI
-// import { useSimulationRunner } from '../ui/useSimulationRunner'
-// 
-// const { run, progress, isRunning } = useSimulationRunner()
-// 
-// This hook is currently unused and lacks UI integration
-```
-
-**Status**: Backend simulation engine implemented, UI integration pending.
-
-### 4. Game Server Integration
-
-```typescript
-import { usePokerGame } from '../ui/poker/usePokerGame'
-
-function PokerGameComponent() {
-  const { 
-    connect, 
-    joinTable, 
-    sit, 
-    act, 
-    state, 
-    isConnected 
-  } = usePokerGame()
-  
-  const handleJoinGame = () => {
-    connect('ws://localhost:8080')
-    joinTable('table-1')
-    sit(0, 'Player1')
-  }
-  
-  const handleAction = (action: 'fold' | 'call' | 'raise', amount?: number) => {
-    act(action, amount)
-  }
-  
-  return (
-    <div>
-      {!isConnected ? (
-        <button onClick={handleJoinGame}>Join Game</button>
-      ) : (
-        <div>
-          <button onClick={() => handleAction('fold')}>Fold</button>
-          <button onClick={() => handleAction('call')}>Call</button>
-          <button onClick={() => handleAction('raise', 100)}>Raise $100</button>
-        </div>
-      )}
-    </div>
-  )
-}
-```
+### Adding New Socket Events
+1. Define message schema in `packages/shared/src/protocol/`
+2. Add handler in `apps/game-server/src/sockets/handlers.ts`
+3. Update client-side event handling
+4. Test end-to-end communication
 
 ## Troubleshooting
 
-### Build Issues
+### Common Issues
 
-```bash
-# Clean and rebuild
-npm run rebuild
+#### Build Errors
+- Ensure all packages are built in correct order
+- Check TypeScript compilation in each package
+- Verify import/export paths are correct
 
-# Check for type errors
-npm run typecheck
+#### Module Resolution
+- Use relative imports within packages
+- Use package imports for cross-package dependencies
+- Check barrel export files are up to date
 
-# Verify workspace setup
-npm run build:packages
-```
+#### Configuration Issues
+- Verify domain-specific config files exist
+- Check main config aggregator imports
+- Ensure backward compatibility for legacy components
 
-### Development Issues
+### Getting Help
 
-```bash
-# Restart development servers
-npm run dev:all
-
-# Check backend status
-curl http://localhost:8080/healthz
-
-# Clear browser cache and reload
-```
-
-### Performance Issues
-
-- Use React DevTools Profiler
-- Check Web Worker performance
-- Verify WebSocket connection stability
-- Monitor memory usage
-
-### Game Server Issues
-
-```bash
-# Check server logs
-cd apps/game-server
-npm run dev
-
-# Verify environment configuration
-cat .env
-
-# Test WebSocket connection
-curl http://localhost:8080/healthz
-```
-
-## Contributing
-
-1. **Create a feature branch**
-   ```bash
-   git checkout -b feature/new-feature
-   ```
-
-2. **Make changes following the established patterns**
-
-3. **Test your changes**
-   ```bash
-   npm run test:all
-   npm run typecheck
-   ```
-
-4. **Submit a pull request**
-
-## Next Steps
-
-- Read the [Architecture Guide](./architecture.md)
-- Explore the [System Overview](./system-overview.md)
-- Check out the [Poker Realtime Usage](./poker-realtime-usage.md)
-- Join the development discussions
+- Check the [Architecture](./architecture.md) documentation
+- Review [System Overview](./system-overview.md) for high-level understanding
+- Examine existing modular patterns for guidance
+- Use TypeScript compiler for type checking and error detection

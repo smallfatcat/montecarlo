@@ -5,18 +5,20 @@ A casino game application built with React, TypeScript, and Node.js, featuring r
 ## 🎯 Current Features
 
 - **Poker**: Texas Hold'em with real-time multiplayer via WebSocket server
-- **Blackjack**: Backend simulation engine (no UI currently)
-- **High-Speed Simulations**: Monte Carlo analysis engine (backend only, UI pending)
+- **Blackjack**: Backend simulation engine with high-speed Monte Carlo analysis
+- **High-Speed Simulations**: Monte Carlo analysis engine with Web Worker support
 - **Real-time Multiplayer**: Authoritative game server with Socket.IO
 - **Modern UI**: React-based interface with responsive design
+- **Modular Architecture**: Clean, maintainable codebase with separation of concerns
 
 ## 🏗️ Architecture
 
 - **Frontend**: React 19 + Vite + TypeScript
 - **Backend**: Node.js + Fastify + Socket.IO
-- **Game Engine**: Extracted poker engine with deterministic logic
+- **Game Engine**: Modular poker engine with deterministic logic
 - **Simulation**: Pure function runners for maximum performance
 - **Monorepo**: npm workspaces for package management
+- **Code Quality**: Comprehensive readability standards and modular patterns
 
 ## 🚀 Quick Start
 
@@ -44,11 +46,12 @@ npm run dev:backend     # Backend only
 
 ## ⚠️ Development Status
 
-**This project is in very early development stages.** Features are actively being developed and the API may change frequently. The current focus is on:
+**This project is in active development.** Features are actively being developed and the API may change frequently. The current focus is on:
 
 - Core game logic and multiplayer infrastructure
 - UI component architecture and design
 - Performance optimization and simulation capabilities
+- Code quality and maintainability
 - Documentation and developer experience
 
 ## 🎮 Game Types
@@ -58,8 +61,9 @@ npm run dev:backend     # Backend only
 - WebSocket-based communication
 - CPU players for single-player games
 - Configurable table layouts
+- Modular game engine architecture
 
-### Blackjack (Backend Engine Only)
+### Blackjack (Backend Engine)
 - Simulation engine with standard rules and house rule options
 - Multi-deck shoe management
 - Basic strategy implementation
@@ -100,11 +104,31 @@ See [Building with Automatic Version Generation](./docs/BUILD_WITH_VERSION.md) f
 
 ```
 montecarlo/
-├── vite-app/          # React frontend application
-├── apps/game-server/  # WebSocket multiplayer server
-├── packages/          # Shared packages and game engine
-└── docs/             # Project documentation
+├── vite-app/                 # React frontend application
+│   ├── src/
+│   │   ├── ui/              # UI components and hooks
+│   │   ├── config/          # Modular configuration
+│   │   ├── poker/           # Poker game logic (modular)
+│   │   ├── blackjack/       # Blackjack game logic (modular)
+│   │   ├── stores/          # State management (modular)
+│   │   └── workers/         # Web Workers for simulations
+├── apps/game-server/         # WebSocket multiplayer server (modular)
+├── packages/                 # Shared packages and game engine
+│   ├── shared/              # Common types and protocols (modular)
+│   └── poker-engine/        # Poker game engine (modular)
+└── docs/                    # Project documentation
 ```
+
+## 🎯 Code Quality Standards
+
+This project maintains high code quality through:
+
+- **Modular Architecture**: Single responsibility principle with clear separation of concerns
+- **File Size Limits**: Maximum 200 lines per file for maintainability
+- **Function Complexity**: Maximum 50 lines per function for readability
+- **Comprehensive Documentation**: JSDoc comments and clear naming conventions
+- **Type Safety**: Full TypeScript coverage throughout
+- **Consistent Patterns**: Barrel exports, module organization, and naming conventions
 
 ## 📄 License
 
