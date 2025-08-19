@@ -1,3 +1,3 @@
-export * from './protocol.js'
+export * from './protocol/index.js'
 
 
