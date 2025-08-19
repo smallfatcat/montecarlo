@@ -1,7 +1,7 @@
 {
   "project": "montecarlo",
   "team": "dev",
-  "prodUrl": "http://127.0.0.1:3210",
+  "prodUrl": "https://convex.smallfatcat-dev.org",
   "functions": "convex/",
   "auth": {
     "enabled": true
