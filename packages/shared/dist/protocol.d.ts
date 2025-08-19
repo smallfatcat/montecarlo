@@ -124,6 +124,16 @@ export declare const C2S: {
         seats?: number | undefined;
         startingStack?: number | undefined;
     }>;
+    toggleDebugMode: z.ZodObject<{
+        tableId: z.ZodDefault<z.ZodString>;
+        enabled: z.ZodBoolean;
+    }, "strip", z.ZodTypeAny, {
+        tableId: string;
+        enabled: boolean;
+    }, {
+        enabled: boolean;
+        tableId?: string | undefined;
+    }>;
 };
 export declare const S2C: {
     ready: z.ZodObject<{

@@ -24,6 +24,12 @@ export const C2S = {
   joinLobby: z.object({}),
   listTables: z.object({}),
   createTable: z.object({ tableId: z.string().optional(), seats: z.number().int().min(2).max(9).optional(), startingStack: z.number().int().positive().optional() }),
+  
+  // State Machine Debug Control
+  toggleDebugMode: z.object({ 
+    tableId: z.string().default('table-1'), 
+    enabled: z.boolean() 
+  }),
 }
 
 // Server -> Client messages
