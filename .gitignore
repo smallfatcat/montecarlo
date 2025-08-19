@@ -153,3 +153,6 @@ apps/game-server/src/assets/images/icons/favicon.ico
 packages/shared/dist/
 packages/poker-engine/dist/
 vite-app/public/cardback/*.png
+
+# Convex self-hosted server
+convex-self-hosted/
