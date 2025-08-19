@@ -67,6 +67,12 @@ export const S2C = {
   tableRemoved: z.object({ 
     tableId: z.string() 
   }),
+  
+  // Autodeal status
+  autodealStatus: z.object({
+    tableId: z.string(),
+    enabled: z.boolean(),
+  }),
 } as const
 
 export type S2C = typeof S2C

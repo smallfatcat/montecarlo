@@ -61,6 +61,9 @@ export function createServerRuntimeTable(io, tableId, opts) {
                     opts?.publisher?.handEnded?.({ tableId, handId: s.handId, board, results });
                 }
                 catch { }
+                // Emit autodeal status when hand ends
+                const autodealEnabled = runtime.isAutodealEnabled?.() ?? false;
+                io.to(room).emit('autodeal_status', { tableId, enabled: autodealEnabled });
             }
         },
         onAction: (handId, seat, action, toCall, street) => {
@@ -185,6 +188,9 @@ export function createServerRuntimeTable(io, tableId, opts) {
             console.log('[server-runtime] join', { socketId: socket.id });
         }
         catch { }
+        // Send current autodeal status to the new client
+        const autodealEnabled = runtime.isAutodealEnabled?.() ?? false;
+        socket.emit('autodeal_status', { tableId, enabled: autodealEnabled });
     }
     function removeClient(socket) {
         socket.leave(room);
@@ -273,6 +279,9 @@ export function createServerRuntimeTable(io, tableId, opts) {
             if (clientSocket) {
                 clientSocket.emit('seat_autoplay', { playerId, seatIndex, enabled });
             }
+            // Emit autodeal status change to all clients in the room
+            const autodealEnabled = runtime.isAutodealEnabled?.() ?? false;
+            io.to(room).emit('autodeal_status', { tableId, enabled: autodealEnabled });
         },
         getClientSeatAuto(playerId, seatIndex) {
             const seatSet = clientAutoplay.get(playerId);
@@ -286,6 +295,10 @@ export function createServerRuntimeTable(io, tableId, opts) {
                 }
             }
             return false;
+        },
+        // Check if autodeal is currently enabled
+        isAutodealEnabled() {
+            return runtime.isAutodealEnabled?.() ?? false;
         },
         getState() { return lastState; },
         addClient,

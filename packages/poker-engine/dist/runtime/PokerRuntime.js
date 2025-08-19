@@ -45,6 +45,13 @@ export class PokerRuntime {
         this.cb.onState(this.state);
         this.armTimers();
     }
+    /**
+     * Check if autodeal is currently enabled (i.e., if at least one seat has autoplay enabled).
+     * When autodeal is disabled, the next hand must be started manually by calling beginHand().
+     */
+    isAutodealEnabled() {
+        return this.state.seats.some((_, seatIndex) => this.shouldAutoplaySeatFn(seatIndex));
+    }
     beginHand() {
         this.state = startHand(this.state);
         const s = this.state;
@@ -135,7 +142,11 @@ export class PokerRuntime {
         if (s.status === 'hand_over') {
             if (s.gameOver)
                 return;
-            // Always auto-deal the next hand; per-seat autoplay only affects per-turn actions
+            // Only auto-deal if at least one seat has autoplay enabled
+            // When autodeal is disabled, the next hand must be started manually by calling beginHand()
+            const hasAnyAutoplay = s.seats.some((_, seatIndex) => this.shouldAutoplaySeatFn(seatIndex));
+            if (!hasAnyAutoplay)
+                return;
             const bump = this.delayBumpOnceMs;
             this.delayBumpOnceMs = 0;
             const delay = CONFIG.pokerAutoplay.autoDealDelayMs + (CONFIG.poker.animations?.chipFlyDurationMs ?? 0) + bump;

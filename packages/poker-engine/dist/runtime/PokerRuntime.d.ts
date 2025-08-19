@@ -47,6 +47,11 @@ export declare class PokerRuntime {
      * When set to false, the runtime will not schedule an automatic CPU action when it is this seat's turn.
      */
     setSeatCpu(seatIndex: number, isCpu: boolean): void;
+    /**
+     * Check if autodeal is currently enabled (i.e., if at least one seat has autoplay enabled).
+     * When autodeal is disabled, the next hand must be started manually by calling beginHand().
+     */
+    isAutodealEnabled(): boolean;
     beginHand(): void;
     act(action: BettingAction): void;
     private clearAllTimers;

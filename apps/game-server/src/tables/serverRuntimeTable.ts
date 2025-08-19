@@ -16,6 +16,8 @@ export interface TableApi {
   setClientSeatAuto(playerId: string, seatIndex: number, enabled: boolean): void
   getClientSeatAuto(playerId: string, seatIndex: number): boolean
   shouldSeatAutoPlay(seatIndex: number): boolean
+  // Autodeal control functions
+  isAutodealEnabled(): boolean
   getState(): PokerTableState
   addClient(socket: Socket): void
   removeClient(socket: Socket): void
@@ -89,6 +91,10 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
           }
           opts?.publisher?.handEnded?.({ tableId, handId: s.handId, board, results })
         } catch {}
+        
+        // Emit autodeal status when hand ends
+        const autodealEnabled = (runtime as any).isAutodealEnabled?.() ?? false
+        io.to(room).emit('autodeal_status', { tableId, enabled: autodealEnabled })
       }
     },
     onAction: (handId, seat, action, toCall, street) => {
@@ -164,6 +170,10 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
       }
     } catch {}
     try { console.log('[server-runtime] join', { socketId: socket.id }) } catch {}
+    
+    // Send current autodeal status to the new client
+    const autodealEnabled = (runtime as any).isAutodealEnabled?.() ?? false
+    socket.emit('autodeal_status', { tableId, enabled: autodealEnabled })
   }
 
   function removeClient(socket: Socket) {
@@ -224,6 +234,10 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
       if (clientSocket) {
         clientSocket.emit('seat_autoplay', { playerId, seatIndex, enabled })
       }
+      
+      // Emit autodeal status change to all clients in the room
+      const autodealEnabled = (runtime as any).isAutodealEnabled?.() ?? false
+      io.to(room).emit('autodeal_status', { tableId, enabled: autodealEnabled })
     },
     getClientSeatAuto(playerId, seatIndex) {
       const seatSet = clientAutoplay.get(playerId)
@@ -238,6 +252,11 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
         }
       }
       return false
+    },
+    
+    // Check if autodeal is currently enabled
+    isAutodealEnabled() {
+      return (runtime as any).isAutodealEnabled?.() ?? false
     },
     
     getState() { return lastState as PokerTableState },
