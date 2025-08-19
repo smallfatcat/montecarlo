@@ -29,6 +29,9 @@ export {
   errorHandlingExample as timedPokerErrorHandling
 } from './timedPokerExample.js'
 
+// Debug Integration Examples
+export * from './debugIntegrationExample.js'
+
 // Integrated State Machine
 export * from './integratedPokerMachine.js'
 export * from './integratedExample.js'

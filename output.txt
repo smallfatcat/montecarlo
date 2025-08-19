@@ -1,0 +1,429 @@
+[1] [server-runtime] state { handId: 0, street: null, toAct: null }
+[1] 🚀 [StateMachine] Adding monitoring to PokerRuntime...
+[1] 🚀 [StateMachine] Configuration: {
+[1]   enabled: true,
+[1]   debugMode: true,
+[1]   enableTimerIntegration: true,
+[1]   enablePerformanceMonitoring: true
+[1] }
+[1] 🚀 [Monitoring] Adding state machine monitoring...
+[1] 🔧 [StateMachine] Adapter created with options: {
+[1]   enableStateMachine: true,
+[1]   enableTimerIntegration: true,
+[1]   enablePerformanceMonitoring: true
+[1] }
+[1] 🔧 [StateMachine] Initializing with runtime state: {
+[1]   status: 'idle',
+[1]   handId: 0,
+[1]   street: null,
+[1]   currentToAct: null,
+[1]   seatsCount: 6
+[1] }
+[1] 🔧 [StateMachine] Extracted player info: {
+[1]   playerIds: [ 0, 1, 2, 3, 4, 5 ],
+[1]   playerStacks: { '0': 5000, '1': 5000, '2': 5000, '3': 5000, '4': 5000, '5': 5000 }
+[1] }
+[1] 🔧 [StateMachine] State machine initialized successfully
+[1] 🔧 [StateMachine] Syncing runtime state to state machine: { status: 'idle', handId: 0, street: null }
+[1] 🔧 [StateMachine] Sending PLAYERS_READY event
+[1] 🚀 [Monitoring] State machine monitoring added to runtime
+[1] 🚀 [StateMachine] Monitoring added successfully
+[1] {"level":30,"time":1755587621027,"pid":1894867,"hostname":"DESKTOP-K48M9KD","id":"Rs6xFQeJixCb3xpGAAAB","reason":"client namespace disconnect","msg":"socket disconnected"}
+[1] {"level":30,"time":1755587621199,"pid":1894867,"hostname":"DESKTOP-K48M9KD","id":"Y_BvdTNF00WkGRBXAAAD","origin":"http://localhost:5173","msg":"socket connected"}
+[1] [server-runtime] join { socketId: 'Y_BvdTNF00WkGRBXAAAD' }
+[1] 🚀 [Monitoring] Runtime state changed: { status: 'idle', handId: 0, street: null }
+[1] 🔧 [StateMachine] Current state machine state: {
+[1]   gameState: { type: 'waiting_for_players' },
+[1]   handState: null,
+[1]   context: {
+[1]     gameState: { type: 'waiting_for_players' },
+[1]     handState: null,
+[1]     handContext: null,
+[1]     timerManager: StateMachineTimerManager {
+[1]       timers: Map(0) {},
+[1]       callbacks: [Object],
+[1]       nextTimerId: 1
+[1]     },
+[1]     activeTimers: Set(0) {},
+[1]     autoPlayEnabled: true,
+[1]     autoDealEnabled: true,
+[1]     playerTimeouts: Map(3) { 0 => 30000, 1 => 30000, 2 => 30000 },
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1
+[1]   },
+[1]   performance: {
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1,
+[1]     activeTimers: 0,
+[1]     timerStats: {
+[1]       activeCount: 0,
+[1]       totalCount: 0,
+[1]       byPriority: [Object],
+[1]       byType: [Object]
+[1]     }
+[1]   },
+[1]   timers: {
+[1]     activeCount: 0,
+[1]     totalCount: 0,
+[1]     byPriority: { high: 0, normal: 0, low: 0 },
+[1]     byType: {
+[1]       cpu_action: 0,
+[1]       player_action: 0,
+[1]       auto_deal: 0,
+[1]       watchdog: 0,
+[1]       street_timeout: 0,
+[1]       hand_timeout: 0
+[1]     }
+[1]   }
+[1] }
+[1] [server-runtime] state { handId: 0, street: null, toAct: null }
+[1] [server-runtime] hand_start { handId: 1, buttonIndex: 0, smallBlind: 5, bigBlind: 10 }
+[1] [server-runtime] post_blind { handId: 0, seat: 1, amount: 5 }
+[1] [server-runtime] post_blind { handId: 0, seat: 2, amount: 10 }
+[1] [server-runtime] hand_setup { handId: 1, seats: 6, deckRemaining: 40 }
+[1] 🚀 [Monitoring] Runtime state changed: { status: 'in_hand', handId: 1, street: 'preflop' }
+[1] 🔧 [StateMachine] Current state machine state: {
+[1]   gameState: { type: 'waiting_for_players' },
+[1]   handState: null,
+[1]   context: {
+[1]     gameState: { type: 'waiting_for_players' },
+[1]     handState: null,
+[1]     handContext: null,
+[1]     timerManager: StateMachineTimerManager {
+[1]       timers: Map(0) {},
+[1]       callbacks: [Object],
+[1]       nextTimerId: 1
+[1]     },
+[1]     activeTimers: Set(0) {},
+[1]     autoPlayEnabled: true,
+[1]     autoDealEnabled: true,
+[1]     playerTimeouts: Map(3) { 0 => 30000, 1 => 30000, 2 => 30000 },
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1
+[1]   },
+[1]   performance: {
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1,
+[1]     activeTimers: 0,
+[1]     timerStats: {
+[1]       activeCount: 0,
+[1]       totalCount: 0,
+[1]       byPriority: [Object],
+[1]       byType: [Object]
+[1]     }
+[1]   },
+[1]   timers: {
+[1]     activeCount: 0,
+[1]     totalCount: 0,
+[1]     byPriority: { high: 0, normal: 0, low: 0 },
+[1]     byType: {
+[1]       cpu_action: 0,
+[1]       player_action: 0,
+[1]       auto_deal: 0,
+[1]       watchdog: 0,
+[1]       street_timeout: 0,
+[1]       hand_timeout: 0
+[1]     }
+[1]   }
+[1] }
+[1] [server-runtime] state { handId: 1, street: 'preflop', toAct: 3 }
+[1] [server-runtime] action { handId: 1, seat: 3, action: 'fold', toCall: 10, street: 'preflop' }
+[1] 🚀 [Monitoring] Runtime state changed: { status: 'in_hand', handId: 1, street: 'preflop' }
+[1] 🔧 [StateMachine] Current state machine state: {
+[1]   gameState: { type: 'waiting_for_players' },
+[1]   handState: null,
+[1]   context: {
+[1]     gameState: { type: 'waiting_for_players' },
+[1]     handState: null,
+[1]     handContext: null,
+[1]     timerManager: StateMachineTimerManager {
+[1]       timers: Map(0) {},
+[1]       callbacks: [Object],
+[1]       nextTimerId: 1
+[1]     },
+[1]     activeTimers: Set(0) {},
+[1]     autoPlayEnabled: true,
+[1]     autoDealEnabled: true,
+[1]     playerTimeouts: Map(3) { 0 => 30000, 1 => 30000, 2 => 30000 },
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1
+[1]   },
+[1]   performance: {
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1,
+[1]     activeTimers: 0,
+[1]     timerStats: {
+[1]       activeCount: 0,
+[1]       totalCount: 0,
+[1]       byPriority: [Object],
+[1]       byType: [Object]
+[1]     }
+[1]   },
+[1]   timers: {
+[1]     activeCount: 0,
+[1]     totalCount: 0,
+[1]     byPriority: { high: 0, normal: 0, low: 0 },
+[1]     byType: {
+[1]       cpu_action: 0,
+[1]       player_action: 0,
+[1]       auto_deal: 0,
+[1]       watchdog: 0,
+[1]       street_timeout: 0,
+[1]       hand_timeout: 0
+[1]     }
+[1]   }
+[1] }
+[1] [server-runtime] state { handId: 1, street: 'preflop', toAct: 4 }
+[1] [server-runtime] action { handId: 1, seat: 4, action: 'fold', toCall: 10, street: 'preflop' }
+[1] 🚀 [Monitoring] Runtime state changed: { status: 'in_hand', handId: 1, street: 'preflop' }
+[1] 🔧 [StateMachine] Current state machine state: {
+[1]   gameState: { type: 'waiting_for_players' },
+[1]   handState: null,
+[1]   context: {
+[1]     gameState: { type: 'waiting_for_players' },
+[1]     handState: null,
+[1]     handContext: null,
+[1]     timerManager: StateMachineTimerManager {
+[1]       timers: Map(0) {},
+[1]       callbacks: [Object],
+[1]       nextTimerId: 1
+[1]     },
+[1]     activeTimers: Set(0) {},
+[1]     autoPlayEnabled: true,
+[1]     autoDealEnabled: true,
+[1]     playerTimeouts: Map(3) { 0 => 30000, 1 => 30000, 2 => 30000 },
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1
+[1]   },
+[1]   performance: {
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1,
+[1]     activeTimers: 0,
+[1]     timerStats: {
+[1]       activeCount: 0,
+[1]       totalCount: 0,
+[1]       byPriority: [Object],
+[1]       byType: [Object]
+[1]     }
+[1]   },
+[1]   timers: {
+[1]     activeCount: 0,
+[1]     totalCount: 0,
+[1]     byPriority: { high: 0, normal: 0, low: 0 },
+[1]     byType: {
+[1]       cpu_action: 0,
+[1]       player_action: 0,
+[1]       auto_deal: 0,
+[1]       watchdog: 0,
+[1]       street_timeout: 0,
+[1]       hand_timeout: 0
+[1]     }
+[1]   }
+[1] }
+[1] [server-runtime] state { handId: 1, street: 'preflop', toAct: 5 }
+[1] [server-runtime] action { handId: 1, seat: 5, action: 'call', toCall: 10, street: 'preflop' }
+[1] 🚀 [Monitoring] Runtime state changed: { status: 'in_hand', handId: 1, street: 'preflop' }
+[1] 🔧 [StateMachine] Current state machine state: {
+[1]   gameState: { type: 'waiting_for_players' },
+[1]   handState: null,
+[1]   context: {
+[1]     gameState: { type: 'waiting_for_players' },
+[1]     handState: null,
+[1]     handContext: null,
+[1]     timerManager: StateMachineTimerManager {
+[1]       timers: Map(0) {},
+[1]       callbacks: [Object],
+[1]       nextTimerId: 1
+[1]     },
+[1]     activeTimers: Set(0) {},
+[1]     autoPlayEnabled: true,
+[1]     autoDealEnabled: true,
+[1]     playerTimeouts: Map(3) { 0 => 30000, 1 => 30000, 2 => 30000 },
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1
+[1]   },
+[1]   performance: {
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1,
+[1]     activeTimers: 0,
+[1]     timerStats: {
+[1]       activeCount: 0,
+[1]       totalCount: 0,
+[1]       byPriority: [Object],
+[1]       byType: [Object]
+[1]     }
+[1]   },
+[1]   timers: {
+[1]     activeCount: 0,
+[1]     totalCount: 0,
+[1]     byPriority: { high: 0, normal: 0, low: 0 },
+[1]     byType: {
+[1]       cpu_action: 0,
+[1]       player_action: 0,
+[1]       auto_deal: 0,
+[1]       watchdog: 0,
+[1]       street_timeout: 0,
+[1]       hand_timeout: 0
+[1]     }
+[1]   }
+[1] }
+[1] [server-runtime] state { handId: 1, street: 'preflop', toAct: 0 }
+[1] [server-runtime] act accepted { playerId: '2d47476453093d3bf78fce2ac6780515', action: 'call' }
+[1] [server-runtime] action { handId: 1, seat: 0, action: 'fold', toCall: 10, street: 'preflop' }
+[1] 🚀 [Monitoring] Runtime state changed: { status: 'in_hand', handId: 1, street: 'preflop' }
+[1] 🔧 [StateMachine] Current state machine state: {
+[1]   gameState: { type: 'waiting_for_players' },
+[1]   handState: null,
+[1]   context: {
+[1]     gameState: { type: 'waiting_for_players' },
+[1]     handState: null,
+[1]     handContext: null,
+[1]     timerManager: StateMachineTimerManager {
+[1]       timers: Map(0) {},
+[1]       callbacks: [Object],
+[1]       nextTimerId: 1
+[1]     },
+[1]     activeTimers: Set(0) {},
+[1]     autoPlayEnabled: true,
+[1]     autoDealEnabled: true,
+[1]     playerTimeouts: Map(3) { 0 => 30000, 1 => 30000, 2 => 30000 },
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1
+[1]   },
+[1]   performance: {
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1,
+[1]     activeTimers: 0,
+[1]     timerStats: {
+[1]       activeCount: 0,
+[1]       totalCount: 0,
+[1]       byPriority: [Object],
+[1]       byType: [Object]
+[1]     }
+[1]   },
+[1]   timers: {
+[1]     activeCount: 0,
+[1]     totalCount: 0,
+[1]     byPriority: { high: 0, normal: 0, low: 0 },
+[1]     byType: {
+[1]       cpu_action: 0,
+[1]       player_action: 0,
+[1]       auto_deal: 0,
+[1]       watchdog: 0,
+[1]       street_timeout: 0,
+[1]       hand_timeout: 0
+[1]     }
+[1]   }
+[1] }
+[1] [server-runtime] state { handId: 1, street: 'preflop', toAct: 1 }
+[1] [server-runtime] action { handId: 1, seat: 1, action: 'fold', toCall: 5, street: 'preflop' }
+[1] [server-runtime] deal { handId: 1, street: 'flop', cards: '5C QH 6S' }
+[1] 🚀 [Monitoring] Runtime state changed: { status: 'in_hand', handId: 1, street: 'flop' }
+[1] 🔧 [StateMachine] Current state machine state: {
+[1]   gameState: { type: 'waiting_for_players' },
+[1]   handState: null,
+[1]   context: {
+[1]     gameState: { type: 'waiting_for_players' },
+[1]     handState: null,
+[1]     handContext: null,
+[1]     timerManager: StateMachineTimerManager {
+[1]       timers: Map(0) {},
+[1]       callbacks: [Object],
+[1]       nextTimerId: 1
+[1]     },
+[1]     activeTimers: Set(0) {},
+[1]     autoPlayEnabled: true,
+[1]     autoDealEnabled: true,
+[1]     playerTimeouts: Map(3) { 0 => 30000, 1 => 30000, 2 => 30000 },
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1
+[1]   },
+[1]   performance: {
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1,
+[1]     activeTimers: 0,
+[1]     timerStats: {
+[1]       activeCount: 0,
+[1]       totalCount: 0,
+[1]       byPriority: [Object],
+[1]       byType: [Object]
+[1]     }
+[1]   },
+[1]   timers: {
+[1]     activeCount: 0,
+[1]     totalCount: 0,
+[1]     byPriority: { high: 0, normal: 0, low: 0 },
+[1]     byType: {
+[1]       cpu_action: 0,
+[1]       player_action: 0,
+[1]       auto_deal: 0,
+[1]       watchdog: 0,
+[1]       street_timeout: 0,
+[1]       hand_timeout: 0
+[1]     }
+[1]   }
+[1] }
+[1] [server-runtime] state { handId: 1, street: 'flop', toAct: 2 }
+[1] [server-runtime] action { handId: 1, seat: 2, action: 'check', toCall: 0, street: 'flop' }
+[1] 🚀 [Monitoring] Runtime state changed: { status: 'in_hand', handId: 1, street: 'flop' }
+[1] 🔧 [StateMachine] Current state machine state: {
+[1]   gameState: { type: 'waiting_for_players' },
+[1]   handState: null,
+[1]   context: {
+[1]     gameState: { type: 'waiting_for_players' },
+[1]     handState: null,
+[1]     handContext: null,
+[1]     timerManager: StateMachineTimerManager {
+[1]       timers: Map(0) {},
+[1]       callbacks: [Object],
+[1]       nextTimerId: 1
+[1]     },
+[1]     activeTimers: Set(0) {},
+[1]     autoPlayEnabled: true,
+[1]     autoDealEnabled: true,
+[1]     playerTimeouts: Map(3) { 0 => 30000, 1 => 30000, 2 => 30000 },
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1
+[1]   },
+[1]   performance: {
+[1]     lastActionTime: 1755587616293,
+[1]     averageActionTime: 0,
+[1]     actionCount: 1,
+[1]     activeTimers: 0,
+[1]     timerStats: {
+[1]       activeCount: 0,
+[1]       totalCount: 0,
+[1]       byPriority: [Object],
+[1]       byType: [Object]
+[1]     }
+[1]   },
+[1]   timers: {
+[1]     activeCount: 0,
+[1]     totalCount: 0,
+[1]     byPriority: { high: 0, normal: 0, low: 0 },
+[1]     byType: {
+[1]       cpu_action: 0,
+[1]       player_action: 0,
+[1]       auto_deal: 0,
+[1]       watchdog: 0,
+[1]       street_timeout: 0,
+[1]       hand_timeout: 0
+[1]     }
+[1]   }
+[1] }
+[1] [server-runtime] state { handId: 1, street: 'flop', toAct: 5 }

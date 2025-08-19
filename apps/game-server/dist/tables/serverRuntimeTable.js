@@ -1,8 +1,16 @@
 import { PokerRuntime } from '@montecarlo/poker-engine';
+import { addStateMachineMonitoring } from '@montecarlo/poker-engine';
 export function createServerRuntimeTable(io, tableId, opts) {
     const seats = opts?.seats ?? 6;
     const startingStack = opts?.startingStack ?? 5000;
     const cpuSeats = Array.from({ length: seats }, (_, i) => i);
+    // State Machine configuration with defaults
+    const stateMachineConfig = {
+        enabled: opts?.stateMachine?.enabled ?? true,
+        debugMode: opts?.stateMachine?.debugMode ?? true,
+        enableTimerIntegration: opts?.stateMachine?.enableTimerIntegration ?? true,
+        enablePerformanceMonitoring: opts?.stateMachine?.enablePerformanceMonitoring ?? true
+    };
     let lastState = null;
     // Track autoplay per client per seat
     const clientAutoplay = new Map(); // playerId -> Set of seat indices with autoplay enabled
@@ -130,6 +138,21 @@ export function createServerRuntimeTable(io, tableId, opts) {
             catch { }
         },
     });
+    // Add state machine monitoring to the runtime
+    if (stateMachineConfig.enabled) {
+        console.log('🚀 [StateMachine] Adding monitoring to PokerRuntime...');
+        console.log('🚀 [StateMachine] Configuration:', stateMachineConfig);
+        runtime = addStateMachineMonitoring(runtime);
+        console.log('🚀 [StateMachine] Monitoring added successfully');
+        // Set initial debug mode based on configuration
+        if (!stateMachineConfig.debugMode) {
+            runtime.setStateMachineDebug?.(false);
+            console.log('🚀 [StateMachine] Debug mode disabled by configuration');
+        }
+    }
+    else {
+        console.log('🚀 [StateMachine] State machine monitoring disabled by configuration');
+    }
     function addClient(socket) {
         socket.join(room);
         if (lastState)
@@ -463,6 +486,20 @@ export function createServerRuntimeTable(io, tableId, opts) {
                     catch { }
                 },
             });
+            // Add state machine monitoring to the new runtime
+            if (stateMachineConfig.enabled) {
+                console.log('🚀 [StateMachine] Adding monitoring to reset PokerRuntime...');
+                runtime = addStateMachineMonitoring(runtime);
+                console.log('🚀 [StateMachine] Reset monitoring added successfully');
+                // Set initial debug mode based on configuration
+                if (!stateMachineConfig.debugMode) {
+                    runtime.setStateMachineDebug?.(false);
+                    console.log('🚀 [StateMachine] Reset debug mode disabled by configuration');
+                }
+            }
+            else {
+                console.log('🚀 [StateMachine] Reset state machine monitoring disabled by configuration');
+            }
             // Clear all client autoplay settings on reset
             clientAutoplay.clear();
             lastState = runtime['state'];
@@ -513,6 +550,22 @@ export function createServerRuntimeTable(io, tableId, opts) {
                 catch { }
             }, disconnectGraceMs);
             pendingReleases.set(playerId, handle);
+        },
+        // State Machine monitoring methods
+        getStateMachineStatus() {
+            return runtime.getStateMachineStatus?.() ?? null;
+        },
+        getStateMachinePerformance() {
+            return runtime.getStateMachinePerformance?.() ?? null;
+        },
+        getStateMachineTimers() {
+            return runtime.getStateMachineTimers?.() ?? null;
+        },
+        logStateMachineState() {
+            runtime.logStateMachineState?.();
+        },
+        setStateMachineDebug(enabled) {
+            runtime.setStateMachineDebug?.(enabled);
         }
     };
     function getSummary() {

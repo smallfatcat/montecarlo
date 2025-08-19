@@ -52,6 +52,7 @@ export class StateMachineRuntimeAdapter {
   private options: StateMachineRuntimeOptions
   private callbacks: StateMachineRuntimeCallbacks
   private isEnabled: boolean = false
+  private debugMode: boolean = true // Temporary debug flag
 
   constructor(
     originalRuntime: any,
@@ -62,6 +63,14 @@ export class StateMachineRuntimeAdapter {
     this.options = options
     this.callbacks = callbacks
     this.isEnabled = options.enableStateMachine
+
+    if (this.debugMode) {
+      console.log('🔧 [StateMachine] Adapter created with options:', {
+        enableStateMachine: this.isEnabled,
+        enableTimerIntegration: this.options.enableTimerIntegration,
+        enablePerformanceMonitoring: this.options.enablePerformanceMonitoring
+      })
+    }
 
     if (this.isEnabled) {
       this.initializeStateMachine()
@@ -77,6 +86,16 @@ export class StateMachineRuntimeAdapter {
     const currentState = this.originalRuntime.state
     if (!currentState) return
 
+    if (this.debugMode) {
+      console.log('🔧 [StateMachine] Initializing with runtime state:', {
+        status: currentState.status,
+        handId: currentState.handId,
+        street: currentState.street,
+        currentToAct: currentState.currentToAct,
+        seatsCount: currentState.seats.length
+      })
+    }
+
     // Extract player information from current runtime
     const playerIds = currentState.seats
       .filter((seat: SeatState) => seat.stack > 0)
@@ -87,6 +106,13 @@ export class StateMachineRuntimeAdapter {
         .filter((seat: SeatState) => seat.stack > 0)
         .map((seat: SeatState) => [seat.seatIndex, seat.stack])
     )
+
+    if (this.debugMode) {
+      console.log('🔧 [StateMachine] Extracted player info:', {
+        playerIds: Array.from(playerIds),
+        playerStacks: Object.fromEntries(playerStacks)
+      })
+    }
 
     // Create timer callbacks
     const timerCallbacks: TimerCallbacks = {
@@ -107,6 +133,10 @@ export class StateMachineRuntimeAdapter {
       this.options.enableTimerIntegration
     )
 
+    if (this.debugMode) {
+      console.log('🔧 [StateMachine] State machine initialized successfully')
+    }
+
     // Configure timeouts
     this.stateMachine.setPlayerTimeout(0, this.options.defaultPlayerTimeout)
     this.stateMachine.setPlayerTimeout(1, this.options.defaultPlayerTimeout)
@@ -125,31 +155,67 @@ export class StateMachineRuntimeAdapter {
     const currentState = this.originalRuntime.state
     if (!currentState) return
 
+    if (this.debugMode) {
+      console.log('🔧 [StateMachine] Syncing runtime state to state machine:', {
+        status: currentState.status,
+        handId: currentState.handId,
+        street: currentState.street
+      })
+    }
+
     // Map runtime state to state machine events
     if (currentState.status === 'idle') {
+      if (this.debugMode) {
+        console.log('🔧 [StateMachine] Sending PLAYERS_READY event')
+      }
       this.stateMachine.processGameEvent({ type: 'PLAYERS_READY' })
     } else if (currentState.status === 'in_hand') {
+      if (this.debugMode) {
+        console.log('🔧 [StateMachine] Sending START_HAND event')
+      }
       this.stateMachine.processGameEvent({ type: 'START_HAND' })
     }
   }
 
-  /**
+    /**
    * Process a betting action through the state machine
    */
   processAction(seatIndex: number, action: BettingAction): TimedActionResult | null {
     if (!this.isEnabled || !this.stateMachine) {
+      if (this.debugMode) {
+        console.log('🔧 [StateMachine] Action processing skipped - not enabled or no state machine')
+      }
       return null
+    }
+
+    if (this.debugMode) {
+      console.log('🔧 [StateMachine] Processing action:', {
+        seatIndex,
+        action,
+        currentState: this.stateMachine.getGameState(),
+        handState: this.stateMachine.getHandState()
+      })
     }
 
     try {
       // Process action through state machine
       const result = this.stateMachine.processPlayerAction(seatIndex, action)
       
-              // Notify callbacks
-        this.callbacks.onStateMachineEvent?.(
-          { type: 'PLAYER_ACTION', playerIndex: seatIndex, action },
-          result
-        )
+      if (this.debugMode) {
+        console.log('🔧 [StateMachine] Action processed successfully:', {
+          success: result.success,
+          error: result.error,
+          newState: result.currentState,
+          timerEvents: result.timerEvents?.length || 0,
+          performance: result.performance
+        })
+      }
+      
+      // Notify callbacks
+      this.callbacks.onStateMachineEvent?.(
+        { type: 'PLAYER_ACTION', playerIndex: seatIndex, action },
+        result
+      )
 
       if (this.options.enablePerformanceMonitoring && result.performance) {
         this.callbacks.onPerformanceUpdate?.(result.performance)
@@ -160,7 +226,7 @@ export class StateMachineRuntimeAdapter {
 
       return result
     } catch (error) {
-      console.error('Error processing action through state machine:', error)
+      console.error('🔧 [StateMachine] Error processing action through state machine:', error)
       return null
     }
   }
@@ -170,11 +236,32 @@ export class StateMachineRuntimeAdapter {
    */
   processGameEvent(event: GameEvent): TimedActionResult | null {
     if (!this.isEnabled || !this.stateMachine) {
+      if (this.debugMode) {
+        console.log('🔧 [StateMachine] Game event processing skipped - not enabled or no state machine')
+      }
       return null
+    }
+
+    if (this.debugMode) {
+      console.log('🔧 [StateMachine] Processing game event:', {
+        event,
+        currentState: this.stateMachine.getGameState(),
+        handState: this.stateMachine.getHandState()
+      })
     }
 
     try {
       const result = this.stateMachine.processGameEvent(event)
+      
+      if (this.debugMode) {
+        console.log('🔧 [StateMachine] Game event processed successfully:', {
+          success: result.success,
+          error: result.error,
+          newState: result.currentState,
+          timerEvents: result.timerEvents?.length || 0,
+          performance: result.performance
+        })
+      }
       
       // Notify callbacks
       this.callbacks.onStateMachineEvent?.(event, result)
@@ -188,7 +275,7 @@ export class StateMachineRuntimeAdapter {
 
       return result
     } catch (error) {
-      console.error('Error processing game event through state machine:', error)
+      console.error('🔧 [StateMachine] Error processing game event through state machine:', error)
       return null
     }
   }
@@ -202,16 +289,33 @@ export class StateMachineRuntimeAdapter {
     const gameState = this.stateMachine.getGameState()
     const handState = this.stateMachine.getHandState()
 
+    if (this.debugMode) {
+      console.log('🔧 [StateMachine] Syncing state machine state to runtime:', {
+        gameState: gameState.type,
+        handState: handState?.type,
+        runtimeStatus: this.originalRuntime.state.status
+      })
+    }
+
     // Update runtime state based on state machine
     if (gameState.type === 'game_over') {
       // Handle game over
+      if (this.debugMode) {
+        console.log('🔧 [StateMachine] Updating runtime to game_over status')
+      }
       this.originalRuntime.state.gameOver = true
       this.originalRuntime.state.status = 'hand_over'
     } else if (gameState.type === 'hand_in_progress') {
       // Handle in-hand state
       if (handState?.type === 'hand_complete') {
+        if (this.debugMode) {
+          console.log('🔧 [StateMachine] Updating runtime to hand_over status')
+        }
         this.originalRuntime.state.status = 'hand_over'
       } else if (handState?.type === 'betting_round') {
+        if (this.debugMode) {
+          console.log('🔧 [StateMachine] Updating runtime to in_hand status with street:', handState.street)
+        }
         this.originalRuntime.state.status = 'in_hand'
         this.originalRuntime.state.street = handState.street
       }
@@ -307,14 +411,26 @@ export class StateMachineRuntimeAdapter {
    * Get performance summary
    */
   getPerformanceSummary(): any {
-    return this.stateMachine?.getPerformanceSummary() ?? null
+    const summary = this.stateMachine?.getPerformanceSummary() ?? null
+    
+    if (this.debugMode && summary) {
+      console.log('🔧 [StateMachine] Performance summary:', summary)
+    }
+    
+    return summary
   }
 
   /**
    * Get timer statistics
    */
   getTimerStats(): any {
-    return this.stateMachine?.getTimerStats() ?? null
+    const stats = this.stateMachine?.getTimerStats() ?? null
+    
+    if (this.debugMode && stats) {
+      console.log('🔧 [StateMachine] Timer statistics:', stats)
+    }
+    
+    return stats
   }
 
   /**
@@ -343,9 +459,47 @@ export class StateMachineRuntimeAdapter {
   }
 
   /**
+   * Toggle debug mode
+   */
+  setDebugMode(enabled: boolean): void {
+    this.debugMode = enabled
+    if (enabled) {
+      console.log('🔧 [StateMachine] Debug mode enabled')
+    } else {
+      console.log('🔧 [StateMachine] Debug mode disabled')
+    }
+  }
+
+  /**
+   * Get debug mode status
+   */
+  isDebugModeEnabled(): boolean {
+    return this.debugMode
+  }
+
+  /**
+   * Log current state machine state for debugging
+   */
+  logCurrentState(): void {
+    if (!this.debugMode || !this.stateMachine) return
+    
+    console.log('🔧 [StateMachine] Current state machine state:', {
+      gameState: this.stateMachine.getGameState(),
+      handState: this.stateMachine.getHandState(),
+      context: this.stateMachine.getContext(),
+      performance: this.stateMachine.getPerformanceSummary(),
+      timers: this.stateMachine.getTimerStats()
+    })
+  }
+
+  /**
    * Dispose of the adapter
    */
   dispose(): void {
+    if (this.debugMode) {
+      console.log('🔧 [StateMachine] Disposing adapter')
+    }
+    
     if (this.stateMachine) {
       this.stateMachine.dispose()
       this.stateMachine = null
@@ -368,12 +522,18 @@ export class StateMachineRuntimeAdapter {
     timerIntegration: boolean
     performanceMonitoring: boolean
   } {
-    return {
+    const status = {
       enabled: this.isEnabled,
       stateMachineActive: this.stateMachine !== null,
       timerIntegration: this.options.enableTimerIntegration,
       performanceMonitoring: this.options.enablePerformanceMonitoring
     }
+    
+    if (this.debugMode) {
+      console.log('🔧 [StateMachine] Adapter status:', status)
+    }
+    
+    return status
   }
 }
 

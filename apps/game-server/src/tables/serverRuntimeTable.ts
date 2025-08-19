@@ -2,6 +2,7 @@ import type { BettingAction } from '../protocol.js'
 import type { Server as SocketIOServer, Socket } from 'socket.io'
 import type { PokerTableState } from '@montecarlo/poker-engine'
 import { PokerRuntime } from '@montecarlo/poker-engine'
+import { addStateMachineMonitoring } from '@montecarlo/poker-engine'
 
 export type TableId = string
 
@@ -36,12 +37,26 @@ export interface TableApi {
     updatedAt: number
   }
   handleDisconnect(playerId: string): void
+  // State Machine monitoring methods
+  getStateMachineStatus(): any
+  getStateMachinePerformance(): any
+  getStateMachineTimers(): any
+  logStateMachineState(): void
+  setStateMachineDebug(enabled: boolean): void
 }
 
 export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, opts?: { seats?: number; startingStack?: number; onSummaryChange?: (summary: any) => void; disconnectGraceMs?: number; publisher?: { handStarted: (p: { tableId: string; handId: number; buttonIndex: number; smallBlind: number; bigBlind: number }) => Promise<void>; action: (p: { tableId: string; handId: number; order: number; seatIndex: number; street: any; type: string; amount?: number; playerToken?: string }) => Promise<void>; handEnded?: (p: { tableId: string; handId: number; board: string[]; results: Array<{ seatIndex: number; playerToken?: string; delta: number }> }) => Promise<void>; seat?: (p: { tableId: string; seatIndex: number; playerToken: string; playerName: string }) => Promise<void>; unseat?: (p: { tableId: string; seatIndex: number; playerToken: string }) => Promise<void>; deal?: (p: { tableId: string; handId: number; street: any; cards: string[] }) => Promise<void>; } }): TableApi {
   const seats = opts?.seats ?? 6
   const startingStack = opts?.startingStack ?? 5000
   const cpuSeats = Array.from({ length: seats }, (_, i) => i)
+  
+  // State Machine configuration with defaults
+  const stateMachineConfig = {
+    enabled: (opts as any)?.stateMachine?.enabled ?? true,
+    debugMode: (opts as any)?.stateMachine?.debugMode ?? true,
+    enableTimerIntegration: (opts as any)?.stateMachine?.enableTimerIntegration ?? true,
+    enablePerformanceMonitoring: (opts as any)?.stateMachine?.enablePerformanceMonitoring ?? true
+  }
   let lastState: PokerTableState | null = null
   // Track autoplay per client per seat
   const clientAutoplay = new Map<string, Set<number>>() // playerId -> Set of seat indices with autoplay enabled
@@ -130,6 +145,22 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
       try { console.log('[server-runtime] hand_setup', { handId: setup.handId, seats: setup.seats.length, deckRemaining: setup.deckRemaining }) } catch {}
     },
   })
+
+  // Add state machine monitoring to the runtime
+  if (stateMachineConfig.enabled) {
+    console.log('🚀 [StateMachine] Adding monitoring to PokerRuntime...')
+    console.log('🚀 [StateMachine] Configuration:', stateMachineConfig)
+    runtime = addStateMachineMonitoring(runtime)
+    console.log('🚀 [StateMachine] Monitoring added successfully')
+    
+    // Set initial debug mode based on configuration
+    if (!stateMachineConfig.debugMode) {
+      (runtime as any).setStateMachineDebug?.(false)
+      console.log('🚀 [StateMachine] Debug mode disabled by configuration')
+    }
+  } else {
+    console.log('🚀 [StateMachine] State machine monitoring disabled by configuration')
+  }
 
   function addClient(socket: Socket) {
     socket.join(room)
@@ -351,6 +382,22 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
           try { console.log('[server-runtime] hand_setup', { handId: setup.handId, seats: setup.seats.length, deckRemaining: setup.deckRemaining }) } catch {}
         },
       })
+      
+      // Add state machine monitoring to the new runtime
+      if (stateMachineConfig.enabled) {
+        console.log('🚀 [StateMachine] Adding monitoring to reset PokerRuntime...')
+        runtime = addStateMachineMonitoring(runtime)
+        console.log('🚀 [StateMachine] Reset monitoring added successfully')
+        
+        // Set initial debug mode based on configuration
+        if (!stateMachineConfig.debugMode) {
+          (runtime as any).setStateMachineDebug?.(false)
+          console.log('🚀 [StateMachine] Reset debug mode disabled by configuration')
+        }
+      } else {
+        console.log('🚀 [StateMachine] Reset state machine monitoring disabled by configuration')
+      }
+      
       // Clear all client autoplay settings on reset
       clientAutoplay.clear()
       lastState = (runtime as any)['state'] as PokerTableState
@@ -382,6 +429,22 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
         try { opts?.onSummaryChange?.(getSummary()) } catch {}
       }, disconnectGraceMs)
       pendingReleases.set(playerId, handle)
+    },
+    // State Machine monitoring methods
+    getStateMachineStatus() {
+      return (runtime as any).getStateMachineStatus?.() ?? null
+    },
+    getStateMachinePerformance() {
+      return (runtime as any).getStateMachinePerformance?.() ?? null
+    },
+    getStateMachineTimers() {
+      return (runtime as any).getStateMachineTimers?.() ?? null
+    },
+    logStateMachineState() {
+      (runtime as any).logStateMachineState?.()
+    },
+    setStateMachineDebug(enabled: boolean) {
+      (runtime as any).setStateMachineDebug?.(enabled)
     }
   }
 
