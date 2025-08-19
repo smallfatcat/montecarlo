@@ -28,6 +28,9 @@ export function PokerTableHorseshoeControls(props: {
   onLeaveSeat?: () => void
   variant?: 'toolbar' | 'sidebar'
   sidebarWidth?: number
+  // State Machine Debug Controls
+  debugMode?: boolean
+  onToggleDebugMode?: (enabled: boolean) => void
 }) {
   const {
     table,
@@ -46,6 +49,8 @@ export function PokerTableHorseshoeControls(props: {
     playerNames,
     onRenameMe,
     onLeaveSeat,
+    debugMode = false,
+    onToggleDebugMode,
   } = props
 
   // Removed bet sizing control from sidebar
@@ -95,6 +100,18 @@ export function PokerTableHorseshoeControls(props: {
         <input type="checkbox" checked={autoPlay} onChange={(e) => onToggleAutoPlay(e.target.checked)} /> 
         Autoplay
       </label>
+      
+      {/* State Machine Debug Toggle */}
+      {onToggleDebugMode && (
+        <label className="control-label" title="Toggle state machine debug logging">
+          <input 
+            type="checkbox" 
+            checked={debugMode} 
+            onChange={(e) => onToggleDebugMode(e.target.checked)} 
+          /> 
+          🔧 Debug Mode
+        </label>
+      )}
       
       {layoutVariant === 'toolbar' && <span className="control-separator" />}
       

@@ -59,6 +59,12 @@ export const C2S = {
   ping: z.object({ 
     ts: z.number().int() 
   }),
+  
+  // State Machine Debug Control
+  toggleDebugMode: z.object({ 
+    tableId: z.string().default('table-1'), 
+    enabled: z.boolean() 
+  }),
 } as const
 
 export type C2S = typeof C2S

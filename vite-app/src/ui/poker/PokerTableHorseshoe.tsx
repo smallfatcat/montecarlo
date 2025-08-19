@@ -6,8 +6,11 @@ import { PokerTableHorseshoeView } from './PokerTableHorseshoeView'
 import { PokerTableHorseshoeControls } from './PokerTableHorseshoeControls'
 
 export function PokerTableHorseshoe() {
-  const { table, revealed, dealNext, isAutoplayEnabled, setAutoplayForSeat, available, fold, check, call, bet, raise, hideHoleCardsUntilShowdown, setHideHoleCardsUntilShowdown, review, reviewNextStep, reviewPrevStep, endReview, sit, leave, mySeatIndex, playerNames, renameCurrentPlayer, resetGame } = usePokerGameContext()
+  const { table, revealed, dealNext, isAutoplayEnabled, setAutoplayForSeat, available, fold, check, call, bet, raise, hideHoleCardsUntilShowdown, setHideHoleCardsUntilShowdown, review, reviewNextStep, reviewPrevStep, endReview, sit, leave, mySeatIndex, playerNames, renameCurrentPlayer, resetGame, runtimeRef } = usePokerGameContext()
   const { equity, run: runEquity, running: equityRunning } = useEquity()
+  
+  // State Machine Debug Mode State
+  const [debugMode, setDebugMode] = useState<boolean>(false)
 
   const community = table.community
   const showdownText = useMemo(() => {
@@ -129,6 +132,26 @@ export function PokerTableHorseshoe() {
   const [editLayoutMode] = useState<boolean>(false)
 
   const SIDEBAR_WIDTH = 220
+  
+  // State Machine Debug Toggle Handler
+  const handleToggleDebugMode = (enabled: boolean) => {
+    setDebugMode(enabled)
+    
+    // Send WebSocket message to server to toggle debug mode using poker runtime
+    try {
+      if (runtimeRef.current?.toggleDebugMode) {
+        console.log('🔧 [UI] Sending debug toggle to server via poker runtime:', enabled)
+        runtimeRef.current.toggleDebugMode(enabled)
+      } else {
+        console.warn('🔧 [UI] Poker runtime not available, cannot send debug toggle')
+      }
+    } catch (error) {
+      console.error('🔧 [UI] Failed to send debug toggle:', error)
+    }
+    
+    console.log('🔧 [UI] Debug mode toggled:', enabled ? 'ON' : 'OFF')
+  }
+  
   return (
     <div style={{ display: 'flex' }}>
       <PokerTableHorseshoeControls
@@ -145,6 +168,9 @@ export function PokerTableHorseshoe() {
         hideHoleCardsUntilShowdown={hideHoleCardsUntilShowdown}
         onToggleHideHoleCards={setHideHoleCardsUntilShowdown}
         
+        // State Machine Debug Controls
+        debugMode={debugMode}
+        onToggleDebugMode={handleToggleDebugMode}
         
         onOpenHistory={() => { window.location.hash = '#poker-history' }}
         onOpenLobby={() => { window.location.hash = '#lobby' }}

@@ -100,6 +100,11 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
     socket?.emit('act', { tableId, action })
   }
 
+  function toggleDebugMode(enabled: boolean) {
+    console.log('[wsAdapter] toggleDebugMode', enabled)
+    socket?.emit('toggleDebugMode', { tableId, enabled })
+  }
+
   function setSeatAutoPlay(seatIndex: number, enabled: boolean) {
     console.log('[wsAdapter] setSeatAuto', { seatIndex, enabled })
     socket?.emit('setAuto', { tableId, seatIndex, auto: enabled }, (_ack: any) => {})
@@ -132,7 +137,7 @@ export function createRealtimeRuntimeAdapter(wsUrl: string, cb: RuntimeCallbacks
   }
 
   connect()
-  return { beginHand, act, setSeatAutoPlay, isSeatAutoPlayEnabled, sit, leave, reset, dispose }
+  return { beginHand, act, setSeatAutoPlay, isSeatAutoPlayEnabled, sit, leave, reset, dispose, toggleDebugMode }
 }
 
 

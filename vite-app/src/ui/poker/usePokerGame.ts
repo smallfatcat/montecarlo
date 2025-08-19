@@ -218,6 +218,9 @@ export function usePokerGame() {
     renameCurrentPlayer,
     sit,
     leave,
+    
+    // Runtime access for advanced operations
+    runtimeRef,
   }
 }
 

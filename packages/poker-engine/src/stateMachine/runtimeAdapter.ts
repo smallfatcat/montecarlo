@@ -52,7 +52,7 @@ export class StateMachineRuntimeAdapter {
   private options: StateMachineRuntimeOptions
   private callbacks: StateMachineRuntimeCallbacks
   private isEnabled: boolean = false
-  private debugMode: boolean = true // Temporary debug flag
+  private debugMode: boolean = false // Temporary debug flag
 
   constructor(
     originalRuntime: any,

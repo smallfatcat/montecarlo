@@ -13,6 +13,7 @@ export type RuntimeLike = {
   leave?: () => void
   reset?: () => void
   dispose: () => void
+  toggleDebugMode?: (enabled: boolean) => void
 }
 
 export function usePokerRuntime(
