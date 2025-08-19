@@ -44,10 +44,10 @@ export function PokerHistoryPage() {
   return (
     <div style={{ 
       padding: 24, 
-      maxWidth: 1200, 
+      maxWidth: 1800, 
       margin: '0 auto',
       color: 'white',
-      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+      background: 'var(--color-neutral-800)',
       minHeight: '100vh'
     }}>
       <h1 style={{ 
@@ -65,41 +65,14 @@ export function PokerHistoryPage() {
       {/* Hand Replay Section - Inline on page */}
       {replayHandId && (
         <div style={{
-          border: '1px solid rgba(255,255,255,0.14)',
-          borderRadius: 12,
-          padding: 24,
-          background: 'rgba(0,0,0,0.12)',
-          marginBottom: 24
+          marginBottom: 24,
+          width: '100%',
+          maxWidth: '1600px',
+          margin: '0 auto 24px auto'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <h2 style={{ fontSize: 24, fontWeight: 600, color: 'white' }}>
-              Hand Replay
-            </h2>
-            <button
-              onClick={() => setReplayHandId(null)}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: 6,
-                cursor: 'pointer',
-                fontSize: 14,
-                fontWeight: 500,
-                transition: 'background-color 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#c82333'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#dc3545'
-              }}
-            >
-              Close Replay
-            </button>
-          </div>
           <HandReplay 
             handId={replayHandId} 
+            onClose={() => setReplayHandId(null)}
           />
         </div>
       )}

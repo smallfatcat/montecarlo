@@ -9,6 +9,7 @@ import type { PokerTableState } from '../../poker/types';
 
 interface HandReplayProps {
   handId: Id<'hands'>;
+  onClose?: () => void;
 }
 
 interface GameStateSnapshot {
@@ -41,7 +42,7 @@ interface GameStateSnapshot {
   actionId?: string;
 }
 
-export function HandReplay({ handId }: HandReplayProps) {
+export function HandReplay({ handId, onClose }: HandReplayProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1000); // ms between steps
@@ -176,34 +177,58 @@ export function HandReplay({ handId }: HandReplayProps) {
 
   if (!handReplay) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading hand replay...</div>
+      <div className="flex items-center justify-center h-64" style={{ 
+        background: 'var(--color-poker-table)',
+        borderRadius: '12px',
+        border: '1px solid var(--color-poker-table-border)'
+      }}>
+        <div className="text-lg" style={{ color: 'var(--color-neutral-200)' }}>Loading hand replay...</div>
       </div>
     );
   }
 
   if (!snapshots.length) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">No replay data available for this hand</div>
+      <div className="flex items-center justify-center h-64" style={{ 
+        background: 'var(--color-poker-table)',
+        borderRadius: '12px',
+        border: '1px solid var(--color-poker-table-border)'
+      }}>
+        <div className="text-lg" style={{ color: 'var(--color-neutral-200)' }}>No replay data available for this hand</div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ 
+      background: 'var(--color-poker-table-light)',
+      borderRadius: '12px',
+      border: '1px solid var(--color-poker-table-border)'
+    }}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+      <div className="flex items-center justify-between p-4 rounded-t-lg" style={{
+        background: 'var(--color-poker-wood)',
+        borderBottom: '1px solid var(--color-poker-table-border)',
+        color: 'var(--color-neutral-50)'
+      }}>
         <div>
-          <h2 className="text-xl font-semibold text-gray-800">Hand Replay</h2>
-          <p className="text-sm text-gray-600">
+          <h2 className="text-xl font-semibold" style={{ color: 'var(--color-neutral-50)' }}>Hand Replay</h2>
+          <p className="text-sm" style={{ color: 'var(--color-neutral-200)' }}>
             Step {currentStep + 1} of {snapshots.length} • {getStepDescription(currentSnapshot)}
           </p>
         </div>
+        {onClose && (
+          <Button onClick={onClose} variant="danger" size="sm">
+            Close Replay
+          </Button>
+        )}
       </div>
 
       {/* Replay Controls */}
-      <div className="flex items-center justify-center gap-2 p-4 border-b bg-gray-50">
+      <div className="flex items-center justify-center gap-2 p-4 border-b" style={{
+        background: 'var(--color-poker-table-light)',
+        borderBottom: '1px solid var(--color-poker-table-border)'
+      }}>
         <Button onClick={goToStart} disabled={currentStep === 0} variant="outline" size="sm">
           ⏮️ Start
         </Button>
@@ -223,11 +248,16 @@ export function HandReplay({ handId }: HandReplayProps) {
         </Button>
 
         <div className="ml-4 flex items-center gap-2">
-          <label className="text-sm">Speed:</label>
+          <label className="text-sm" style={{ color: 'var(--color-neutral-200)' }}>Speed:</label>
           <select 
             value={playbackSpeed} 
             onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
             className="text-sm border rounded px-2 py-1"
+            style={{
+              background: 'var(--color-poker-table-light)',
+              border: '1px solid var(--color-poker-table-border)',
+              color: 'var(--color-neutral-200)'
+            }}
           >
             <option value={500}>0.5s</option>
             <option value={1000}>1s</option>
@@ -238,21 +268,28 @@ export function HandReplay({ handId }: HandReplayProps) {
       </div>
 
       {/* Progress Bar */}
-      <div className="px-4 py-2 bg-gray-50">
-        <div className="w-full bg-gray-200 rounded-full h-2">
+      <div className="px-4 py-2" style={{ background: 'var(--color-poker-table-light)' }}>
+        <div className="w-full rounded-full h-2" style={{ background: 'var(--color-poker-table-light)' }}>
           <div 
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${((currentStep + 1) / snapshots.length) * 100}%` }}
+            className="h-2 rounded-full transition-all duration-300"
+            style={{ 
+              width: `${((currentStep + 1) / snapshots.length) * 100}%`,
+              background: 'var(--color-poker-green)'
+            }}
           />
         </div>
-        <div className="flex justify-between text-xs text-gray-600 mt-1">
+        <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--color-neutral-300)' }}>
           <span>{formatTimestamp(snapshots[0]?.timestamp || 0)}</span>
           <span>{formatTimestamp(snapshots[snapshots.length - 1]?.timestamp || 0)}</span>
         </div>
       </div>
 
       {/* Poker Table */}
-      <div className="p-4">
+      <div className="p-4" style={{ 
+        background: 'var(--color-poker-table-light)', 
+        borderRadius: '12px',
+        border: '1px solid var(--color-poker-table-border)'
+      }}>
         {currentPokerState ? (
           <PokerTableHorseshoeView 
             table={currentPokerState}
@@ -278,13 +315,17 @@ export function HandReplay({ handId }: HandReplayProps) {
           />
         ) : (
           <div className="flex items-center justify-center h-64">
-            <div className="text-lg">Loading game state...</div>
+            <div className="text-lg" style={{ color: 'var(--color-neutral-200)' }}>Loading game state...</div>
           </div>
         )}
       </div>
 
       {/* Step Details */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+      <div className="p-4 border-t rounded-b-lg" style={{
+        background: 'var(--color-poker-wood)',
+        borderTop: '1px solid var(--color-poker-table-border)',
+        color: 'var(--color-neutral-200)'
+      }}>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <strong>Current Street:</strong> {currentSnapshot?.gameState.street || 'preflop'}
