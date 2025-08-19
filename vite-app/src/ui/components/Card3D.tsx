@@ -68,7 +68,7 @@ export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false
       >
         {CONFIG.enableCardBackImage ? (
           <img
-            src={`/cardback/${cardBackImage}`}
+            src={`${import.meta.env.BASE_URL}cardback/${cardBackImage}`}
             alt="Card back"
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             onError={(e) => { 
@@ -97,7 +97,7 @@ function FaceCenter({ suit, rank }: { suit: Card['suit']; rank: 'A' | 'J' | 'Q' 
   const url = useMemo(() => {
     const s = suit.toLowerCase()
     const r = rank.toLowerCase()
-    return `/face/${s}_${r}.png`
+    return `${import.meta.env.BASE_URL}face/${s}_${r}.png`
   }, [suit, rank])
 
   // Use an <img> that hides on error, falling back to SVG FaceArt
