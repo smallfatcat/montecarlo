@@ -1,19 +1,19 @@
 // Web Worker to run high-speed blackjack simulations with progress updates
 import { createShoe, shuffleInPlace } from '../blackjack/deck'
+import { 
+  createInitialTable, 
+  startTableRound, 
+  getSeatAvailableActions, 
+  getActiveSeat, 
+  seatHit, 
+  seatStand, 
+  seatDouble, 
+  seatSplit 
+} from '../blackjack/table'
+import { suggestAction, type SuggestedAction } from '../blackjack/strategy'
 import { CONFIG } from '../config'
 import type { Card } from '../blackjack/types'
 import type { TableState } from '../blackjack/table'
-import {
-  createInitialTable,
-  startTableRound,
-  getSeatAvailableActions,
-  getActiveSeat,
-  seatHit,
-  seatStand,
-  seatDouble,
-  seatSplit,
-} from '../blackjack/table'
-import { suggestAction, type SuggestedAction } from '../blackjack/strategy'
 
 type RunMessage = {
   type: 'run'
@@ -26,17 +26,22 @@ type RunMessage = {
     casinoInitial: number
     betsBySeat: number[]
     existingShoe?: Card[]
-    rules?: {
-      dealerHitsSoft17?: boolean
-      blackjackPayout?: number
-      doubleTotals?: number[]
-      doubleAfterSplit?: boolean
-      allowSplitRanks?: Array<'A'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'10'|'J'|'Q'|'K'> | null
-    }
+    rules?: Partial<{
+      dealerHitsSoft17: boolean
+      blackjackPayout: number
+      doubleTotals: number[]
+      doubleAfterSplit: boolean
+      allowSplitRanks: string[] | null
+    }>
   }
 }
 
-type ProgressMessage = { type: 'progress'; completed: number; total: number }
+type ProgressMessage = {
+  type: 'progress'
+  completed: number
+  total: number
+}
+
 type DoneMessage = {
   type: 'done'
   result: {
@@ -46,16 +51,20 @@ type DoneMessage = {
     remainingShoe: Card[]
   }
 }
-type ErrorMessage = { type: 'error'; error: string }
+
+type ErrorMessage = {
+  type: 'error'
+  error: string
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ctx: any = self
 
 ctx.onmessage = (ev: MessageEvent<RunMessage>) => {
-  const msg = ev.data
-  if (!msg || msg.type !== 'run') return
   try {
-    // Apply rule overrides if provided
+    const msg = ev.data
+    if (!msg || msg.type !== 'run') return
+    
     if (msg.options.rules) {
       Object.assign(CONFIG.rules, msg.options.rules)
     }
@@ -90,7 +99,7 @@ function runWithProgress(options: RunMessage['options'], onProgress: (completed:
   let casinoBank = casinoInitial
   const cutoff = Math.floor(deckCount * CONFIG.shoe.cardsPerDeck * reshuffleCutoffRatio)
 
-  const chunk = Math.max(1, Math.floor(numHands / CONFIG.simulation.progressUpdateSteps))
+  const chunk = Math.max(1, Math.floor(numHands / CONFIG.ui.simulation.progressUpdateSteps))
 
   for (let handIdx = 0; handIdx < numHands; handIdx += 1) {
     const needNewShoe = !shoe || shoe.length <= cutoff

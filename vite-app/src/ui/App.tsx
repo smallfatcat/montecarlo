@@ -1,68 +1,25 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect } from 'react'
 import { CONFIG } from '../config'
-import { DeckGallery } from './DeckGallery'
-import { PokerTableHorseshoe } from './poker/PokerTableHorseshoe'
-import { PokerLobby } from './poker/PokerLobby'
-import { PokerGameProvider } from './poker/PokerGameContext'
-import { PokerTestDashboard } from './poker/PokerTestDashboard'
-import { PokerHistoryPage } from './poker/PokerHistoryPage'
-import { PokerLayoutEditorPage } from './poker/PokerLayoutEditorPage'
-import { Landing } from './Landing'
-import { DesignSystemDemo } from './components/DesignSystemDemo'
+import { useAppRouting } from './hooks/useAppRouting'
+import { AppContentRenderer } from './components/AppContentRenderer'
 import VersionDisplay from '../components/VersionDisplay'
 import '../styles/design-tokens.css'
 
 export function App() {
-  const [hash, setHash] = useState<string>(typeof window !== 'undefined' ? window.location.hash : '')
+  const routing = useAppRouting();
+
+  // Set CSS variables for layout configuration
   useEffect(() => {
-    const root = document.documentElement
-    root.style.setProperty('--app-max-width', `${CONFIG.layout.appMaxWidthPx}px`)
-  }, [])
-  useEffect(() => {
-    const onHashChange = () => setHash(window.location.hash)
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
-  }, [])
-  const showDeck = hash === '#cards'
-  const showPoker = hash === '#poker' || hash.startsWith('#poker/')
-  const showPokerTest = hash === '#poker-test'
-  const showPokerHistory = hash === '#poker-history'
-  const showPokerLayoutEditor = hash === '#poker-layout-editor'
-  const showBlackjack = false
-  const showPokerLobby = hash === '#lobby' || hash === '#poker-lobby'
-  const showDesignSystem = hash === '#design-system'
-  const pokerTableId = showPoker && hash.startsWith('#poker/') ? hash.slice('#poker/'.length) : 'table-1'
-
-  let content: ReactNode
-  if (showDeck) content = <DeckGallery />
-  else if (showPokerTest) content = <PokerTestDashboard />
-  else if (showPokerHistory) content = (
-    <PokerGameProvider>
-      <PokerHistoryPage />
-    </PokerGameProvider>
-  )
-  else if (showPokerLayoutEditor) content = (
-    <PokerGameProvider>
-      <PokerLayoutEditorPage />
-    </PokerGameProvider>
-  )
-  else if (showPokerLobby) content = (
-    <PokerLobby />
-  )
-  else if (showDesignSystem) content = <DesignSystemDemo />
-  else if (showPoker) content = (
-    <PokerGameProvider key={pokerTableId}>
-      <PokerTableHorseshoe />
-    </PokerGameProvider>
-  )
-  else if (showBlackjack) content = null as any
-  else content = <Landing />
-
-
+    const root = document.documentElement;
+    root.style.setProperty('--app-max-width', `${CONFIG.layout.appMaxWidthPx}px`);
+    root.style.setProperty('--hands-columns', `${CONFIG.layout.handsColumns}`);
+  }, []);
 
   return (
     <div style={{ position: 'relative' }}>
-      {content}
+      <AppContentRenderer {...routing} />
+      
+      {/* Version display positioned at bottom */}
       <div
         id="app-version"
         style={{

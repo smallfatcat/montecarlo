@@ -1,49 +1,64 @@
-import { useMemo, useState } from 'react'
-import { createStandardDeck, type Card } from '../blackjack'
-import { Card3D } from './components/Card3D'
 import { CardBackSelector } from './components/CardBackSelector'
+import { Card3D } from './components/Card3D'
+import type { Card } from '../blackjack'
 
 export function DeckGallery() {
-  const [faceDown, setFaceDown] = useState(false)
-  const [flat, setFlat] = useState(false)
-  const [scale, setScale] = useState(1)
-  const deck: Card[] = useMemo(() => createStandardDeck(), [])
+  const handleCardBackChange = (cardBack: string) => {
+    console.log('Card back changed to:', cardBack)
+  }
+
+  // Create a sample deck for display
+  const sampleCards: Card[] = [
+    { rank: 'A', suit: 'Hearts' },
+    { rank: 'K', suit: 'Spades' },
+    { rank: 'Q', suit: 'Diamonds' },
+    { rank: 'J', suit: 'Clubs' },
+    { rank: '10', suit: 'Hearts' },
+    { rank: '9', suit: 'Spades' },
+    { rank: '8', suit: 'Diamonds' },
+    { rank: '7', suit: 'Clubs' },
+  ]
 
   return (
-    <div id="deck-gallery" className="deck-gallery">
-      <h1>Card Layout Gallery</h1>
-      <div className="deck-controls">
-        <label>
-          <input type="checkbox" checked={faceDown} onChange={(e) => setFaceDown(e.target.checked)} /> Face down
-        </label>
-        <label>
-          <input type="checkbox" checked={flat} onChange={(e) => setFlat(e.target.checked)} /> Use flat-enter animation
-        </label>
-        <label className="scale">
-          Scale
-          <input
-            type="range"
-            min={0.7}
-            max={1.3}
-            step={0.05}
-            value={scale}
-            onChange={(e) => setScale(parseFloat(e.target.value))}
-          />
-          <span>{scale.toFixed(2)}x</span>
-        </label>
+    <div className="deck-gallery" style={{ padding: '20px' }}>
+      <h2>Deck Gallery</h2>
+      
+      <div style={{ marginBottom: '20px' }}>
+        <h3>Card Back Selection</h3>
+        <CardBackSelector onCardBackChange={handleCardBackChange} />
       </div>
       
-      <CardBackSelector />
-
-      <div className="deck-grid">
-        {deck.map((card) => (
-          <div key={`${card.suit}-${card.rank}`} className="deck-item">
-            <div className="deck-card-wrapper" style={{ transform: `scale(${scale})` }}>
-              <Card3D card={card} faceDown={faceDown} index={0} enterFromTop={false} flat={flat} />
+      <div style={{ marginBottom: '20px' }}>
+        <h3>Sample Cards</h3>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {sampleCards.map((card, index) => (
+            <div key={`${card.rank}-${card.suit}-${index}`}>
+              <Card3D card={card} faceDown={false} index={0} enterFromTop={false} flat={false} />
             </div>
-            <div className="deck-label">{card.rank} of {card.suit}</div>
-          </div>
-        ))}
+          ))}
+        </div>
+      </div>
+      
+      <div style={{ marginBottom: '20px' }}>
+        <h3>Face Down Cards</h3>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {sampleCards.slice(0, 4).map((card, index) => (
+            <div key={`face-down-${card.rank}-${card.suit}-${index}`}>
+              <Card3D card={card} faceDown={true} index={index} enterFromTop={false} flat={false} />
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <div>
+        <h3>Animation Examples</h3>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {sampleCards.slice(0, 3).map((card, index) => (
+            <div key={`animated-${card.rank}-${card.suit}-${index}`}>
+              <Card3D card={card} faceDown={false} index={index} enterFromTop={true} flat={false} />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

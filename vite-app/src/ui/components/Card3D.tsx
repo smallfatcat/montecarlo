@@ -6,7 +6,7 @@ import { FaceArt } from './FaceArt'
 import { useMemo, useState, useEffect } from 'react'
 
 export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false, flat = false, highlight = false }: { card: Card; faceDown?: boolean; index?: number; enterFromTop?: boolean; flat?: boolean; highlight?: boolean }) {
-  const [cardBackImage, setCardBackImage] = useState(CONFIG.ui.cardBackImage)
+  const [cardBackImage, setCardBackImage] = useState(CONFIG.cardBackImage)
   
   // Listen for card back changes
   useEffect(() => {
@@ -66,7 +66,7 @@ export function Card3D({ card, faceDown = false, index = 0, enterFromTop = false
         animate={{ rotateY: faceDown ? 0 : 180 }}
         transition={{ duration: CONFIG.animation.cardFlipDurationSec }}
       >
-        {CONFIG.ui.enableCardBackImage ? (
+        {CONFIG.enableCardBackImage ? (
           <img
             src={`/cardback/${cardBackImage}`}
             alt="Card back"
@@ -103,7 +103,7 @@ function FaceCenter({ suit, rank }: { suit: Card['suit']; rank: 'A' | 'J' | 'Q' 
   // Use an <img> that hides on error, falling back to SVG FaceArt
   return (
     <div style={{ width: '84%', height: '84%', display: 'grid', placeItems: 'center' }}>
-      {CONFIG.ui.enableFaceImages ? (
+      {CONFIG.enableFaceImages ? (
         <img
           src={url}
           alt={`${rank} of ${suit}`}
