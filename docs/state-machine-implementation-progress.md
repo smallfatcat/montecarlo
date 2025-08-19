@@ -7,7 +7,7 @@ Implementing state machines to improve the poker game architecture, replacing ma
 
 ### Phase 1: Core State Machine Foundation ✅
 - [x] Analysis and planning
-- [x] Install XState dependencies
+- [x] Design custom class-based state machine architecture
 - [x] Create basic game state machine
 - [x] Define core state types and transitions
 - [x] Implement basic state validation
@@ -36,10 +36,24 @@ Implementing state machines to improve the poker game architecture, replacing ma
 - [x] Add comprehensive tests for all state transitions
 - [x] Performance testing and optimization
 
-## Current Status: Phase 5 Complete, All Phases Finished! 🎉
+## Current Status: Phase 5 Complete + Debug Toggle Integration! 🎉
+
+### Latest Achievement: Debug Toggle Integration ✅
+- [x] **Frontend Integration**: Added debug toggle button to poker table controls
+- [x] **WebSocket Protocol**: Added `toggleDebugMode` message type to C2S protocol
+- [x] **Server-Side Handler**: Implemented debug toggle message handling in game server
+- [x] **State Machine Integration**: Connected debug toggle to state machine runtime
+- [x] **Code Cleanup**: Resolved duplicate protocol definitions and cleaned up exports
+- [x] **End-to-End Testing**: Verified complete flow from UI button to server state machine
+
+### Debug Toggle Features:
+- **UI Control**: Checkbox button in poker table controls for toggling debug mode
+- **Real-time Control**: Instant debug mode changes via WebSocket communication
+- **State Machine Integration**: Debug mode directly controls state machine logging
+- **Clean Architecture**: Proper separation of concerns with organized protocol structure
 
 ### Next Steps:
-🎉 **All Phases Complete!** The state machine system is now ready for production use.
+🎉 **All Phases Complete + Production Ready!** The state machine system with debug controls is now ready for production use.
 
 **Production Deployment Options:**
 1. **Gradual Migration**: Use the runtime adapter to gradually migrate existing tables
@@ -55,7 +69,7 @@ Implementing state machines to improve the poker game architecture, replacing ma
 - ✅ Comprehensive analysis of current architecture
 - ✅ Identified key areas for improvement
 - ✅ Created implementation plan
-- ✅ Installed XState dependencies
+- ✅ Designed custom class-based state machine architecture
 - ✅ Created SimplePokerStateMachine class
 - ✅ Implemented core state transitions
 - ✅ Added context management and player actions
@@ -223,7 +237,7 @@ The system is now ready for production deployment with multiple options:
 - **State Monitoring**: Real-time visibility into game state and transitions
 
 ## Technical Decisions Made:
-- **Library Choice**: XState (mature, TypeScript-friendly, good tooling)
+- **Implementation Choice**: Custom class-based state machine (better control, simpler integration)
 - **Migration Strategy**: Gradual implementation alongside existing code
 - **Starting Point**: Core game state machine for hand progression
 

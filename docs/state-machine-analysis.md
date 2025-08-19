@@ -132,91 +132,34 @@ class PokerStateMachine {
 }
 ```
 
-#### Option B: XState (Recommended)
+#### Option B: Custom Class-Based State Machine (Implemented)
 ```typescript
-import { createMachine, assign } from 'xstate'
+// Custom TypeScript class-based state machine implementation
+export class SimplePokerStateMachine {
+  private currentState: GameState = { type: 'idle' }
+  private context: PokerContext
 
-const pokerMachine = createMachine({
-  id: 'poker',
-  initial: 'idle',
-  context: {
-    players: [],
-    currentHand: null,
-    pot: 0,
-    deck: [],
-    community: []
-  },
-  states: {
-    idle: {
-      on: {
-        PLAYERS_READY: 'waiting_for_players'
-      }
-    },
-    waiting_for_players: {
-      on: {
-        START_HAND: 'hand_in_progress'
-      }
-    },
-    hand_in_progress: {
-      initial: 'preflop',
-      states: {
-        preflop: {
-          on: {
-            PLAYER_ACTION: [
-              { target: 'preflop', cond: 'moreActionsNeeded' },
-              { target: 'flop', cond: 'roundComplete' }
-            ]
-          }
-        },
-        flop: {
-          on: {
-            PLAYER_ACTION: [
-              { target: 'flop', cond: 'moreActionsNeeded' },
-              { target: 'turn', cond: 'roundComplete' }
-            ]
-          }
-        },
-        turn: {
-          on: {
-            PLAYER_ACTION: [
-              { target: 'turn', cond: 'moreActionsNeeded' },
-              { target: 'river', cond: 'roundComplete' }
-            ]
-          }
-        },
-        river: {
-          on: {
-            PLAYER_ACTION: [
-              { target: 'river', cond: 'moreActionsNeeded' },
-              { target: 'showdown', cond: 'roundComplete' }
-            ]
-          }
-        },
-        showdown: {
-          on: {
-            SETTLE_HAND: 'hand_settled'
-          }
-        },
-        hand_settled: {
-          type: 'final'
-        }
-      },
-      on: {
-        HAND_COMPLETE: 'hand_complete'
-      }
-    },
-    hand_complete: {
-      on: {
-        START_NEXT_HAND: 'hand_in_progress',
-        GAME_OVER: 'game_over'
-      }
-    },
-    game_over: {
-      type: 'final'
-    }
+  constructor(initialContext: PokerContext) {
+    this.context = initialContext
   }
-})
+
+  transition(event: GameEvent): GameState {
+    // Validate transition and update state
+    const newState = this.validateTransition(event)
+    if (newState) {
+      this.currentState = newState
+      this.updateContext(event)
+    }
+    return this.currentState
+  }
+
+  getState(): GameState {
+    return this.currentState
+  }
+}
 ```
+
+**Note**: We implemented a custom class-based state machine instead of XState for better control and simpler integration with the existing codebase.
 
 ### 3. **Benefits of State Machine Implementation**
 
@@ -337,7 +280,7 @@ if (nextState.type === 'flop') {
 5. **Enabling better debugging** and monitoring capabilities
 
 The recommended approach is to:
-1. **Start with XState** for the core game state machine
+1. **Start with custom class-based state machine** for better control and integration
 2. **Implement incrementally** to minimize risk
 3. **Focus on hand progression** and player actions first
 4. **Add comprehensive testing** for all state transitions

@@ -27,7 +27,17 @@ This index provides an overview of all available documentation and their current
 - **[VERSIONING.md](VERSIONING.md)** - Version management and release process
 - **[chip-animation-flow.md](chip-animation-flow.md)** - Chip animation system design
 
+### State Machine System
+- **[state-machine-analysis.md](state-machine-analysis.md)** - Analysis of poker game architecture improvements
+- **[state-machine-implementation-progress.md](state-machine-implementation-progress.md)** - Complete implementation progress and status
+
 ## 🔄 Recent Updates
+
+### August 2025 - State Machine Implementation Complete! 🎉
+- **New**: Complete state machine system for poker game architecture
+- **Features**: Hand progression, timer integration, debug controls, runtime adapter
+- **Status**: Production-ready with comprehensive testing and documentation
+- **Impact**: Improved game flow, better error handling, enhanced debugging capabilities
 
 ### August 2025 - Documentation Accuracy Update
 - **Updated**: architecture.md, getting-started.md, system-overview.md, README.md, VERSIONING.md, BUILD_WITH_VERSION.md
@@ -51,6 +61,8 @@ This index provides an overview of all available documentation and their current
 | BUILD_WITH_VERSION.md | ✅ Current | Aug 2025 | Auto version gen + endpoints |
 | PHASE_1_COMPLETION_SUMMARY.md | ✅ Current | Dec 2024 | Zustand implementation complete |
 | PHASE_2_COMPLETION_SUMMARY.md | ✅ Current | Dec 2024 | Design system implementation complete |
+| state-machine-analysis.md | ✅ Current | Dec 2024 | State machine architecture analysis |
+| state-machine-implementation-progress.md | ✅ Current | Dec 2024 | Complete implementation status |
 
 ## 🎯 Current Development Focus
 
