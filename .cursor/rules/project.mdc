@@ -1,8 +1,3 @@
----
-description: Project-wide rules, context, and workflows for the Poker-focused app (frontend in vite-app, backend in apps/game-server) with seeded deterministic engine
-globs: ["**/*.{js,ts,tsx,jsx}", "**/*.md", ".cursor/rules/*.mdc"]
-related_docs: ["docs/system-overview.md", "docs/poker-realtime-usage.md"]
----
 
 # Monte Carlo Project Rules
 
@@ -13,8 +8,8 @@ related_docs: ["docs/system-overview.md", "docs/poker-realtime-usage.md"]
     "languages": ["javascript", "typescript"],
     "runtime_targets": ["browser", "node"],
     "primary_goal": "Authoritative multiplayer Poker app with a deterministic, seeded engine; Blackjack simulation remains backend-only for now",
-    "format_version": "1.0.0",
-    "last_updated": "2025-08-18"
+    "format_version": "1.1.0",
+    "last_updated": "2025-08-19"
 }
 
 ## Objectives
@@ -23,6 +18,7 @@ related_docs: ["docs/system-overview.md", "docs/poker-realtime-usage.md"]
 - Keep the engine (`packages/poker-engine`) pure and deterministic with seeded shuffles per hand.
 - Frontend (`vite-app`) renders Poker UI, manages local UX, and connects to `apps/game-server` via `VITE_WS_URL`.
 - Support high-speed local analysis (e.g., equity worker) without impacting UI responsiveness.
+- Maintain high code readability and modular architecture across all components.
 
 ## Architecture Principles
 
@@ -61,6 +57,86 @@ related_docs: ["docs/system-overview.md", "docs/poker-realtime-usage.md"]
         "id": "protocol_validation",
         "severity": "warning",
         "description": "All inbound/outbound messages are validated (e.g., with Zod) and mapped to shared types in `packages/shared`."
+    }
+]
+
+## Code Readability and Architecture Standards
+
+@rules [
+    {
+        "id": "modular_architecture",
+        "severity": "error",
+        "description": "Maintain the established modular architecture. Each file should have a single, clear responsibility. Avoid monolithic files exceeding 200 lines."
+    },
+    {
+        "id": "single_responsibility",
+        "severity": "error",
+        "description": "Each module, class, or function should have one clear purpose. Extract functionality into focused modules rather than creating large, multi-purpose files."
+    },
+    {
+        "id": "barrel_exports",
+        "severity": "warning",
+        "description": "Use index.ts files for barrel exports to provide clean public APIs. Group related exports logically and document their purpose."
+    },
+    {
+        "id": "domain_separation",
+        "severity": "warning",
+        "description": "Organize code by domain rather than technical concerns. Group related functionality together (e.g., all poker flow logic in `packages/poker-engine/src/flow/`)."
+    },
+    {
+        "id": "consistent_naming",
+        "severity": "warning",
+        "description": "Use consistent naming patterns across modules. Prefer descriptive names over abbreviations. Follow established patterns in each domain."
+    },
+    {
+        "id": "documentation_standards",
+        "severity": "warning",
+        "description": "All public functions and classes must have JSDoc comments explaining purpose, parameters, and return values. Include usage examples for complex functions."
+    }
+]
+
+## Module Organization Patterns
+
+@rules [
+    {
+        "id": "flow_module_pattern",
+        "severity": "warning",
+        "description": "Follow the established flow module pattern: separate table creation, hand management, betting logic, and street advancement into focused modules."
+    },
+    {
+        "id": "strategy_module_pattern",
+        "severity": "warning",
+        "description": "Follow the established strategy module pattern: separate hand analysis, preflop analysis, and action suggestion into focused modules."
+    },
+    {
+        "id": "protocol_module_pattern",
+        "severity": "warning",
+        "description": "Follow the established protocol module pattern: separate common types, client-to-server, and server-to-client schemas into focused modules."
+    },
+    {
+        "id": "server_module_pattern",
+        "severity": "warning",
+        "description": "Follow the established server module pattern: separate configuration, HTTP server, Socket.IO server, identity management, and event handling into focused modules."
+    }
+]
+
+## File Size and Complexity Guidelines
+
+@rules [
+    {
+        "id": "file_size_limit",
+        "severity": "warning",
+        "description": "Aim to keep individual files under 200 lines. If a file exceeds this, consider extracting functionality into focused modules."
+    },
+    {
+        "id": "function_complexity",
+        "severity": "warning",
+        "description": "Functions should be focused and readable. If a function exceeds 50 lines or has deeply nested logic, consider breaking it down."
+    },
+    {
+        "id": "import_organization",
+        "severity": "info",
+        "description": "Organize imports in this order: external libraries, internal modules, relative imports, type imports. Use consistent import patterns within each domain."
     }
 ]
 
@@ -160,6 +236,11 @@ related_docs: ["docs/system-overview.md", "docs/poker-realtime-usage.md"]
         "id": "property_tests",
         "severity": "info",
         "description": "Property tests: side pot construction matches commitments; winner determination consistent with hand evaluator; remainder distribution follows dealer-left order."
+    },
+    {
+        "id": "module_testing",
+        "severity": "warning",
+        "description": "Test individual modules in isolation. Each extracted module should have its own test suite covering its specific responsibilities."
     }
 ]
 
@@ -180,6 +261,11 @@ related_docs: ["docs/system-overview.md", "docs/poker-realtime-usage.md"]
         "id": "control_flow_guard_clauses",
         "severity": "info",
         "description": "Use guard clauses for edge cases to keep nesting shallow."
+    },
+    {
+        "id": "type_safety",
+        "severity": "error",
+        "description": "Maintain full TypeScript type safety. All functions should have proper parameter and return type annotations."
     }
 ]
 
@@ -188,14 +274,46 @@ related_docs: ["docs/system-overview.md", "docs/poker-realtime-usage.md"]
 @options {
     "recommended_layout": {
         "packages/poker-engine": "Pure engine and types (deterministic state transitions)",
+        "packages/poker-engine/src/flow": "Game flow modules: table creation, hand management, betting logic, street advancement",
+        "packages/poker-engine/src/strategy": "Strategy modules: hand analysis, preflop analysis, action suggestion",
         "packages/shared": "Shared types and message contracts",
+        "packages/shared/src/protocol": "Protocol modules: common types, client-to-server, server-to-client schemas",
         "vite-app/src/poker": "Flow helpers, client-side utilities (no gameplay authority)",
         "vite-app/src/ui/poker": "React UI components and hooks",
         "vite-app/src/workers": "Web Workers (e.g., equityMonteCarlo)",
         "apps/game-server": "Fastify + Socket.IO authoritative server",
+        "apps/game-server/src/config": "Server configuration and environment parsing",
+        "apps/game-server/src/server": "HTTP and Socket.IO server setup",
+        "apps/game-server/src/identity": "Token management and identity resolution",
+        "apps/game-server/src/sockets": "Socket event handlers and event management",
         "docs": "Architecture and operations docs"
     }
 }
+
+## Refactoring Guidelines
+
+@rules [
+    {
+        "id": "refactoring_approach",
+        "severity": "warning",
+        "description": "When refactoring, follow the established patterns: extract focused modules, maintain single responsibility, use barrel exports, and preserve backward compatibility."
+    },
+    {
+        "id": "backward_compatibility",
+        "severity": "error",
+        "description": "Refactoring must maintain backward compatibility. Public APIs should not change without proper migration paths."
+    },
+    {
+        "id": "incremental_refactoring",
+        "severity": "info",
+        "description": "Refactor incrementally, testing each step. Extract functionality into modules before removing it from the original file."
+    },
+    {
+        "id": "documentation_updates",
+        "severity": "warning",
+        "description": "Update documentation and rules when refactoring. Document the new architecture and patterns for future developers."
+    }
+]
 
 ## Workflows
 
@@ -213,6 +331,21 @@ related_docs: ["docs/system-overview.md", "docs/poker-realtime-usage.md"]
         "Start backend in `apps/game-server` with `.env` (HOST, PORT, FRONTEND_ORIGINS)",
         "Start frontend in `vite-app` with `.env.local` setting `VITE_WS_URL`",
         "Open the SPA and verify connection and event flow"
+    ],
+    "add_new_poker_feature": [
+        "Identify the appropriate module in `packages/poker-engine/src/flow/` or `packages/poker-engine/src/strategy/`",
+        "Add the feature following the established module pattern",
+        "Update the module's index.ts to export the new functionality",
+        "Add tests for the new feature",
+        "Update documentation if needed"
+    ],
+    "refactor_large_file": [
+        "Identify the main responsibilities of the file",
+        "Create focused modules for each responsibility",
+        "Extract functions and types into appropriate modules",
+        "Update imports and exports",
+        "Test that functionality is preserved",
+        "Update documentation and rules"
     ]
 }
 
@@ -225,15 +358,21 @@ related_docs: ["docs/system-overview.md", "docs/poker-realtime-usage.md"]
         "No UI or I/O inside engine",
         "No `Math.random` calls under `packages/poker-engine/**/*`",
         "Server validates messages and is authoritative",
-        "Tests cover deterministic behavior with fixed seeds"
+        "Tests cover deterministic behavior with fixed seeds",
+        "Maintain modular architecture with single responsibility per module",
+        "Files should not exceed 200 lines without justification",
+        "All public APIs must have proper TypeScript types and JSDoc documentation"
     ],
     "recommended": [
         "Benchmarks demonstrate hands/sec and equity samples/sec",
         "Public APIs documented with types/JSDoc",
-        "UI updates are batched and decoupled from engine loop"
+        "UI updates are batched and decoupled from engine loop",
+        "Use barrel exports (index.ts) for clean public APIs",
+        "Follow established module patterns for consistency",
+        "Maintain clear separation of concerns between modules"
     ]
 }
 
-@version "1.0.0"
-@last_updated "2025-08-18"
+@version "1.1.0"
+@last_updated "2025-08-19"
 

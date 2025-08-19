@@ -1,27 +1,84 @@
 import { io } from 'socket.io-client'
 
-const url = process.env.WS_URL || 'ws://127.0.0.1:8080'
-const socket = io(url, { path: '/socket.io' })
+/**
+ * Development client for testing the game server
+ */
+class DevClient {
+  private socket: any
+  private tableId = 'table-1'
 
-socket.on('connect', () => {
-  console.log('[client] connected', socket.id)
-  socket.emit('join', { tableId: 'table-1' }, (ack: any) => {
-    console.log('[client] join ack', ack)
+  constructor(url: string = 'ws://127.0.0.1:8080') {
+    this.socket = io(url, { path: '/socket.io' })
+    this.setupEventHandlers()
+  }
+
+  /**
+   * Sets up all socket event handlers
+   */
+  private setupEventHandlers(): void {
+    this.socket.on('connect', () => {
+      console.log('[client] connected', this.socket.id)
+      this.joinTable()
+    })
+
+    this.socket.on('state', (s: any) => {
+      console.log('[client] state', { 
+        handId: s.handId, 
+        street: s.street, 
+        toAct: s.currentToAct 
+      })
+    })
+
+    this.socket.on('hand_start', (m: any) => {
+      console.log('[client] hand_start', m)
+    })
+
+    this.socket.on('post_blind', (m: any) => {
+      console.log('[client] post_blind', m)
+    })
+
+    this.socket.on('hand_setup', (m: any) => {
+      console.log('[client] hand_setup deckRemaining', m.deckRemaining)
+    })
+
+    this.socket.on('deal', (m: any) => {
+      console.log('[client] deal', m)
+    })
+
+    this.socket.on('action', (m: any) => {
+      console.log('[client] action', m)
+    })
+
+    this.socket.on('disconnect', (r: any) => {
+      console.log('[client] disconnect', r)
+    })
+  }
+
+  /**
+   * Joins the default table
+   */
+  private joinTable(): void {
+    this.socket.emit('join', { tableId: this.tableId }, (ack: any) => {
+      console.log('[client] join ack', ack)
+      this.beginHand()
+    })
+  }
+
+  /**
+   * Begins a new hand
+   */
+  private beginHand(): void {
     setTimeout(() => {
-      socket.emit('begin', { tableId: 'table-1' }, (ack2: any) => {
+      this.socket.emit('begin', { tableId: this.tableId }, (ack2: any) => {
         console.log('[client] begin ack', ack2)
       })
     }, 200)
-  })
-})
+  }
+}
 
-socket.on('state', (s) => console.log('[client] state', { handId: s.handId, street: s.street, toAct: s.currentToAct }))
-socket.on('hand_start', (m) => console.log('[client] hand_start', m))
-socket.on('post_blind', (m) => console.log('[client] post_blind', m))
-socket.on('hand_setup', (m) => console.log('[client] hand_setup deckRemaining', m.deckRemaining))
-socket.on('deal', (m) => console.log('[client] deal', m))
-socket.on('action', (m) => console.log('[client] action', m))
-socket.on('disconnect', (r) => console.log('[client] disconnect', r))
+// Create and start the dev client
+const url = process.env.WS_URL || 'ws://127.0.0.1:8080'
+new DevClient(url)
 
 
 

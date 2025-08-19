@@ -1,0 +1,240 @@
+# Code Readability Standards
+
+@context {
+    "type": "readability_rules",
+    "domain": ["code_quality", "architecture", "maintainability"],
+    "languages": ["javascript", "typescript"],
+    "primary_goal": "Maintain high code readability and modular architecture across all components",
+    "format_version": "1.0.0",
+    "last_updated": "2025-08-19"
+}
+
+## Core Principles
+
+@rules [
+    {
+        "id": "single_responsibility",
+        "severity": "error",
+        "description": "Every module, class, or function should have one clear, well-defined purpose. If a component does multiple things, extract functionality into focused modules."
+    },
+    {
+        "id": "modular_architecture",
+        "severity": "error",
+        "description": "Maintain the established modular architecture. Organize code by domain rather than technical concerns. Use clear boundaries between modules."
+    },
+    {
+        "id": "readable_code",
+        "severity": "warning",
+        "description": "Code should be self-documenting. Use descriptive names, clear structure, and minimal complexity. If code is hard to read, refactor it."
+    }
+]
+
+## File Organization Standards
+
+@rules [
+    {
+        "id": "file_size_limit",
+        "severity": "warning",
+        "description": "Keep individual files under 200 lines. If a file exceeds this limit, identify responsibilities and extract them into focused modules."
+    },
+    {
+        "id": "directory_structure",
+        "severity": "warning",
+        "description": "Follow established directory patterns. Group related functionality together in domain-specific directories with clear, descriptive names."
+    },
+    {
+        "id": "barrel_exports",
+        "severity": "warning",
+        "description": "Use index.ts files for barrel exports to provide clean public APIs. Group related exports logically and document their purpose."
+    }
+]
+
+## Module Patterns
+
+@rules [
+    {
+        "id": "flow_module_pattern",
+        "severity": "warning",
+        "description": "Follow the established flow module pattern: separate table creation, hand management, betting logic, and street advancement into focused modules."
+    },
+    {
+        "id": "strategy_module_pattern",
+        "severity": "warning",
+        "description": "Follow the established strategy module pattern: separate hand analysis, preflop analysis, and action suggestion into focused modules."
+    },
+    {
+        "id": "protocol_module_pattern",
+        "severity": "warning",
+        "description": "Follow the established protocol module pattern: separate common types, client-to-server, and server-to-client schemas into focused modules."
+    },
+    {
+        "id": "server_module_pattern",
+        "severity": "warning",
+        "description": "Follow the established server module pattern: separate configuration, HTTP server, Socket.IO server, identity management, and event handling into focused modules."
+    }
+]
+
+## Function and Class Standards
+
+@rules [
+    {
+        "id": "function_complexity",
+        "severity": "warning",
+        "description": "Functions should be focused and readable. If a function exceeds 50 lines or has deeply nested logic, consider breaking it down."
+    },
+    {
+        "id": "naming_conventions",
+        "severity": "warning",
+        "description": "Use descriptive names over abbreviations. Follow established naming patterns within each domain. Names should clearly indicate purpose and behavior."
+    },
+    {
+        "id": "parameter_count",
+        "severity": "info",
+        "description": "Limit function parameters to 4-5. If more are needed, consider using configuration objects or breaking the function into smaller pieces."
+    }
+]
+
+## Documentation Standards
+
+@rules [
+    {
+        "id": "jsdoc_requirements",
+        "severity": "warning",
+        "description": "All public functions and classes must have JSDoc comments explaining purpose, parameters, return values, and usage examples for complex functions."
+    },
+    {
+        "id": "readme_files",
+        "severity": "info",
+        "description": "Each major module should have a README.md explaining its purpose, usage, and relationship to other modules."
+    },
+    {
+        "id": "inline_comments",
+        "severity": "info",
+        "description": "Use inline comments sparingly and only when the code is not self-explanatory. Prefer clear code over comments."
+    }
+]
+
+## Import and Export Standards
+
+@rules [
+    {
+        "id": "import_organization",
+        "severity": "info",
+        "description": "Organize imports in this order: external libraries, internal modules, relative imports, type imports. Use consistent import patterns within each domain."
+    },
+    {
+        "id": "export_clarity",
+        "severity": "warning",
+        "description": "Export only what is needed by other modules. Use named exports for clarity. Avoid default exports for complex objects."
+    },
+    {
+        "id": "circular_dependencies",
+        "severity": "error",
+        "description": "Avoid circular dependencies between modules. Design modules with clear, unidirectional dependencies."
+    }
+]
+
+## Refactoring Guidelines
+
+@rules [
+    {
+        "id": "refactoring_approach",
+        "severity": "warning",
+        "description": "When refactoring, follow the established patterns: extract focused modules, maintain single responsibility, use barrel exports, and preserve backward compatibility."
+    },
+    {
+        "id": "incremental_refactoring",
+        "severity": "info",
+        "description": "Refactor incrementally, testing each step. Extract functionality into modules before removing it from the original file."
+    },
+    {
+        "id": "backward_compatibility",
+        "severity": "error",
+        "description": "Refactoring must maintain backward compatibility. Public APIs should not change without proper migration paths."
+    }
+]
+
+## Code Quality Metrics
+
+@rules [
+    {
+        "id": "cyclomatic_complexity",
+        "severity": "info",
+        "description": "Aim for low cyclomatic complexity. Functions with many conditional branches should be simplified or broken down."
+    },
+    {
+        "id": "nesting_depth",
+        "severity": "warning",
+        "description": "Limit nesting depth to 3-4 levels. Use guard clauses and early returns to reduce nesting."
+    },
+    {
+        "id": "magic_numbers",
+        "severity": "warning",
+        "description": "Avoid magic numbers and strings. Use named constants or configuration values instead."
+    }
+]
+
+## Testing and Validation
+
+@rules [
+    {
+        "id": "test_coverage",
+        "severity": "warning",
+        "description": "Each extracted module should have its own test suite covering its specific responsibilities. Test public APIs thoroughly."
+    },
+    {
+        "id": "integration_testing",
+        "severity": "info",
+        "description": "Test module interactions and ensure that refactoring doesn't break existing functionality."
+    }
+]
+
+## Examples
+
+@examples {
+    "extract_large_function": [
+        "Identify the main responsibilities within the function",
+        "Create focused helper functions for each responsibility",
+        "Replace the original function with calls to the helpers",
+        "Test that the behavior is preserved",
+        "Update documentation if needed"
+    ],
+    "split_large_file": [
+        "Identify the main domains or responsibilities in the file",
+        "Create new modules for each domain",
+        "Move related functions, types, and constants to appropriate modules",
+        "Update imports and exports",
+        "Create barrel exports (index.ts) for clean public APIs",
+        "Test that functionality is preserved",
+        "Update documentation and rules"
+    ],
+    "improve_naming": [
+        "Identify unclear or abbreviated names",
+        "Replace with descriptive, domain-specific names",
+        "Ensure consistency with established patterns in the module",
+        "Update all references to the renamed elements",
+        "Test that functionality is preserved"
+    ]
+}
+
+## Validation
+
+@validation {
+    "required": [
+        "Maintain modular architecture with single responsibility per module",
+        "Files should not exceed 200 lines without justification",
+        "All public APIs must have proper TypeScript types and JSDoc documentation",
+        "Refactoring must maintain backward compatibility",
+        "Use established module patterns for consistency"
+    ],
+    "recommended": [
+        "Use barrel exports (index.ts) for clean public APIs",
+        "Follow established naming conventions within each domain",
+        "Maintain clear separation of concerns between modules",
+        "Test individual modules in isolation",
+        "Document architectural decisions and patterns"
+    ]
+}
+
+@version "1.0.0"
+@last_updated "2025-08-19"
