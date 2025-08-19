@@ -333,4 +333,173 @@ export const deal = internalMutation({
   },
 })
 
+// New ingest functions for state machine integration
+export const stateMachineEvent = internalMutation({
+  args: {
+    eventId: v.string(),
+    tableId: v.string(),
+    handId: v.number(),
+    eventType: v.union(
+      v.literal("state_transition"),
+      v.literal("action_processed"),
+      v.literal("timer_event"),
+      v.literal("performance_metric"),
+      v.literal("game_event"),
+      v.literal("pot_update"),
+      v.literal("street_change"),
+      v.literal("seat_state_change")
+    ),
+    fromState: v.optional(v.string()),
+    toState: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    performanceData: v.optional(v.object({
+      processingTimeMs: v.number(),
+      memoryUsage: v.optional(v.number()),
+      cpuTime: v.optional(v.number())
+    })),
+    gameContext: v.optional(v.object({
+      currentStreet: v.optional(v.string()),
+      potAmount: v.optional(v.number()),
+      activeSeat: v.optional(v.number()),
+      betToCall: v.optional(v.number()),
+      lastRaiseAmount: v.optional(v.number())
+    }))
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const proceed = await ensureIdempotent(ctx, args.eventId);
+    if (!proceed) return null;
+    
+    const table = await ctx.db
+      .query("tables")
+      .withIndex("by_tableId", (q: any) => q.eq("tableId", args.tableId))
+      .unique();
+    if (!table) return null;
+    
+    const hand = await ctx.db
+      .query("hands")
+      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", table._id).eq("handSeq", args.handId))
+      .unique();
+    if (!hand) return null;
+    
+    await ctx.db.insert("stateMachineEvents", {
+      handId: hand._id,
+      timestamp: Date.now(),
+      eventType: args.eventType,
+      fromState: args.fromState,
+      toState: args.toState,
+      metadata: args.metadata,
+      performanceData: args.performanceData,
+      gameContext: args.gameContext
+    });
+    
+    return null;
+  },
+});
+
+export const gameStateSnapshot = internalMutation({
+  args: {
+    eventId: v.string(),
+    tableId: v.string(),
+    handId: v.number(),
+    gameState: v.object({
+      status: v.string(),
+      street: v.optional(v.string()),
+      currentToAct: v.optional(v.number()),
+      pot: v.object({
+        main: v.number(),
+        sidePots: v.optional(v.array(v.object({
+          amount: v.number(),
+          eligibleSeats: v.array(v.number())
+        })))
+      }),
+      seats: v.array(v.object({
+        seatIndex: v.number(),
+        stack: v.number(),
+        committedThisStreet: v.number(),
+        totalCommitted: v.number(),
+        hasFolded: v.boolean(),
+        isAllIn: v.boolean(),
+        hole: v.array(v.string())
+      })),
+      community: v.array(v.string()),
+      buttonIndex: v.number(),
+      lastAggressorIndex: v.optional(v.number()),
+      betToCall: v.number(),
+      lastRaiseAmount: v.number()
+    }),
+    trigger: v.optional(v.string()),
+    actionId: v.optional(v.id("actions"))
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const proceed = await ensureIdempotent(ctx, args.eventId);
+    if (!proceed) return null;
+    
+    const table = await ctx.db
+      .query("tables")
+      .withIndex("by_tableId", (q: any) => q.eq("tableId", args.tableId))
+      .unique();
+    if (!table) return null;
+    
+    const hand = await ctx.db
+      .query("hands")
+      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", table._id).eq("handSeq", args.handId))
+      .unique();
+    if (!hand) return null;
+    
+    await ctx.db.insert("gameStateSnapshots", {
+      handId: hand._id,
+      timestamp: Date.now(),
+      gameState: args.gameState,
+      trigger: args.trigger,
+      actionId: args.actionId
+    });
+    
+    return null;
+  },
+});
+
+export const potHistoryEvent = internalMutation({
+  args: {
+    eventId: v.string(),
+    tableId: v.string(),
+    handId: v.number(),
+    potType: v.union(v.literal("main"), v.literal("side")),
+    amount: v.number(),
+    eligibleSeats: v.array(v.number()),
+    trigger: v.string(),
+    actionId: v.optional(v.id("actions"))
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const proceed = await ensureIdempotent(ctx, args.eventId);
+    if (!proceed) return null;
+    
+    const table = await ctx.db
+      .query("tables")
+      .withIndex("by_tableId", (q: any) => q.eq("tableId", args.tableId))
+      .unique();
+    if (!table) return null;
+    
+    const hand = await ctx.db
+      .query("hands")
+      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", table._id).eq("handSeq", args.handId))
+      .unique();
+    if (!hand) return null;
+    
+    await ctx.db.insert("potHistory", {
+      handId: hand._id,
+      timestamp: Date.now(),
+      potType: args.potType,
+      amount: args.amount,
+      eligibleSeats: args.eligibleSeats,
+      trigger: args.trigger,
+      actionId: args.actionId
+    });
+    
+    return null;
+  },
+});
+
 

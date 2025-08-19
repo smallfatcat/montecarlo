@@ -1,0 +1,12 @@
+{
+  "project": "montecarlo",
+  "team": "dev",
+  "prodUrl": "http://127.0.0.1:3210",
+  "functions": "convex/",
+  "auth": {
+    "enabled": true
+  },
+  "http": {
+    "enabled": true
+  }
+}

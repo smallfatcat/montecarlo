@@ -98,6 +98,80 @@ export default defineSchema({
     eventId: v.string(),
     receivedAt: v.number(),
   }).index("by_source_and_eventId", ["source", "eventId"]),
+
+  // New tables for comprehensive state machine tracking
+  stateMachineEvents: defineTable({
+    handId: v.id("hands"),
+    timestamp: v.number(),
+    eventType: v.union(
+      v.literal("state_transition"),
+      v.literal("action_processed"),
+      v.literal("timer_event"),
+      v.literal("performance_metric"),
+      v.literal("game_event"),
+      v.literal("pot_update"),
+      v.literal("street_change"),
+      v.literal("seat_state_change")
+    ),
+    fromState: v.optional(v.string()),
+    toState: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    performanceData: v.optional(v.object({
+      processingTimeMs: v.number(),
+      memoryUsage: v.optional(v.number()),
+      cpuTime: v.optional(v.number())
+    })),
+    gameContext: v.optional(v.object({
+      currentStreet: v.optional(v.string()),
+      potAmount: v.optional(v.number()),
+      activeSeat: v.optional(v.number()),
+      betToCall: v.optional(v.number()),
+      lastRaiseAmount: v.optional(v.number())
+    }))
+  }).index("by_hand_and_timestamp", ["handId", "timestamp"]),
+
+  gameStateSnapshots: defineTable({
+    handId: v.id("hands"),
+    timestamp: v.number(),
+    gameState: v.object({
+      status: v.string(),
+      street: v.optional(v.string()),
+      currentToAct: v.optional(v.number()),
+      pot: v.object({
+        main: v.number(),
+        sidePots: v.optional(v.array(v.object({
+          amount: v.number(),
+          eligibleSeats: v.array(v.number())
+        })))
+      }),
+      seats: v.array(v.object({
+        seatIndex: v.number(),
+        stack: v.number(),
+        committedThisStreet: v.number(),
+        totalCommitted: v.number(),
+        hasFolded: v.boolean(),
+        isAllIn: v.boolean(),
+        hole: v.array(v.string())
+      })),
+      community: v.array(v.string()),
+      buttonIndex: v.number(),
+      lastAggressorIndex: v.optional(v.number()),
+      betToCall: v.number(),
+      lastRaiseAmount: v.number()
+    }),
+    trigger: v.optional(v.string()), // What caused this snapshot
+    actionId: v.optional(v.id("actions")) // Link to specific action if applicable
+  }).index("by_hand_and_timestamp", ["handId", "timestamp"]),
+
+  potHistory: defineTable({
+    handId: v.id("hands"),
+    timestamp: v.number(),
+    potType: v.union(v.literal("main"), v.literal("side")),
+    amount: v.number(),
+    eligibleSeats: v.array(v.number()),
+    trigger: v.string(), // What caused this pot change
+    actionId: v.optional(v.id("actions"))
+  }).index("by_hand_and_timestamp", ["handId", "timestamp"])
 });
 
 

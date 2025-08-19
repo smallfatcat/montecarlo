@@ -45,7 +45,7 @@ export interface TableApi {
   setStateMachineDebug(enabled: boolean): void
 }
 
-export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, opts?: { seats?: number; startingStack?: number; onSummaryChange?: (summary: any) => void; disconnectGraceMs?: number; publisher?: { handStarted: (p: { tableId: string; handId: number; buttonIndex: number; smallBlind: number; bigBlind: number }) => Promise<void>; action: (p: { tableId: string; handId: number; order: number; seatIndex: number; street: any; type: string; amount?: number; playerToken?: string }) => Promise<void>; handEnded?: (p: { tableId: string; handId: number; board: string[]; results: Array<{ seatIndex: number; playerToken?: string; delta: number }> }) => Promise<void>; seat?: (p: { tableId: string; seatIndex: number; playerToken: string; playerName: string }) => Promise<void>; unseat?: (p: { tableId: string; seatIndex: number; playerToken: string }) => Promise<void>; deal?: (p: { tableId: string; handId: number; street: any; cards: string[] }) => Promise<void>; } }): TableApi {
+export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, opts?: { seats?: number; startingStack?: number; onSummaryChange?: (summary: any) => void; disconnectGraceMs?: number; publisher?: { handStarted: (p: { tableId: string; handId: number; buttonIndex: number; smallBlind: number; bigBlind: number }) => Promise<void>; action: (p: { tableId: string; handId: number; order: number; seatIndex: number; street: any; type: string; amount?: number; playerToken?: string }) => Promise<void>; handEnded?: (p: { tableId: string; handId: number; board: string[]; results: Array<{ seatIndex: number; playerToken?: string; delta: number }> }) => Promise<void>; seat?: (p: { tableId: string; seatIndex: number; playerToken: string; playerName: string }) => Promise<void>; unseat?: (p: { tableId: string; seatIndex: number; playerToken: string }) => Promise<void>; deal?: (p: { tableId: string; handId: number; street: any; cards: string[] }) => Promise<void>; }; stateMachineAdapter?: any }): TableApi {
   const seats = opts?.seats ?? 6
   const startingStack = opts?.startingStack ?? 5000
   const cpuSeats = Array.from({ length: seats }, (_, i) => i)
@@ -87,6 +87,34 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
       io.to(room).emit('state', s)
       try { console.log('[server-runtime] state', { handId: s.handId, street: s.street, toAct: s.currentToAct }) } catch {}
       try { opts?.onSummaryChange?.(getSummary()) } catch {}
+      
+      // Integrate with state machine adapter if available
+      try {
+        const stateMachineAdapter = (opts as any)?.stateMachineAdapter
+        if (stateMachineAdapter && stateMachineAdapter.enabled) {
+          // Determine trigger for state change
+          let trigger = 'state_change'
+          let actionId: string | undefined = undefined
+          
+          if (transitionedToEnd) {
+            trigger = 'hand_ended'
+          } else if (prev?.street !== s.street) {
+            trigger = 'street_change'
+          } else if (prev?.status !== s.status) {
+            trigger = 'status_change'
+          } else if (prev?.currentToAct !== s.currentToAct) {
+            trigger = 'player_turn_change'
+          }
+          
+          // Capture state change in state machine adapter
+          stateMachineAdapter.onGameStateChange(s, trigger, actionId).catch((err: unknown) => {
+            console.error('[StateMachineAdapter] Error capturing state change:', err)
+          })
+        }
+      } catch (err) {
+        console.error('[server-runtime] Error in state machine adapter integration:', err)
+      }
+      
       if (transitionedToEnd) {
         try {
           const toCode = (c: any) => `${c.rank}${c.suit[0]}`

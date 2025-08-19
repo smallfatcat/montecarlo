@@ -86,6 +86,37 @@ http.route({
   }),
 });
 
+// New HTTP endpoints for state machine integration
+http.route({
+  path: "/ingest/stateMachineEvent",
+  method: "POST",
+  handler: withIngestAuth(async (ctx, req) => {
+    const body = await req.json();
+    await ctx.runMutation(internal.ingest.stateMachineEvent, body);
+    return new Response(null, { status: 204 });
+  }),
+});
+
+http.route({
+  path: "/ingest/gameStateSnapshot",
+  method: "POST",
+  handler: withIngestAuth(async (ctx, req) => {
+    const body = await req.json();
+    await ctx.runMutation(internal.ingest.gameStateSnapshot, body);
+    return new Response(null, { status: 204 });
+  }),
+});
+
+http.route({
+  path: "/ingest/potHistoryEvent",
+  method: "POST",
+  handler: withIngestAuth(async (ctx, req) => {
+    const body = await req.json();
+    await ctx.runMutation(internal.ingest.potHistoryEvent, body);
+    return new Response(null, { status: 204 });
+  }),
+});
+
 export default http;
 
 

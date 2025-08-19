@@ -44,6 +44,34 @@ export function createServerRuntimeTable(io, tableId, opts) {
                 opts?.onSummaryChange?.(getSummary());
             }
             catch { }
+            // Integrate with state machine adapter if available
+            try {
+                const stateMachineAdapter = opts?.stateMachineAdapter;
+                if (stateMachineAdapter && stateMachineAdapter.enabled) {
+                    // Determine trigger for state change
+                    let trigger = 'state_change';
+                    let actionId = undefined;
+                    if (transitionedToEnd) {
+                        trigger = 'hand_ended';
+                    }
+                    else if (prev?.street !== s.street) {
+                        trigger = 'street_change';
+                    }
+                    else if (prev?.status !== s.status) {
+                        trigger = 'status_change';
+                    }
+                    else if (prev?.currentToAct !== s.currentToAct) {
+                        trigger = 'player_turn_change';
+                    }
+                    // Capture state change in state machine adapter
+                    stateMachineAdapter.onGameStateChange(s, trigger, actionId).catch((err) => {
+                        console.error('[StateMachineAdapter] Error capturing state change:', err);
+                    });
+                }
+            }
+            catch (err) {
+                console.error('[server-runtime] Error in state machine adapter integration:', err);
+            }
             if (transitionedToEnd) {
                 try {
                     const toCode = (c) => `${c.rank}${c.suit[0]}`;

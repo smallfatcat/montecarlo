@@ -4,6 +4,7 @@ import { createHttpServer } from './server/http.js'
 import { createSocketServer } from './server/socket.js'
 import { registerSocketHandlers } from './sockets/handlers.js'
 import { ConvexPublisher } from './ingest/convexPublisher.js'
+import { StateMachineAdapter } from './ingest/stateMachineAdapter.js'
 import type { TableId } from './tables/serverRuntimeTable.js'
 import { createServerRuntimeTable } from './tables/serverRuntimeTable.js'
 import { InMemoryTokenStore } from './identity/tokenStore.js'
@@ -19,19 +20,61 @@ async function buildServer() {
 
   // Single runtime per table id across all connections
   const tables: Map<TableId, ReturnType<typeof createServerRuntimeTable>> = new Map()
+  // Store state machine adapters separately
+  const stateMachineAdapters: Map<TableId, StateMachineAdapter> = new Map()
   // Include /http prefix for self-hosted Convex HTTP routes
   const convex = new ConvexPublisher({ baseUrl: (process.env.CONVEX_INGEST_URL || '').replace(/\/$/, '') + '/http', secret: process.env.INGEST_SECRET })
 
   function getTable(tableId: TableId) {
     let t = tables.get(tableId)
     if (!t) {
-      t = createServerRuntimeTable(io, tableId, { onSummaryChange: (s) => io.emit('table_update', s), publisher: convex.enabled ? {
-        handStarted: (p) => convex.handStarted(p),
-        action: (p) => convex.action(p as any),
-        seat: (p) => convex.seat?.(p) ?? Promise.resolve(),
-        unseat: (p) => convex.unseat?.(p) ?? Promise.resolve(),
-        handEnded: (p: any) => (convex as any).handEnded?.(p) ?? Promise.resolve(),
-      } : undefined })
+      // Create state machine adapter for this table
+      const stateMachineAdapter = new StateMachineAdapter(convex, tableId)
+      stateMachineAdapters.set(tableId, stateMachineAdapter)
+      
+      t = createServerRuntimeTable(io, tableId, { 
+        onSummaryChange: (s) => io.emit('table_update', s), 
+        publisher: convex.enabled ? {
+          handStarted: (p) => {
+            // Set current hand for state machine tracking
+            stateMachineAdapter.setCurrentHand(p.handId)
+            return convex.handStarted(p)
+          },
+          action: (p) => {
+            // Capture action processing for state machine
+            stateMachineAdapter.captureActionProcessed(p.type, p.seatIndex, { 
+              street: p.street, 
+              amount: p.amount,
+              playerToken: p.playerToken 
+            })
+            return convex.action(p as any)
+          },
+          seat: (p) => {
+            // Capture seat state change
+            stateMachineAdapter.captureSeatStateChange(p.seatIndex, 'seated', { 
+              playerToken: p.playerToken, 
+              playerName: p.playerName 
+            })
+            return convex.seat?.(p) ?? Promise.resolve()
+          },
+          unseat: (p) => {
+            // Capture seat state change
+            stateMachineAdapter.captureSeatStateChange(p.seatIndex, 'unseated', { 
+              playerToken: p.playerToken 
+            })
+            return convex.unseat?.(p) ?? Promise.resolve()
+          },
+          handEnded: (p: any) => {
+            // Capture final game state
+            stateMachineAdapter.captureGameEvent('hand_ended', { 
+              board: p.board, 
+              results: p.results 
+            })
+            return (convex as any).handEnded?.(p) ?? Promise.resolve()
+          },
+        } : undefined,
+        stateMachineAdapter: convex.enabled ? stateMachineAdapter : undefined
+      })
       tables.set(tableId, t)
     }
     return t
