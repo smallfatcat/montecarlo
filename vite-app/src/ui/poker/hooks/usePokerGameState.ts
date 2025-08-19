@@ -29,47 +29,17 @@ export function usePokerGameState() {
   const isAutoplayEnabled = (seatIndex: number) => mySeatAutoplay === seatIndex
 
   // Helper to enable/disable autoplay for a specific seat
-  const setAutoplayForSeat = (seatIndex: number, enabled: boolean): boolean => {
+  const setAutoplayForSeat = (seatIndex: number, enabled: boolean) => {
     if (enabled) {
-      // Only enable autoplay if there are human players at the table
-      if (hasHumanPlayers()) {
-        setMySeatAutoplay(seatIndex)
-      } else {
-        console.log('Cannot enable autoplay: no human players at table')
-        return false // Indicate that autoplay was not enabled
-      }
+      setMySeatAutoplay(seatIndex)
     } else {
       setMySeatAutoplay(null)
     }
-    return true // Indicate success
   }
 
   // Helper to clear autoplay when leaving a seat
   const clearAutoplayOnLeave = () => {
     setMySeatAutoplay(null)
-  }
-
-  // Helper to check if there are any human players at the table
-  const hasHumanPlayers = () => {
-    return playerNames.some((name, index) => {
-      // Check if this seat has a player name (not null) and is not a CPU seat
-      return name !== null && index < table.seats.length && !table.seats[index]?.isCPU
-    })
-  }
-
-  // Helper to automatically disable autoplay if no human players
-  const checkAndDisableAutoplayIfNoHumans = () => {
-    if (mySeatAutoplay !== null && !hasHumanPlayers()) {
-      setMySeatAutoplay(null)
-      return true // Autoplay was disabled
-    }
-    return false // No change
-  }
-
-  // Helper to check if autoplay can be enabled for a specific seat
-  const canEnableAutoplay = (seatIndex: number): boolean => {
-    // Check if the seat is valid and there are human players
-    return seatIndex >= 0 && seatIndex < table.seats.length && hasHumanPlayers()
   }
 
   return {
@@ -94,8 +64,5 @@ export function usePokerGameState() {
     setClearing,
     // Actions
     resetGameState,
-    hasHumanPlayers,
-    checkAndDisableAutoplayIfNoHumans,
-    canEnableAutoplay,
   }
 }
