@@ -2,7 +2,7 @@
 
 ## Overview
 
-Montecarlo is a casino game application built with a modern, modular architecture. The application supports both poker and blackjack games with real-time multiplayer capabilities, plus high-speed simulation features. The codebase follows strict readability standards with single responsibility principles and clear separation of concerns.
+Montecarlo is a casino game application built with a modern, modular architecture. The application supports both poker and blackjack games with real-time multiplayer capabilities, plus high-speed simulation features. The codebase follows strict readability standards with single responsibility principles and clear separation of concerns. The poker game engine now features a comprehensive state machine system for improved game flow management, error handling, and debugging capabilities.
 
 ## Architecture Principles
 
@@ -15,6 +15,8 @@ Montecarlo is a casino game application built with a modern, modular architectur
 - **Simulation Speed**: Pure function runners for maximum simulation performance
 - **Real-time Communication**: WebSocket-based multiplayer with authoritative server
 - **Code Quality**: Comprehensive readability standards and documentation
+- **State Machine Design**: Explicit state transitions with validation and error handling
+- **Debugging Integration**: Built-in debugging controls and monitoring capabilities
 
 ## Project Structure
 
@@ -93,6 +95,14 @@ montecarlo/
 │           │   ├── preflopAnalysis.ts  # Preflop evaluation
 │           │   ├── actionSuggestion.ts # Action recommendations
 │           │   └── index.ts            # Barrel exports
+│           ├── stateMachine/      # State machine system
+│           │   ├── types.ts            # State machine type definitions
+│           │   ├── simplePokerMachine.ts # Core game state machine
+│           │   ├── handProgressionMachine.ts # Hand progression states
+│           │   ├── integratedPokerMachine.ts # Combined state machines
+│           │   ├── timedPokerMachine.ts # Timer-integrated machine
+│           │   ├── runtimeAdapter.ts # Runtime integration adapter
+│           │   └── index.ts            # Barrel exports
 │           └── types.ts           # Core types
 ├── apps/                     # Applications
 │   └── game-server/         # WebSocket game server (modular)
@@ -143,10 +153,11 @@ The heart of the game server that manages individual poker table instances:
 Defines the communication contract between client and server:
 
 - **Message Schemas**: Zod-based validation for all messages
-- **Client-to-Server (C2S)**: Player actions and table management
-- **Server-to-Client (S2C)**: Game state updates and server responses
+- **Client-to-Server (C2S)**: Player actions, table management, and debug controls
+- **Server-to-Client (S2C)**: Game state updates, server responses, and debug mode changes
 - **Type Safety**: Full TypeScript integration with runtime validation
 - **Modular Organization**: Clean separation of protocol concerns
+- **Debug Integration**: `toggleDebugMode` message for state machine debugging control
 
 #### Table Management
 
@@ -166,6 +177,7 @@ Defines the communication contract between client and server:
 - **`act`**: Perform betting actions (fold, check, call, bet, raise)
 - **`setAuto`**: Enable/disable automatic play
 - **`reset`**: Reset table to initial state
+- **`toggleDebugMode`**: Enable/disable state machine debug logging
 
 #### Server-to-Client Events
 
@@ -173,6 +185,87 @@ Defines the communication contract between client and server:
 - **`state`**: Complete table state update
 - **`error`**: Error messages and validation failures
 - **`table_list`**: Available tables for joining
+- **`debugModeChanged`**: Debug mode toggle confirmation
+
+## State Machine System
+
+### Overview
+
+The poker game engine now features a comprehensive state machine system that provides explicit state transitions, validation, and error handling. This system replaces manual state management with structured, predictable game flow control.
+
+### Core Components
+
+#### State Machine Types (`packages/poker-engine/src/stateMachine/types.ts`)
+
+Defines the foundational types for the state machine system:
+
+- **Game States**: `idle`, `waiting_for_players`, `hand_in_progress`, `hand_complete`, `game_over`
+- **Hand Progression States**: `preflop`, `flop`, `turn`, `river`, `showdown`, `hand_complete`
+- **Player Actions**: `fold`, `check`, `call`, `bet`, `raise`
+- **Context Management**: Player states, betting information, and game history
+
+#### Simple Poker State Machine (`simplePokerMachine.ts`)
+
+Manages high-level game flow:
+
+- **State Transitions**: Validated transitions between game states
+- **Event Processing**: Handles game events with proper validation
+- **Context Updates**: Maintains game state consistency
+- **Error Handling**: Prevents invalid state transitions
+
+#### Hand Progression State Machine (`handProgressionMachine.ts`)
+
+Manages detailed hand progression through betting rounds:
+
+- **Street Management**: Preflop → Flop → Turn → River → Showdown
+- **Betting Round Logic**: Player action validation and round completion
+- **Action Validation**: Ensures actions are valid for current state
+- **Context Synchronization**: Maintains hand-specific state
+
+#### Integrated Poker Machine (`integratedPokerMachine.ts`)
+
+Combines game-level and hand-level state machines:
+
+- **Coordinated Management**: Seamless integration between game and hand states
+- **Event Delegation**: Routes events to appropriate state machine
+- **State Consistency**: Ensures both machines remain synchronized
+- **Result Handling**: Processes outcomes from both state machines
+
+#### Timed Poker Machine (`timedPokerMachine.ts`)
+
+Enhanced state machine with timer integration:
+
+- **Timer Management**: Centralized timer system for all game events
+- **Performance Tracking**: Built-in metrics and optimization tools
+- **Timeout Handling**: Automatic action processing on timeouts
+- **Autoplay Integration**: Seamless integration with existing autoplay features
+
+#### Runtime Adapter (`runtimeAdapter.ts`)
+
+Provides seamless integration with existing PokerRuntime:
+
+- **State Synchronization**: Automatic coordination between state machines and runtime
+- **Feature Toggles**: Enable/disable state machine integration per table
+- **Error Recovery**: Graceful handling of runtime errors
+- **Performance Monitoring**: Built-in metrics and optimization tools
+
+### Benefits
+
+- **Explicit State Flow**: Clear, predictable game progression
+- **Better Error Handling**: Invalid transitions are caught and prevented
+- **Type Safety**: Full TypeScript coverage with proper typing
+- **Maintainable Code**: Clear separation of concerns
+- **Testable Architecture**: Easy to validate state transitions
+- **Production Ready**: Comprehensive integration with existing systems
+
+### Debugging and Monitoring
+
+The state machine system includes comprehensive debugging capabilities:
+
+- **Debug Mode Toggle**: UI control for enabling/disabling debug logging
+- **Real-time Monitoring**: Live state transition tracking
+- **Performance Metrics**: Timer usage and action timing statistics
+- **Error Recovery**: Automatic handling of edge cases and failures
 
 ## Frontend Architecture
 
@@ -184,6 +277,7 @@ The frontend follows a modular component architecture:
 - **Single Responsibility**: Each component has one clear purpose
 - **Composition**: Complex UIs are built from smaller, focused components
 - **Hooks**: Custom hooks encapsulate reusable logic and state management
+- **Debug Controls**: Built-in debug toggle button for state machine monitoring
 
 ### State Management
 
@@ -246,6 +340,13 @@ Configuration is organized into domain-specific modules:
 - **WebSocket Optimization**: Efficient binary protocols
 - **Message Validation**: Runtime type checking with Zod
 - **Connection Management**: Automatic reconnection and error handling
+
+### Debugging and Monitoring
+
+- **State Machine Debugging**: Real-time debug mode control via UI
+- **Performance Metrics**: Built-in timing and optimization tracking
+- **Error Recovery**: Automatic handling of edge cases and failures
+- **Live Monitoring**: Real-time state transition tracking and validation
 
 ## Testing Strategy
 

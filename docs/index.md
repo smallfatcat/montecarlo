@@ -30,6 +30,7 @@ This index provides an overview of all available documentation and their current
 ### State Machine System
 - **[state-machine-analysis.md](state-machine-analysis.md)** - Analysis of poker game architecture improvements
 - **[state-machine-implementation-progress.md](state-machine-implementation-progress.md)** - Complete implementation progress and status
+- **[state-machine-flowcharts.md](state-machine-flowcharts.md)** - Visual flowcharts of state machine system
 
 ## 🔄 Recent Updates
 
@@ -63,6 +64,7 @@ This index provides an overview of all available documentation and their current
 | PHASE_2_COMPLETION_SUMMARY.md | ✅ Current | Dec 2024 | Design system implementation complete |
 | state-machine-analysis.md | ✅ Current | Dec 2024 | State machine architecture analysis |
 | state-machine-implementation-progress.md | ✅ Current | Dec 2024 | Complete implementation status |
+| state-machine-flowcharts.md | ✅ Current | Dec 2024 | Visual flowcharts of state machine system |
 
 ## 🎯 Current Development Focus
 
