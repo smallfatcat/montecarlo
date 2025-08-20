@@ -249,8 +249,9 @@ export function createServerRuntimeTable(io: SocketIOServer, tableId: TableId, o
     tableId,
     beginHand() { runtime.beginHand() },
     actFrom(socket, action) {
-      // Back-compat: use socket.id as playerId if identity not used
-      return this.actFromId(socket.id, action)
+      // Prefer identified player id when available; fall back to socket.id
+      const playerId = ((socket as any).data?.playerId as string | undefined) || socket.id
+      return this.actFromId(playerId, action)
     },
     actFromId(playerId, action) {
       const s = lastState

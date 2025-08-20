@@ -5,11 +5,11 @@
   "homepage": "https://148.230.118.4/",
   "type": "module",
   "scripts": {
-    "predeploy": "FORCE_GENERATE=true bash ../scripts/version.sh generate && VITE_CONVEX_URL=https://148.230.118.4 npm run build",
+    "predeploy": "FORCE_GENERATE=true bash ../scripts/version.sh generate && npm run build",
     "deploy": "gh-pages -d dist",
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:prod": "VITE_CONVEX_URL=https://148.230.118.4 npm run build",
+    "build:prod": "npm run build",
     "copy-version-files": "cp BUILD_INFO dist/ 2>/dev/null || echo 'BUILD_INFO not found, skipping' && cp VERSION dist/ 2>/dev/null || echo 'VERSION not found, skipping'",
     "preview": "vite preview",
     "test": "vitest run",

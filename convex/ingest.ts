@@ -103,10 +103,14 @@ export const action = internalMutation({
       table = await ctx.db.get(tId)
     }
     const tableNonNull = table!
-    let hand = await ctx.db
+    // Tolerate duplicate hands (legacy data): pick the first match if multiple exist
+    let hand: any = null
+    for await (const h of ctx.db
       .query("hands")
-      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", tableNonNull._id).eq("handSeq", args.handId))
-      .unique();
+      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", tableNonNull._id).eq("handSeq", args.handId))) {
+      hand = h
+      break
+    }
     if (!hand) {
       const newId = await ctx.db.insert("hands", {
         tableId: tableNonNull._id,
@@ -183,10 +187,14 @@ export const handEnded = internalMutation({
       table = await ctx.db.get(tId)
     }
     const tableNonNull2 = table!
-    let hand = await ctx.db
+    // Tolerate duplicate hands (legacy data): pick the first match if multiple exist
+    let hand: any = null
+    for await (const h of ctx.db
       .query("hands")
-      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", tableNonNull2._id).eq("handSeq", args.handId))
-      .unique();
+      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", tableNonNull2._id).eq("handSeq", args.handId))) {
+      hand = h
+      break
+    }
     if (!hand) {
       const newId = await ctx.db.insert("hands", {
         tableId: tableNonNull2._id,
@@ -321,10 +329,14 @@ export const deal = internalMutation({
       .withIndex("by_tableId", (q: any) => q.eq("tableId", args.tableId))
       .unique();
     if (!table) return null;
-    const hand = await ctx.db
+    // Tolerate duplicate hands (legacy data): pick the first match if multiple exist
+    let hand: any = null
+    for await (const h of ctx.db
       .query("hands")
-      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", table._id).eq("handSeq", args.handId))
-      .unique();
+      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", table._id).eq("handSeq", args.handId))) {
+      hand = h
+      break
+    }
     if (!hand) return null;
     // Append cards to board
     const prev = hand.board || []
@@ -376,10 +388,14 @@ export const stateMachineEvent = internalMutation({
       .unique();
     if (!table) return null;
     
-    const hand = await ctx.db
+    // Tolerate duplicate hands (legacy data): pick the first match if multiple exist
+    let hand: any = null
+    for await (const h of ctx.db
       .query("hands")
-      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", table._id).eq("handSeq", args.handId))
-      .unique();
+      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", table._id).eq("handSeq", args.handId))) {
+      hand = h
+      break
+    }
     if (!hand) return null;
     
     await ctx.db.insert("stateMachineEvents", {
@@ -442,10 +458,14 @@ export const gameStateSnapshot = internalMutation({
       .unique();
     if (!table) return null;
     
-    const hand = await ctx.db
+    // Tolerate duplicate hands (legacy data): pick the first match if multiple exist
+    let hand: any = null
+    for await (const h of ctx.db
       .query("hands")
-      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", table._id).eq("handSeq", args.handId))
-      .unique();
+      .withIndex("by_table_and_seq", (q: any) => q.eq("tableId", table._id).eq("handSeq", args.handId))) {
+      hand = h
+      break
+    }
     if (!hand) return null;
     
     await ctx.db.insert("gameStateSnapshots", {
