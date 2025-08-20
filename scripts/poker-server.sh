@@ -77,14 +77,14 @@ case "${1:-help}" in
     health)
         echo "Checking health endpoints..."
         echo "Health check:"
-        if curl -fsS -m 3 "http://127.0.0.1:8080/healthz" >/dev/null 2>&1; then
+        if curl -fsS -m 3 "http://148.230.118.4:8080/healthz" >/dev/null 2>&1; then
             echo "  ✓ /healthz - OK"
         else
             echo "  ✗ /healthz - FAILED"
         fi
         
         echo "Ready check:"
-        if curl -fsS -m 3 "http://127.0.0.1:8080/readyz" >/dev/null 2>&1; then
+        if curl -fsS -m 3 "http://148.230.118.4:8080/readyz" >/dev/null 2>&1; then
             echo "  ✓ /readyz - OK"
         else
             echo "  ✗ /readyz - FAILED"

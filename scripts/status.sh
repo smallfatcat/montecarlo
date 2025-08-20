@@ -91,13 +91,13 @@ else
 fi
 
 section "Local health checks"
-kv "HTTP" "http://127.0.0.1:${PORT}/healthz"
-if curl -fsS -m 3 "http://127.0.0.1:${PORT}/healthz" >/dev/null 2>&1; then
+kv "HTTP" "http://148.230.118.4:${PORT}/healthz"
+if curl -fsS -m 3 "http://148.230.118.4:${PORT}/healthz" >/dev/null 2>&1; then
 	kv "healthz" "$(color 32 OK)"
 else
 	kv "healthz" "$(color 31 FAIL)"
 fi
-if curl -fsS -m 3 "http://127.0.0.1:${PORT}/readyz" >/dev/null 2>&1; then
+if curl -fsS -m 3 "http://148.230.118.4:${PORT}/readyz" >/dev/null 2>&1; then
 	kv "readyz" "$(color 32 OK)"
 else
 	kv "readyz" "$(color 33 WARN)"

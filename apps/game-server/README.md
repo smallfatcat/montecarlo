@@ -6,7 +6,7 @@
 cp .env.example .env
 npm install
 npm run dev
-# http://127.0.0.1:8080/healthz
+# http://148.230.118.4:8080/healthz
 ```
 
 ### Environment
@@ -17,7 +17,7 @@ npm run dev
 
 ### Socket.IO testing
 
-Connect locally via `ws://127.0.0.1:8080/socket.io` (dev). In production or behind TLS/tunnels use `wss://<host>/socket.io`. Listen for `ready` and emit `echo` to test round‑trip.
+Connect locally via `ws://148.230.118.4:8080/socket.io` (dev). In production or behind TLS/tunnels use `wss://<host>/socket.io`. Listen for `ready` and emit `echo` to test round‑trip.
 
 
 
