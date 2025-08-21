@@ -1,5 +1,6 @@
 import type { PokerTableState, BettingAction } from '../types.js'
 import { CONFIG } from '../localConfig.js'
+import { BetAmountSchema, SeatIndexSchema, PokerActionSchema, validateAndSanitizeInput } from '@montecarlo/shared'
 
 /**
  * Posts a blind bet for a specific seat
@@ -25,7 +26,27 @@ export function postBlind(state: PokerTableState, seatIndex: number, amount: num
  * Validates if a betting action is legal
  */
 export function validateAction(state: PokerTableState, seatIndex: number, action: BettingAction): { valid: boolean; error?: string } {
+  // Enhanced input validation
+  const seatValidation = validateAndSanitizeInput(seatIndex, SeatIndexSchema)
+  if (!seatValidation.success) {
+    return { valid: false, error: seatValidation.error }
+  }
+  
+  const actionValidation = validateAndSanitizeInput(action, PokerActionSchema)
+  if (!actionValidation.success) {
+    return { valid: false, error: actionValidation.error }
+  }
+  
+  // Validate seat exists
+  if (seatIndex < 0 || seatIndex >= state.seats.length) {
+    return { valid: false, error: 'Invalid seat index' }
+  }
+  
   const seat = state.seats[seatIndex]
+  if (!seat) {
+    return { valid: false, error: 'Seat does not exist' }
+  }
+  
   if (seat.hasFolded) return { valid: false, error: 'Player has folded' }
   if (seat.isAllIn) return { valid: false, error: 'Player is all-in' }
 

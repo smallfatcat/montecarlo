@@ -1,11 +1,12 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { createRateLimitedHandler } from "./rateLimit";
 
 const http = httpRouter();
 
 const withIngestAuth = (handler: Parameters<typeof httpAction>[0]) =>
-  httpAction(async (ctx, req) => {
+  async (ctx: any, req: Request) => {
     const secret = req.headers.get("x-convex-ingest-secret") || "";
     
     // Get the secret from the configuration table
@@ -15,7 +16,7 @@ const withIngestAuth = (handler: Parameters<typeof httpAction>[0]) =>
       return new Response("Unauthorized", { status: 401 });
     }
     return handler(ctx, req);
-  });
+  };
 
 http.route({
   path: "/ingest/health",
@@ -33,92 +34,92 @@ http.route({
 http.route({
   path: "/ingest/handStarted",
   method: "POST",
-  handler: withIngestAuth(async (ctx, req) => {
+  handler: createRateLimitedHandler('/ingest/handStarted')(withIngestAuth(async (ctx, req) => {
     const body = await req.json();
     await ctx.runMutation(internal.ingest.handStarted, body);
     return new Response(null, { status: 204 });
-  }),
+  })),
 });
 
 http.route({
   path: "/ingest/action",
   method: "POST",
-  handler: withIngestAuth(async (ctx, req) => {
+  handler: createRateLimitedHandler('/ingest/action')(withIngestAuth(async (ctx, req) => {
     const body = await req.json();
     await ctx.runMutation(internal.ingest.action, body);
     return new Response(null, { status: 204 });
-  }),
+  })),
 });
 
 http.route({
   path: "/ingest/handEnded",
   method: "POST",
-  handler: withIngestAuth(async (ctx, req) => {
+  handler: createRateLimitedHandler('/ingest/handEnded')(withIngestAuth(async (ctx, req) => {
     const body = await req.json();
     await ctx.runMutation(internal.ingest.handEnded, body);
     return new Response(null, { status: 204 });
-  }),
+  })),
 });
 
 http.route({
   path: "/ingest/seat",
   method: "POST",
-  handler: withIngestAuth(async (ctx, req) => {
+  handler: createRateLimitedHandler('/ingest/seat')(withIngestAuth(async (ctx, req) => {
     const body = await req.json();
     await ctx.runMutation(internal.ingest.seat, body);
     return new Response(null, { status: 204 });
-  }),
+  })),
 });
 
 http.route({
   path: "/ingest/unseat",
   method: "POST",
-  handler: withIngestAuth(async (ctx, req) => {
+  handler: createRateLimitedHandler('/ingest/unseat')(withIngestAuth(async (ctx, req) => {
     const body = await req.json();
     await ctx.runMutation(internal.ingest.unseat, body);
     return new Response(null, { status: 204 });
-  }),
+  })),
 });
 
 http.route({
   path: "/ingest/deal",
   method: "POST",
-  handler: withIngestAuth(async (ctx, req) => {
+  handler: createRateLimitedHandler('/ingest/deal')(withIngestAuth(async (ctx, req) => {
     const body = await req.json();
     await ctx.runMutation(internal.ingest.deal, body);
     return new Response(null, { status: 204 });
-  }),
+  })),
 });
 
 // New HTTP endpoints for state machine integration
 http.route({
   path: "/ingest/stateMachineEvent",
   method: "POST",
-  handler: withIngestAuth(async (ctx, req) => {
+  handler: createRateLimitedHandler('/ingest/stateMachineEvent')(withIngestAuth(async (ctx, req) => {
     const body = await req.json();
     await ctx.runMutation(internal.ingest.stateMachineEvent, body);
     return new Response(null, { status: 204 });
-  }),
+  })),
 });
 
 http.route({
   path: "/ingest/gameStateSnapshot",
   method: "POST",
-  handler: withIngestAuth(async (ctx, req) => {
+  handler: createRateLimitedHandler('/ingest/gameStateSnapshot')(withIngestAuth(async (ctx, req) => {
     const body = await req.json();
     await ctx.runMutation(internal.ingest.gameStateSnapshot, body);
     return new Response(null, { status: 204 });
-  }),
+  })),
 });
 
 http.route({
   path: "/ingest/potHistoryEvent",
   method: "POST",
-  handler: withIngestAuth(async (ctx, req) => {
+  handler: createRateLimitedHandler('/ingest/potHistoryEvent')(withIngestAuth(async (ctx, req) => {
     const body = await req.json();
     await ctx.runMutation(internal.ingest.potHistoryEvent, body);
     return new Response(null, { status: 204 });
-  }),
+  })),
 });
 
 export default http;

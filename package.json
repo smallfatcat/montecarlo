@@ -36,9 +36,11 @@
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "fast-check": "^4.2.0"
   },
   "dependencies": {
-    "convex": "^1.17.4"
+    "convex": "^1.17.4",
+    "isomorphic-dompurify": "^2.26.0"
   }
 }

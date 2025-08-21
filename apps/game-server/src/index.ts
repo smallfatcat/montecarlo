@@ -29,15 +29,18 @@ async function buildServer() {
   const tables: Map<TableId, ReturnType<typeof createServerRuntimeTable>> = new Map()
   // Store state machine adapters separately
   const stateMachineAdapters: Map<TableId, StateMachineAdapter> = new Map()
-  // Include /http prefix for self-hosted Convex HTTP routes
-  const convex = new ConvexPublisher({ baseUrl: (process.env.CONVEX_INGEST_URL || '').replace(/\/$/, '') + '/http', secret: process.env.INSTANCE_SECRET })
+  // Self-hosted Convex HTTP routes require /http prefix
+  const convex = new ConvexPublisher({ 
+    baseUrl: cfg.convexIngestUrl + '/http', 
+    secret: cfg.convexIngestSecret 
+  })
   
   // Debug environment variables
   console.log('[DEBUG] Environment variables loaded:')
-  console.log('[DEBUG] CONVEX_INGEST_URL:', process.env.CONVEX_INGEST_URL)
-  console.log('[DEBUG] INSTANCE_SECRET:', process.env.INSTANCE_SECRET ? `${process.env.INSTANCE_SECRET.substring(0, 8)}...` : 'undefined')
+  console.log('[DEBUG] VITE_CONVEX_URL:', cfg.convexIngestUrl)
+  console.log('[DEBUG] INSTANCE_SECRET:', cfg.ingestSecret ? `${cfg.ingestSecret.substring(0, 8)}...` : 'undefined')
   console.log('[DEBUG] Convex publisher enabled:', convex.enabled)
-  console.log('[DEBUG] Convex base URL:', (process.env.CONVEX_INGEST_URL || '').replace(/\/$/, '') + '/http')
+  console.log('[DEBUG] Convex base URL:', cfg.convexIngestUrl + '/http')
 
   function getTable(tableId: TableId) {
     let t = tables.get(tableId)

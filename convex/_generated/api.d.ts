@@ -16,6 +16,7 @@ import type {
 import type * as history from "../history.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
+import type * as rateLimit from "../rateLimit.js";
 import type * as users from "../users.js";
 
 /**
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   history: typeof history;
   http: typeof http;
   ingest: typeof ingest;
+  rateLimit: typeof rateLimit;
   users: typeof users;
 }>;
 export declare const api: FilterApi<
