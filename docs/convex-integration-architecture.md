@@ -7,9 +7,10 @@ This document provides visual representations of how Convex is integrated into t
 The application uses Convex as a real-time database backend with the following key components:
 
 - **Convex Backend**: Self-hosted Convex instance running in Docker
-- **Game Server**: Node.js backend that ingests poker game events
-- **Frontend**: Vite-based React application
-- **Database Schema**: Poker-specific data model for tables, hands, players, and actions
+- **Game Server**: Node.js backend with state machine integration that ingests poker game events
+- **Frontend**: Vite-based React application using Convex queries for real-time updates
+- **Database Schema**: Poker-specific data model for tables, hands, players, actions, and state machine events
+- **State Machine**: Comprehensive game flow management system integrated with Convex
 
 ## Architecture Diagram
 
@@ -19,12 +20,15 @@ graph TB
         UI[React UI Components]
         ConvexClient[Convex React Client]
         Stores[State Stores]
+        PokerUI[Poker Components]
     end
     
     subgraph "Game Server"
         GameEngine[Poker Game Engine]
+        StateMachine[State Machine Runtime]
         EventEmitter[Event Emitter]
         HTTPClient[HTTP Client]
+        StateMachineAdapter[State Machine Adapter]
     end
     
     subgraph "Convex Backend"
@@ -32,6 +36,7 @@ graph TB
         HTTP[HTTP Endpoints]
         Functions[Convex Functions]
         Schema[Database Schema]
+        Ingest[Event Ingestion]
     end
     
     subgraph "Docker Infrastructure"
@@ -43,10 +48,13 @@ graph TB
     ConvexClient --> Functions
     Functions --> DB
     
-    GameEngine --> EventEmitter
+    GameEngine --> StateMachine
+    StateMachine --> StateMachineAdapter
+    StateMachineAdapter --> EventEmitter
     EventEmitter --> HTTPClient
     HTTPClient --> HTTP
-    HTTP --> Functions
+    HTTP --> Ingest
+    Ingest --> Functions
     Functions --> DB
     
     ConvexBackend --> DB
@@ -56,6 +64,8 @@ graph TB
     style Dashboard fill:#7c3aed
     style DB fill:#059669
     style Functions fill:#dc2626
+    style StateMachine fill:#8b5cf6
+    style StateMachineAdapter fill:#f59e0b
 ```
 
 ## Data Flow Diagram
@@ -67,6 +77,7 @@ sequenceDiagram
     participant Convex as Convex Client
     participant Backend as Convex Backend
     participant GameServer as Game Server
+    participant StateMachine as State Machine
     participant DB as Database
     
     Note over Player,DB: Game Session Flow
@@ -81,414 +92,145 @@ sequenceDiagram
     
     Player->>UI: Take Seat
     UI->>GameServer: Send seat request
-    GameServer->>GameServer: Process seat logic
+    GameServer->>StateMachine: Process seat logic
+    StateMachine->>GameServer: Seat validated
     GameServer->>Backend: POST /ingest/seat
     Backend->>DB: Insert participant record
     Backend-->>GameServer: 204 Success
     
     Note over Player,DB: Hand Play Flow
     
+    GameServer->>StateMachine: Start new hand
+    StateMachine->>GameServer: Hand state initialized
     GameServer->>Backend: POST /ingest/handStarted
     Backend->>DB: Create hand & update table
     Backend-->>GameServer: 204 Success
     
     Player->>UI: Make Action (bet/call/fold)
     UI->>GameServer: Send action
+    GameServer->>StateMachine: Validate action
+    StateMachine->>GameServer: Action processed
     GameServer->>Backend: POST /ingest/action
     Backend->>DB: Insert action record
     Backend-->>GameServer: 204 Success
     
-    GameServer->>Backend: POST /ingest/handEnded
-    Backend->>DB: Update hand results
+    Note over Player,DB: State Machine Events
+    
+    StateMachine->>GameServer: State transition event
+    GameServer->>Backend: POST /ingest/stateMachineEvent
+    Backend->>DB: Store state machine event
     Backend-->>GameServer: 204 Success
     
-    UI->>Convex: Query hand history
-    Convex->>Backend: listMyHands()
-    Backend->>DB: Query hands collection
-    DB-->>Backend: Return hand data
-    Backend-->>Convex: Return hand list
-    Convex-->>UI: Update UI with results
+    StateMachine->>GameServer: Game state snapshot
+    GameServer->>Backend: POST /ingest/gameStateSnapshot
+    Backend->>DB: Store game state
+    Backend-->>GameServer: 204 Success
 ```
 
-## Database Schema Diagram
+## Current Implementation Details
 
-```mermaid
-erDiagram
-    users {
-        id id PK
-        kind string
-        displayName string
-        externalProvider string
-        externalSubject string
-        avatarUrl string
-        createdAt number
-    }
-    
-    tables {
-        id id PK
-        tableId string
-        variant string
-        config object
-        status string
-        createdAt number
-    }
-    
-    participants {
-        id id PK
-        tableId id FK
-        userId id FK
-        seatIndex number
-        joinedAt number
-        leftAt number
-    }
-    
-    hands {
-        id id PK
-        tableId id FK
-        handSeq number
-        seed number
-        buttonIndex number
-        startedAt number
-        endedAt number
-        board array
-        pots array
-        results array
-    }
-    
-    actions {
-        id id PK
-        handId id FK
-        order number
-        street string
-        actorUserId id FK
-        seatIndex number
-        type string
-        amount number
-    }
-    
-    handParticipants {
-        id id PK
-        handId id FK
-        userId id FK
-    }
-    
-    appSessions {
-        id id PK
-        userId id FK
-        deviceId string
-        createdAt number
-        lastSeenAt number
-    }
-    
-    ingestEvents {
-        id id PK
-        source string
-        eventId string
-        receivedAt number
-    }
-    
-    users ||--o{ participants : "joins"
-    users ||--o{ appSessions : "creates"
-    users ||--o{ actions : "performs"
-    users ||--o{ handParticipants : "participates"
-    
-    tables ||--o{ participants : "has"
-    tables ||--o{ hands : "plays"
-    
-    hands ||--o{ actions : "contains"
-    hands ||--o{ handParticipants : "includes"
-    
-    participants }o--|| tables : "belongs_to"
-    participants }o--|| users : "belongs_to"
-    
-    actions }o--|| hands : "belongs_to"
-    actions }o--|| users : "performed_by"
-    
-    handParticipants }o--|| hands : "belongs_to"
-    handParticipants }o--|| users : "belongs_to"
-    
-    appSessions }o--|| users : "belongs_to"
+### HTTP Endpoints
+
+The system implements the following HTTP endpoints for real-time event ingestion:
+
+| Endpoint | Method | Purpose | Authentication |
+|-----------|--------|---------|----------------|
+| `/ingest/health` | GET | Health check and debug counts | None |
+| `/ingest/handStarted` | POST | Hand start event | `x-convex-ingest-secret` |
+| `/ingest/action` | POST | Player action event | `x-convex-ingest-secret` |
+| `/ingest/handEnded` | POST | Hand end event | `x-convex-ingest-secret` |
+| `/ingest/seat` | POST | Player seated event | `x-convex-ingest-secret` |
+| `/ingest/unseat` | POST | Player unseated event | `x-convex-ingest-secret` |
+| `/ingest/deal` | POST | Card deal event | `x-convex-ingest-secret` |
+| `/ingest/stateMachineEvent` | POST | State machine event | `x-convex-ingest-secret` |
+| `/ingest/gameStateSnapshot` | POST | Game state snapshot | `x-convex-ingest-secret` |
+| `/ingest/potHistoryEvent` | POST | Pot history event | `x-convex-ingest-secret` |
+
+### State Machine Integration
+
+The current implementation includes a comprehensive state machine system that:
+
+- **Manages Game Flow**: Handles transitions between preflop, flop, turn, river, and showdown
+- **Validates Actions**: Ensures player actions are valid for the current game state
+- **Tracks Context**: Maintains betting rounds, pot states, and player positions
+- **Integrates with Convex**: Sends state machine events to the backend for persistence
+- **Provides Debug Controls**: Includes runtime debug mode toggling for development
+
+### Frontend Integration
+
+The frontend uses Convex queries for real-time updates:
+
+- **Convex Client**: Configured with environment-based URL
+- **React Components**: Use `useQuery` hooks for real-time data
+- **Poker Components**: Hand replay and history components with live updates
+- **State Management**: Convex handles real-time state synchronization
+
+### Database Schema
+
+The current schema includes:
+
+- **Core Tables**: users, tables, participants, hands, actions
+- **State Machine Tables**: gameStateSnapshots, stateMachineEvents, potHistoryEvents
+- **Configuration**: config table for application settings
+- **Indexes**: Optimized for common query patterns
+
+## Integration Patterns
+
+### Event Ingestion Pattern
+
+```typescript
+// Game server sends events to Convex
+const convex = new ConvexPublisher({ 
+  baseUrl: process.env.CONVEX_INGEST_URL + '/http', 
+  secret: process.env.INSTANCE_SECRET 
+});
+
+// Events are sent via HTTP POST
+await convex.handStarted({
+  eventId: generateEventId(),
+  tableId: tableId,
+  handId: handId,
+  // ... other data
+});
 ```
 
-## Convex Functions Architecture
+### Frontend Query Pattern
 
-```mermaid
-graph LR
-    subgraph "Public API"
-        Users[users.ts]
-        History[history.ts]
-    end
-    
-    subgraph "Internal Functions"
-        Ingest[ingest.ts]
-    end
-    
-    subgraph "HTTP Endpoints"
-        HTTP[http.ts]
-    end
-    
-    subgraph "Database Layer"
-        Schema[schema.ts]
-        DB[(Database)]
-    end
-    
-    Users --> DB
-    History --> DB
-    Ingest --> DB
-    HTTP --> Ingest
-    
-    Schema -.-> DB
-    
-    style Users fill:#10b981
-    style History fill:#10b981
-    style Ingest fill:#f59e0b
-    style HTTP fill:#3b82f6
-    style Schema fill:#8b5cf6
-    style DB fill:#059669
+```typescript
+// React components use Convex queries
+const recentHands = useQuery(api.history.listRecentHands, {});
+const handDetail = useQuery(
+  api.history.getHandDetail, 
+  selectedHandId ? { handId: selectedHandId } : 'skip'
+);
 ```
 
-## Function Call Flow
+### State Machine Integration Pattern
 
-```mermaid
-flowchart TD
-    A[Client Request] --> B{Request Type?}
-    
-    B -->|Query| C[Public Query Function]
-    B -->|Mutation| D[Public Mutation Function]
-    B -->|HTTP| E[HTTP Endpoint]
-    
-    C --> F[Database Query]
-    D --> G[Database Mutation]
-    
-    E --> H{Endpoint Type?}
-    H -->|/ingest/*| I[Internal Mutation]
-    H -->|/health| J[Debug Query]
-    
-    I --> K[Database Update]
-    J --> L[System Status]
-    
-    F --> M[Return Data]
-    G --> N[Return Success]
-    K --> O[Return Success]
-    L --> P[Return Status]
-    
-    style A fill:#f3f4f6
-    style B fill:#dbeafe
-    style C fill:#dcfce7
-    style D fill:#dcfce7
-    style E fill:#fef3c7
-    style I fill:#fed7aa
-    style J fill:#fed7aa
+```typescript
+// State machine events are captured and sent to Convex
+const stateMachineAdapter = new StateMachineAdapter(convex, tableId);
+
+stateMachineAdapter.captureActionProcessed(actionType, seatIndex, {
+  street: currentStreet,
+  amount: betAmount,
+  playerToken: playerToken
+});
 ```
 
-## Deployment Architecture
+## Current Status
 
-```mermaid
-graph TB
-    subgraph "Development Environment"
-        DevFrontend[Frontend Dev Server<br/>:5173]
-        DevGameServer[Game Server Dev<br/>:3000]
-        DevConvex[Convex Dev<br/>:8000]
-    end
-    
-    subgraph "Docker Services"
-        ConvexBackend[Convex Backend<br/>:3210]
-        ConvexDashboard[Dashboard<br/>:6791]
-    end
-    
-    subgraph "Environment Variables"
-        VITE_CONVEX_URL[http://127.0.0.1:3210]
-        CONVEX_INGEST_URL[http://127.0.0.1:3210]
-        INSTANCE_SECRET[dev-secret-123]
-    end
-    
-    DevFrontend --> VITE_CONVEX_URL
-    DevGameServer --> CONVEX_INGEST_URL
-    DevGameServer --> INSTANCE_SECRET
-    
-    VITE_CONVEX_URL --> ConvexBackend
-    CONVEX_INGEST_URL --> ConvexBackend
-    
-    DevConvex --> ConvexBackend
-    ConvexDashboard --> ConvexBackend
-    
-    style ConvexBackend fill:#4f46e5
-    style ConvexDashboard fill:#7c3aed
-    style DevFrontend fill:#10b981
-    style DevGameServer fill:#f59e0b
-    style DevConvex fill:#ef4444
-```
+✅ **Fully Implemented**:
+- Convex backend with comprehensive schema
+- HTTP-based event ingestion
+- State machine integration
+- Frontend real-time updates
+- Debug controls and monitoring
 
-## Data Ingestion Flow
+🎯 **Production Ready**:
+- Authentication and idempotency
+- Error handling and recovery
+- Performance optimization
+- Scalable architecture
 
-```mermaid
-flowchart LR
-    A[Game Event] --> B[Game Server]
-    B --> C{Event Type?}
-    
-    C -->|handStarted| D[POST /ingest/handStarted]
-    C -->|action| E[POST /ingest/action]
-    C -->|handEnded| F[POST /ingest/handEnded]
-    C -->|seat| G[POST /ingest/seat]
-    C -->|unseat| H[POST /ingest/unseat]
-    C -->|deal| I[POST /ingest/deal]
-    
-    D --> J[handStarted Mutation]
-    E --> K[action Mutation]
-    F --> L[handEnded Mutation]
-    G --> M[seat Mutation]
-    H --> N[unseat Mutation]
-    I --> O[deal Mutation]
-    
-    J --> P[Database Update]
-    K --> P
-    L --> P
-    M --> P
-    N --> P
-    O --> P
-    
-    P --> Q[Idempotency Check]
-    Q --> R{Event Processed?}
-    R -->|Yes| S[Skip Processing]
-    R -->|No| T[Process Event]
-    
-    T --> U[Update Schema]
-    U --> V[Return Success]
-    
-    style A fill:#f3f4f6
-    style B fill:#dbeafe
-    style P fill:#dcfce7
-    style Q fill:#fef3c7
-    style T fill:#fed7aa
-```
-
-## Index Strategy
-
-```mermaid
-graph TD
-    subgraph "Primary Indexes"
-        A[users.by_provider_and_subject<br/>externalProvider, externalSubject]
-        B[appSessions.by_user<br/>userId]
-        C[tables.by_tableId<br/>tableId]
-        D[participants.by_table<br/>tableId]
-        E[participants.by_user<br/>userId]
-        F[participants.by_table_and_active<br/>tableId, leftAt]
-        G[hands.by_table_and_seq<br/>tableId, handSeq]
-        H[actions.by_hand_and_order<br/>handId, order]
-        I[handParticipants.by_user<br/>userId]
-        J[handParticipants.by_hand<br/>handId]
-        K[ingestEvents.by_source_and_eventId<br/>source, eventId]
-    end
-    
-    subgraph "Query Patterns"
-        L[User Authentication]
-        M[Table Management]
-        N[Hand History]
-        O[Action Tracking]
-        P[Idempotency]
-    end
-    
-    A --> L
-    B --> L
-    C --> M
-    D --> M
-    E --> M
-    F --> M
-    G --> N
-    H --> O
-    I --> N
-    J --> N
-    K --> P
-    
-    style A fill:#dcfce7
-    style B fill:#dcfce7
-    style C fill:#dcfce7
-    style D fill:#dcfce7
-    style E fill:#dcfce7
-    style F fill:#dcfce7
-    style G fill:#dcfce7
-    style H fill:#dcfce7
-    style I fill:#dcfce7
-    style J fill:#dcfce7
-    style K fill:#dcfce7
-```
-
-## Performance Characteristics
-
-| Component | Latency | Throughput | Scalability |
-|-----------|---------|------------|-------------|
-| Convex Queries | <10ms | High | Horizontal |
-| Convex Mutations | <50ms | High | Horizontal |
-| HTTP Ingest | <100ms | Medium | Load Balanced |
-| Real-time Updates | <100ms | High | WebSocket |
-| Database Operations | <5ms | Very High | Distributed |
-
-## Security Model
-
-```mermaid
-graph TD
-    A[Client Request] --> B{Authentication?}
-    
-    B -->|No| C[401 Unauthorized]
-    B -->|Yes| D{Authorization?}
-    
-    D -->|No| E[403 Forbidden]
-    D -->|Yes| F[Process Request]
-    
-    subgraph "Security Layers"
-        G[HTTP Auth Headers]
-        H[Convex Function Access]
-        I[Database Row Security]
-        J[Environment Variables]
-    end
-    
-    F --> G
-    G --> H
-    H --> I
-    I --> J
-    
-    style C fill:#ef4444
-    style E fill:#f59e0b
-    style F fill:#10b981
-    style G fill:#dbeafe
-    style H fill:#dbeafe
-    style I fill:#dbeafe
-    style J fill:#dbeafe
-```
-
-## Monitoring and Observability
-
-```mermaid
-graph LR
-    A[Application Metrics] --> B[Convex Dashboard]
-    C[HTTP Endpoints] --> D[Health Checks]
-    E[Database Queries] --> F[Performance Metrics]
-    G[Error Handling] --> H[Logging]
-    
-    B --> I[Real-time Monitoring]
-    D --> I
-    F --> I
-    H --> I
-    
-    I --> J[Alerting]
-    I --> K[Analytics]
-    I --> L[Debugging]
-    
-    style A fill:#10b981
-    style B fill:#7c3aed
-    style C fill:#3b82f6
-    style D fill:#f59e0b
-    style E fill:#ef4444
-    style F fill:#8b5cf6
-    style G fill:#f97316
-    style H fill:#06b6d4
-```
-
-This architecture provides a robust, scalable foundation for real-time poker gaming with:
-
-- **Real-time synchronization** between game server and frontend
-- **Idempotent event processing** to prevent duplicate data
-- **Efficient indexing** for fast queries
-- **Self-hosted deployment** for full control
-- **Comprehensive monitoring** and debugging capabilities
-- **Type-safe development** with TypeScript and Convex validators
+The Convex integration provides a robust, real-time foundation for the poker application with comprehensive state management and efficient data synchronization.

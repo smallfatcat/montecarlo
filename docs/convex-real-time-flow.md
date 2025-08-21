@@ -10,12 +10,14 @@ graph TB
         A[Poker Game State]
         B[Player Actions]
         C[Game Events]
+        SM[State Machine]
     end
     
     subgraph "Event Processing"
         D[Event Emitter]
         E[Event Queue]
         F[HTTP Client]
+        SA[State Machine Adapter]
     end
     
     subgraph "Convex Backend"
@@ -34,9 +36,11 @@ graph TB
     A --> D
     B --> D
     C --> D
+    SM --> SA
     
     D --> E
     E --> F
+    SA --> F
     F --> G
     
     G --> H
@@ -54,6 +58,8 @@ graph TB
     style J fill:#ef4444
     style K fill:#7c3aed
     style M fill:#059669
+    style SM fill:#8b5cf6
+    style SA fill:#f59e0b
 ```
 
 ## Event Processing Pipeline
@@ -61,6 +67,7 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant GE as Game Engine
+    participant SM as State Machine
     participant GS as Game Server
     participant CV as Convex Backend
     participant DB as Database
@@ -69,7 +76,9 @@ sequenceDiagram
     
     Note over GE,UI: Real-time Event Processing
     
-    GE->>GS: Game Event Generated
+    GE->>SM: Game Event Generated
+    SM->>SM: Process State Transition
+    SM->>GS: State Machine Event
     GS->>GS: Validate Event
     GS->>CV: HTTP POST /ingest/*
     CV->>CV: Verify Authentication
@@ -86,8 +95,8 @@ sequenceDiagram
     Note over GE,UI: Event Acknowledgment
     
     CV->>GS: Return 204 Success
-    GS->>GE: Event Processed
-    GE->>GE: Continue Game Flow
+    GS->>SM: Event Processed
+    SM->>GE: Continue Game Flow
 ```
 
 ## WebSocket Connection Flow
@@ -273,6 +282,33 @@ flowchart TD
     style N fill:#8b5cf6
 ```
 
+## Current HTTP Endpoints
+
+The system currently implements the following HTTP endpoints for real-time event ingestion:
+
+| Endpoint | Method | Purpose | Authentication |
+|-----------|--------|---------|----------------|
+| `/ingest/health` | GET | Health check and debug counts | None |
+| `/ingest/handStarted` | POST | Hand start event | `x-convex-ingest-secret` |
+| `/ingest/action` | POST | Player action event | `x-convex-ingest-secret` |
+| `/ingest/handEnded` | POST | Hand end event | `x-convex-ingest-secret` |
+| `/ingest/seat` | POST | Player seated event | `x-convex-ingest-secret` |
+| `/ingest/unseat` | POST | Player unseated event | `x-convex-ingest-secret` |
+| `/ingest/deal` | POST | Card deal event | `x-convex-ingest-secret` |
+| `/ingest/stateMachineEvent` | POST | State machine event | `x-convex-ingest-secret` |
+| `/ingest/gameStateSnapshot` | POST | Game state snapshot | `x-convex-ingest-secret` |
+| `/ingest/potHistoryEvent` | POST | Pot history event | `x-convex-ingest-secret` |
+
+## State Machine Integration
+
+The current implementation includes a comprehensive state machine system that:
+
+- **Manages Game Flow**: Handles transitions between preflop, flop, turn, river, and showdown
+- **Validates Actions**: Ensures player actions are valid for the current game state
+- **Tracks Context**: Maintains betting rounds, pot states, and player positions
+- **Integrates with Convex**: Sends state machine events to the backend for persistence
+- **Provides Debug Controls**: Includes runtime debug mode toggling for development
+
 ## Real-Time Metrics
 
 | Metric | Target | Current | Notes |
@@ -291,23 +327,27 @@ graph TB
         A[Single Convex Instance]
         B[Single Game Server]
         C[Multiple Frontend Clients]
+        D[State Machine Runtime]
     end
     
     subgraph "Scaled Architecture"
-        D[Load Balanced Convex]
-        E[Multiple Game Servers]
-        F[Redis Event Bus]
-        G[Horizontal Scaling]
+        E[Load Balanced Convex]
+        F[Multiple Game Servers]
+        G[Redis Event Bus]
+        H[Horizontal Scaling]
+        I[State Machine Clustering]
     end
     
-    A --> H[Vertical Scaling]
-    B --> H
-    C --> H
+    A --> J[Vertical Scaling]
+    B --> J
+    C --> J
+    D --> J
     
-    D --> I[Horizontal Scaling]
-    E --> I
-    F --> I
-    G --> I
+    E --> K[Horizontal Scaling]
+    F --> K
+    G --> K
+    H --> K
+    I --> K
     
     style A fill:#10b981
     style B fill:#f59e0b
@@ -318,6 +358,8 @@ graph TB
     style G fill:#059669
     style H fill:#f59e0b
     style I fill:#8b5cf6
+    style J fill:#f59e0b
+    style K fill:#8b5cf6
 ```
 
 ## Development Workflow
@@ -345,6 +387,17 @@ graph LR
     style H fill:#8b5cf6
 ```
 
+## Current Implementation Status
+
+The real-time architecture is currently implemented with:
+
+- ✅ **Convex Backend**: Self-hosted with comprehensive schema and HTTP endpoints
+- ✅ **State Machine Integration**: Complete state machine system for game flow management
+- ✅ **Event Ingestion**: HTTP-based event ingestion with authentication and idempotency
+- ✅ **Frontend Integration**: React components using Convex queries for real-time updates
+- ✅ **Game Server**: WebSocket-based server with state machine integration
+- ✅ **Debug Controls**: Runtime debug mode toggling for development
+
 This real-time architecture ensures:
 
 - **Immediate UI updates** for better user experience
@@ -352,3 +405,4 @@ This real-time architecture ensures:
 - **Robust error handling** with automatic retry mechanisms
 - **Scalable infrastructure** for handling multiple concurrent games
 - **Developer-friendly workflow** with hot reloading and real-time testing
+- **State machine-driven game flow** for consistent and predictable game behavior

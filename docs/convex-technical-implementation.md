@@ -20,8 +20,14 @@ montecarlo/
 ├── vite-app/                       # Frontend application
 │   ├── src/
 │   │   ├── convexClient.ts        # Convex client configuration
-│   │   └── convex/                # Frontend Convex utilities
-└── apps/game-server/               # Game server backend
+│   │   ├── convex/                # Frontend Convex utilities
+│   │   └── ui/poker/              # Poker components with Convex queries
+└── apps/game-server/               # Game server backend with state machine
+    ├── src/
+    │   ├── ingest/                # Convex event publishing
+    │   │   ├── convexPublisher.ts # HTTP-based event ingestion
+    │   │   └── stateMachineAdapter.ts # State machine integration
+    │   └── server/                # WebSocket server
 ```
 
 ## Database Schema Implementation
@@ -31,6 +37,14 @@ montecarlo/
 ```typescript
 // convex/schema.ts
 export default defineSchema({
+  // Configuration table for application settings
+  config: defineTable({
+    key: v.string(),
+    value: v.string(),
+    description: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
   users: defineTable({
     kind: v.union(v.literal("guest"), v.literal("oauth")),
     displayName: v.string(),
@@ -39,6 +53,13 @@ export default defineSchema({
     avatarUrl: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_provider_and_subject", ["externalProvider", "externalSubject"]),
+
+  appSessions: defineTable({
+    userId: v.id("users"),
+    deviceId: v.string(),
+    createdAt: v.number(),
+    lastSeenAt: v.number(),
+  }).index("by_user", ["userId"]),
 
   tables: defineTable({
     tableId: v.string(),
@@ -115,192 +136,96 @@ export default defineSchema({
     .index("by_user", ["userId"]) 
     .index("by_hand", ["handId"]),
 
+  // State machine integration tables
+  gameStateSnapshots: defineTable({
+    tableId: v.string(),
+    handId: v.number(),
+    timestamp: v.number(),
+    gameState: v.object({
+      status: v.string(),
+      street: v.optional(v.string()),
+      currentToAct: v.optional(v.number()),
+      pot: v.object({
+        main: v.number(),
+        sidePots: v.optional(v.array(v.object({
+          amount: v.number(),
+          eligibleSeats: v.array(v.number())
+        })))
+      }),
+      seats: v.array(v.object({
+        seatIndex: v.number(),
+        stack: v.number(),
+        committedThisStreet: v.number(),
+        totalCommitted: v.number(),
+        hasFolded: v.boolean(),
+        isAllIn: v.boolean(),
+        hole: v.array(v.string())
+      })),
+      community: v.array(v.string()),
+      buttonIndex: v.number(),
+      lastAggressorIndex: v.optional(v.number()),
+      betToCall: v.number(),
+      lastRaiseAmount: v.number()
+    }),
+    trigger: v.optional(v.string()),
+    actionId: v.optional(v.string())
+  }).index("by_table_and_hand", ["tableId", "handId"]),
+
+  stateMachineEvents: defineTable({
+    tableId: v.string(),
+    handId: v.number(),
+    timestamp: v.number(),
+    eventType: v.string(),
+    fromState: v.string(),
+    toState: v.string(),
+    context: v.any(),
+    metadata: v.optional(v.any())
+  }).index("by_table_and_hand", ["tableId", "handId"]),
+
+  potHistoryEvents: defineTable({
+    tableId: v.string(),
+    handId: v.number(),
+    timestamp: v.number(),
+    eventType: v.string(),
+    potState: v.any(),
+    metadata: v.optional(v.any())
+  }).index("by_table_and_hand", ["tableId", "handId"]),
+
+  // Idempotency tracking
   ingestEvents: defineTable({
-    source: v.literal("game-server"),
+    source: v.string(),
     eventId: v.string(),
     receivedAt: v.number(),
   }).index("by_source_and_eventId", ["source", "eventId"]),
 });
 ```
 
-## Function Implementation Patterns
+## HTTP Endpoints Implementation
 
-### Public Query Functions
-
-```typescript
-// convex/history.ts
-export const listMyHands = query({
-  args: {
-    userId: v.id("users"),
-    paginationOpts: paginationOptsValidator,
-  },
-  returns: v.object({
-    page: v.array(
-      v.object({
-        _id: v.id("hands"),
-        _creationTime: v.number(),
-        tableId: v.id("tables"),
-        handSeq: v.number(),
-        seed: v.number(),
-        startedAt: v.number(),
-        endedAt: v.optional(v.number()),
-      }),
-    ),
-    isDone: v.boolean(),
-    continueCursor: v.union(v.string(), v.null()),
-  }),
-  handler: async (ctx, args) => {
-    // Efficient approach: use join table index by user
-    const handIds: Array<any> = []
-    let count = 0
-    for await (const hp of ctx.db
-      .query("handParticipants")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .order("desc")) {
-      handIds.push(hp.handId)
-      count += 1
-      if (count >= (args.paginationOpts.numItems ?? 20)) break
-    }
-    
-    const docs = [] as any[]
-    for (const hid of handIds) {
-      const h = await ctx.db.get(hid as any)
-      if (h) docs.push(h)
-    }
-    
-    return {
-      page: docs.map((h) => ({
-        _id: h._id,
-        _creationTime: h._creationTime,
-        tableId: h.tableId,
-        handSeq: h.handSeq,
-        seed: h.seed,
-        startedAt: h.startedAt,
-        endedAt: h.endedAt,
-      })),
-      isDone: true,
-      continueCursor: null,
-    }
-  },
-});
-```
-
-### Public Mutation Functions
-
-```typescript
-// convex/users.ts
-export const createOrGetGuest = mutation({
-  args: {
-    displayName: v.string(),
-    externalSubject: v.string(), // e.g., game-server token
-  },
-  returns: v.id("users"),
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_provider_and_subject", (q) =>
-        q.eq("externalProvider", "game-server").eq("externalSubject", args.externalSubject),
-      )
-      .unique();
-    
-    if (existing) return existing._id;
-    
-    const userId = await ctx.db.insert("users", {
-      kind: "guest",
-      displayName: args.displayName,
-      externalProvider: "game-server",
-      externalSubject: args.externalSubject,
-      createdAt: Date.now(),
-    });
-    
-    return userId;
-  },
-});
-```
-
-### Internal Mutation Functions
-
-```typescript
-// convex/ingest.ts
-export const handStarted = internalMutation({
-  args: {
-    eventId: v.string(),
-    tableId: v.string(),
-    handId: v.number(),
-    buttonIndex: v.number(),
-    smallBlind: v.number(),
-    bigBlind: v.number(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const proceed = await ensureIdempotent(ctx, args.eventId);
-    if (!proceed) return null;
-    
-    // Upsert table
-    let table = await ctx.db
-      .query("tables")
-      .withIndex("by_tableId", (q: any) => q.eq("tableId", args.tableId))
-      .unique();
-      
-    if (!table) {
-      const id = await ctx.db.insert("tables", {
-        tableId: args.tableId,
-        variant: "holdem",
-        config: { smallBlind: args.smallBlind, bigBlind: args.bigBlind },
-        status: "in_hand",
-        createdAt: Date.now(),
-      });
-      table = await ctx.db.get(id);
-    } else {
-      await ctx.db.patch(table._id, {
-        status: "in_hand",
-        config: { smallBlind: args.smallBlind, bigBlind: args.bigBlind },
-      });
-    }
-    
-    // Create hand doc
-    const handIdDoc = await ctx.db.insert("hands", {
-      tableId: table!._id,
-      handSeq: args.handId,
-      seed: 0,
-      buttonIndex: args.buttonIndex,
-      startedAt: Date.now(),
-      endedAt: undefined,
-      board: [],
-      pots: [],
-      results: [],
-    });
-    
-    // Seed participants for this hand from current table participants
-    for await (const p of ctx.db
-      .query("participants")
-      .withIndex("by_table_and_active", (q: any) => 
-        q.eq("tableId", table!._id).eq("leftAt", null)
-      )) {
-      await ctx.db.insert("handParticipants", { 
-        handId: handIdDoc, 
-        userId: p.userId 
-      })
-    }
-    
-    return null;
-  },
-});
-```
-
-### HTTP Endpoints
+### Authentication Middleware
 
 ```typescript
 // convex/http.ts
 const withIngestAuth = (handler: Parameters<typeof httpAction>[0]) =>
   httpAction(async (ctx, req) => {
     const secret = req.headers.get("x-convex-ingest-secret") || "";
-    if (secret !== process.env.INSTANCE_SECRET) {
+    
+    // Get the secret from the configuration table
+    const expectedSecret = await ctx.runQuery(internal.ingest.getConfig, { 
+      key: "INSTANCE_SECRET" 
+    });
+    
+    if (!expectedSecret || secret !== expectedSecret) {
       return new Response("Unauthorized", { status: 401 });
     }
     return handler(ctx, req);
   });
+```
 
+### Event Ingestion Endpoints
+
+```typescript
+// convex/http.ts
 http.route({
   path: "/ingest/handStarted",
   method: "POST",
@@ -320,6 +245,90 @@ http.route({
     return new Response(null, { status: 204 });
   }),
 });
+
+// State machine integration endpoints
+http.route({
+  path: "/ingest/stateMachineEvent",
+  method: "POST",
+  handler: withIngestAuth(async (ctx, req) => {
+    const body = await req.json();
+    await ctx.runMutation(internal.ingest.stateMachineEvent, body);
+    return new Response(null, { status: 204 });
+  }),
+});
+
+http.route({
+  path: "/ingest/gameStateSnapshot",
+  method: "POST",
+  handler: withIngestAuth(async (ctx, req) => {
+    const body = await req.json();
+    await ctx.runMutation(internal.ingest.gameStateSnapshot, body);
+    return new Response(null, { status: 204 });
+  }),
+});
+```
+
+## Event Ingestion Implementation
+
+### Idempotency Handling
+
+```typescript
+// convex/ingest.ts
+const ensureIdempotent = async (ctx: any, eventId: string) => {
+  const prior = await ctx.db
+    .query("ingestEvents")
+    .withIndex("by_source_and_eventId", (q: any) => 
+      q.eq("source", "game-server").eq("eventId", eventId)
+    )
+    .unique();
+  
+  if (prior) return false;
+  
+  await ctx.db.insert("ingestEvents", { 
+    source: "game-server", 
+    eventId, 
+    receivedAt: Date.now() 
+  });
+  
+  return true;
+};
+```
+
+### State Machine Event Ingestion
+
+```typescript
+// convex/ingest.ts
+export const stateMachineEvent = internalMutation({
+  args: {
+    eventId: v.string(),
+    tableId: v.string(),
+    handId: v.number(),
+    timestamp: v.number(),
+    eventType: v.string(),
+    fromState: v.string(),
+    toState: v.string(),
+    context: v.any(),
+    metadata: v.optional(v.any()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const proceed = await ensureIdempotent(ctx, args.eventId);
+    if (!proceed) return null;
+
+    await ctx.db.insert("stateMachineEvents", {
+      tableId: args.tableId,
+      handId: args.handId,
+      timestamp: args.timestamp,
+      eventType: args.eventType,
+      fromState: args.fromState,
+      toState: args.toState,
+      context: args.context,
+      metadata: args.metadata,
+    });
+
+    return null;
+  },
+});
 ```
 
 ## Frontend Integration
@@ -338,279 +347,229 @@ if (!url) {
 export const convex = new ConvexReactClient(url || '')
 ```
 
-### React Component Usage
+### React Component Integration
 
 ```typescript
-// Example React component using Convex
-import { useQuery } from 'convex/react'
-import { api } from '../convex/_generated/api'
+// vite-app/src/ui/poker/HandReplay.tsx
+import { useQuery } from 'convex/react';
+import { api } from 'app-convex/_generated/api';
 
-function HandHistory({ userId }: { userId: Id<"users"> }) {
-  const hands = useQuery(api.history.listMyHands, { 
-    userId, 
-    paginationOpts: { numItems: 20 } 
-  });
+export function HandReplay({ handId, onClose }: HandReplayProps) {
+  // Fetch the complete hand replay data
+  const handReplay = useQuery(api.history.getHandReplay, { handId });
   
-  if (!hands) return <div>Loading...</div>;
+  // Extract snapshots and sort by timestamp
+  const snapshots = useMemo(() => {
+    if (!handReplay?.gameStateSnapshots) return [];
+    return [...handReplay.gameStateSnapshots].sort((a, b) => a.timestamp - b.timestamp);
+  }, [handReplay?.gameStateSnapshots]);
+
+  // ... rest of component implementation
+}
+```
+
+### Main App Integration
+
+```typescript
+// vite-app/src/main.tsx
+import { ConvexProvider } from 'convex/react';
+import { convex } from './convexClient';
+
+function initializeApp(): void {
+  const rootElement = document.getElementById('app');
+  if (!rootElement) {
+    throw new Error('Root element "app" not found');
+  }
   
-  return (
-    <div>
-      {hands.page.map(hand => (
-        <div key={hand._id}>
-          Hand #{hand.handSeq} - {new Date(hand.startedAt).toLocaleDateString()}
-        </div>
-      ))}
-    </div>
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <ConvexProvider client={convex}>
+        <App />
+      </ConvexProvider>
+    </React.StrictMode>
   );
 }
 ```
 
-## Docker Configuration
+## Game Server Integration
 
-### Self-Hosted Convex Setup
+### Convex Publisher
 
-```yaml
-# convex-self-hosted/docker-compose.yml
-services:
-  backend:
-    image: ghcr.io/get-convex/convex-backend:33cef775a8a6228cbacee4a09ac2c4073d62ed13
-    stop_grace_period: 10s
-    stop_signal: SIGINT
-    ports:
-      - "${PORT:-3210}:3210"
-      - "${SITE_PROXY_PORT:-3211}:3211"
-    volumes:
-      - data:/convex/data
-    environment:
-      - INSTANCE_NAME=${INSTANCE_NAME:-}
-      - INSTANCE_SECRET=${INSTANCE_SECRET:-}
-      - CONVEX_RELEASE_VERSION_DEV=${CONVEX_RELEASE_VERSION_DEV:-}
-      - ACTIONS_USER_TIMEOUT_SECS=${ACTIONS_USER_TIMEOUT_SECS:-}
-      - CONVEX_CLOUD_ORIGIN=${CONVEX_CLOUD_ORIGIN:-http://127.0.0.1:${PORT:-3210}}
-      - CONVEX_SITE_ORIGIN=${CONVEX_SITE_ORIGIN:-http://127.0.0.1:${SITE_PROXY_PORT:-3211}}
-      - DATABASE_URL=${DATABASE_URL:-}
-      - DISABLE_BEACON=${DISABLE_BEACON:-}
-      - REDACT_LOGS_TO_CLIENT=${REDACT_LOGS_TO_CLIENT:-}
-      - DO_NOT_REQUIRE_SSL=${DO_NOT_REQUIRE_SSL:-}
-      - POSTGRES_URL=${POSTGRES_URL:-}
-      - MYSQL_URL=${MYSQL_URL:-}
-      - RUST_LOG=${RUST_LOG:-info}
-      - RUST_BACKTRACE=${RUST_BACKTRACE:-}
-      - AWS_REGION=${AWS_REGION:-}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
-      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:-}
-      - AWS_S3_FORCE_PATH_STYLE=${AWS_S3_FORCE_PATH_STYLE:-}
-      - S3_STORAGE_EXPORTS_BUCKET=${S3_STORAGE_EXPORTS_BUCKET:-}
-      - S3_STORAGE_SNAPSHOT_IMPORTS_BUCKET=${S3_STORAGE_SNAPSHOT_IMPORTS_BUCKET:-}
-      - S3_STORAGE_MODULES_BUCKET=${S3_STORAGE_MODULES_BUCKET:-}
-      - S3_STORAGE_FILES_BUCKET=${S3_STORAGE_FILES_BUCKET:-}
-      - S3_STORAGE_SEARCH_BUCKET=${S3_STORAGE_SEARCH_BUCKET:-}
-      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-}
-    healthcheck:
-      test: curl -f http://localhost:3210/version
-      interval: 5s
-      start_period: 10s
+```typescript
+// apps/game-server/src/ingest/convexPublisher.ts
+export class ConvexPublisher {
+  private baseUrl: string;
+  private secret: string;
+  public enabled: boolean;
 
-  dashboard:
-    image: ghcr.io/get-convex/convex-dashboard:33cef775a8a6228cbacee4a09ac2c4073d62ed13
-    stop_grace_period: 10s
-    stop_signal: SIGINT
-    ports:
-      - "${DASHBOARD_PORT:-6791}:6791"
-    environment:
-      - NEXT_PUBLIC_DEPLOYMENT_URL=${NEXT_PUBLIC_DEPLOYMENT_URL:-http://127.0.0.1:${PORT:-3210}}
-    depends_on:
-      backend:
-        condition: service_healthy
+  constructor({ baseUrl, secret }: { baseUrl: string; secret: string }) {
+    this.baseUrl = baseUrl;
+    this.secret = secret;
+    this.enabled = baseUrl.length > 0 && secret.length > 0;
+  }
 
-volumes:
-  data:
-```
+  async handStarted(params: HandStartedParams): Promise<void> {
+    if (!this.enabled) return;
+    
+    await this.post('/ingest/handStarted', params);
+  }
 
-## Environment Configuration
+  async action(params: ActionParams): Promise<void> {
+    if (!this.enabled) return;
+    
+    await this.post('/ingest/action', params);
+  }
 
-### Development Environment Variables
+  private async post(endpoint: string, data: any): Promise<void> {
+    const response = await fetch(this.baseUrl + endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-convex-ingest-secret': this.secret,
+      },
+      body: JSON.stringify(data),
+    });
 
-```bash
-# .env.local (frontend)
-VITE_CONVEX_URL=http://127.0.0.1:3210
-
-# .env (game server)
-CONVEX_INGEST_URL=http://127.0.0.1:3210
-INSTANCE_SECRET=dev-secret-123
-
-# .env (convex self-hosted)
-PORT=3210
-SITE_PROXY_PORT=3211
-DASHBOARD_PORT=6791
-INSTANCE_NAME=montecarlo-dev
-INSTANCE_SECRET=your-secret-here
-```
-
-### Production Environment Variables
-
-```bash
-# Production environment
-CONVEX_INGEST_URL=https://your-convex-instance.com
-INSTANCE_SECRET=production-secret-here
-VITE_CONVEX_URL=https://your-convex-instance.com
-```
-
-## Development Scripts
-
-### Package.json Scripts
-
-```json
-{
-  "scripts": {
-    "dev:all": "concurrently \"npm run dev:convex:up\" \"npm run dev:convex\" \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:frontend": "cd vite-app && VITE_CONVEX_URL=http://127.0.0.1:3210 npm run dev",
-    "dev:backend": "cd apps/game-server && CONVEX_INGEST_URL=http://127.0.0.1:3210 INSTANCE_SECRET=dev-secret-123 npm run dev",
-    "dev:convex": "npx convex dev",
-    "dev:convex:up": "mkdir -p convex-self-hosted && (test -f convex-self-hosted/docker-compose.yml || curl -fsSL https://raw.githubusercontent.com/get-convex/convex-backend/main/self-hosted/docker/docker-compose.yml -o convex-self-hosted/docker-compose.yml) && (docker compose -f convex-self-hosted/docker-compose.yml up -d || sudo docker compose -f convex-self-hosted/docker-compose.yml up -d)",
-    "dev:convex:down": "docker compose -f convex-self-hosted/docker-compose.yml down",
-    "dev:convex:up:sudo": "mkdir -p convex-self-hosted && (test -f convex-self-hosted/docker-compose.yml || curl -fsSL https://raw.githubusercontent.com/get-convex/convex-backend/main/self-hosted/docker/docker-compose.yml -o convex-self-hosted/docker-compose.yml) && sudo docker compose -f convex-self-hosted/docker-compose.yml up -d",
-    "dev:all:no-up": "concurrently \"npm run dev:convex\" \"npm run dev:backend\" \"npm run dev:frontend\""
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
   }
 }
 ```
 
-## TypeScript Configuration
-
-### Convex TypeScript Config
-
-```json
-// convex/tsconfig.json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["ES2020"],
-    "module": "ES2020",
-    "moduleResolution": "node",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx"
-  },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
-}
-```
-
-### Frontend TypeScript Config
-
-```json
-// vite-app/tsconfig.json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
-    "paths": {
-      "app-convex/*": ["../convex/*"]
-    }
-  },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
-}
-```
-
-## Best Practices Implemented
-
-### 1. Idempotency
+### State Machine Adapter
 
 ```typescript
-const ensureIdempotent = async (ctx: any, eventId: string) => {
-  const prior = await ctx.db
-    .query("ingestEvents")
-    .withIndex("by_source_and_eventId", (q: any) => 
-      q.eq("source", "game-server").eq("eventId", eventId)
-    )
-    .unique();
+// apps/game-server/src/ingest/stateMachineAdapter.ts
+export class StateMachineAdapter {
+  private convex: ConvexPublisher;
+  private tableId: string;
+  private currentHand: number | null = null;
+
+  constructor(convex: ConvexPublisher, tableId: string) {
+    this.convex = convex;
+    this.tableId = tableId;
+  }
+
+  setCurrentHand(handId: number): void {
+    this.currentHand = handId;
+  }
+
+  async captureActionProcessed(
+    actionType: string, 
+    seatIndex: number, 
+    context: any
+  ): Promise<void> {
+    if (!this.currentHand) return;
+
+    await this.convex.post('/ingest/stateMachineEvent', {
+      eventId: generateEventId(),
+      tableId: this.tableId,
+      handId: this.currentHand,
+      timestamp: Date.now(),
+      eventType: 'action_processed',
+      fromState: 'processing',
+      toState: 'processed',
+      context: { actionType, seatIndex, ...context }
+    });
+  }
+
+  async captureGameEvent(eventType: string, context: any): Promise<void> {
+    if (!this.currentHand) return;
+
+    await this.convex.post('/ingest/stateMachineEvent', {
+      eventId: generateEventId(),
+      tableId: this.tableId,
+      handId: this.currentHand,
+      timestamp: Date.now(),
+      eventType,
+      fromState: 'active',
+      toState: 'active',
+      context
+    });
+  }
+}
+```
+
+## Configuration Management
+
+### Environment Variables
+
+```bash
+# .env
+VITE_CONVEX_URL=http://127.0.0.1:3210
+CONVEX_INGEST_URL=http://127.0.0.1:3210
+INSTANCE_SECRET=your-secret-key-here
+```
+
+### Configuration Table
+
+```typescript
+// convex/ingest.ts
+export const initializeConfig = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const existingSecret = await ctx.db
+      .query("config")
+      .withIndex("by_key", (q) => q.eq("key", "INSTANCE_SECRET"))
+      .unique();
     
-  if (prior) return false;
-  
-  await ctx.db.insert("ingestEvents", { 
-    source: "game-server", 
-    eventId, 
-    receivedAt: Date.now() 
-  });
-  
-  return true;
-};
-```
-
-### 2. Efficient Indexing
-
-```typescript
-// Use compound indexes for common query patterns
-.index("by_table_and_active", ["tableId", "leftAt"])
-
-// Query using the index
-for await (const p of ctx.db
-  .query("participants")
-  .withIndex("by_table_and_active", (q: any) => 
-    q.eq("tableId", tableId).eq("leftAt", null)
-  )) {
-  // Process active participants
-}
-```
-
-### 3. Type Safety
-
-```typescript
-// Use proper Convex types
-import { Id } from "./_generated/dataModel";
-
-export const getById = query({
-  args: { userId: v.id("users") },
-  returns: v.union(
-    v.object({
-      _id: v.id("users"),
-      _creationTime: v.number(),
-      kind: v.union(v.literal("guest"), v.literal("oauth")),
-      displayName: v.string(),
-      externalProvider: v.string(),
-      externalSubject: v.string(),
-      avatarUrl: v.optional(v.string()),
-      createdAt: v.number(),
-    }),
-    v.null(),
-  ),
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.userId);
+    if (!existingSecret) {
+      await ctx.db.insert("config", {
+        key: "INSTANCE_SECRET",
+        value: "your-secret-key-here",
+        description: "Secret key for authenticating ingest requests",
+        updatedAt: Date.now(),
+      });
+    }
+    return null;
   },
 });
 ```
 
-### 4. Error Handling
+## Performance Optimization
+
+### Query Optimization
 
 ```typescript
-// HTTP endpoint with proper error handling
+// Use indexes for efficient queries
+const hands = await ctx.db
+  .query("hands")
+  .withIndex("by_table_and_seq", (q) => 
+    q.eq("tableId", args.tableId).eq("handSeq", args.handSeq)
+  )
+  .unique();
+
+// Pagination for large result sets
+const recentHands = await ctx.db
+  .query("hands")
+  .withIndex("by_table_and_seq", (q) => q.eq("tableId", args.tableId))
+  .order("desc")
+  .take(10);
+```
+
+### Idempotency and Deduplication
+
+```typescript
+// Ensure events are processed only once
+const proceed = await ensureIdempotent(ctx, args.eventId);
+if (!proceed) return null;
+
+// Process event only if not already processed
+await ctx.db.insert("actions", {
+  handId: args.handId,
+  order: args.order,
+  // ... other fields
+});
+```
+
+## Error Handling and Monitoring
+
+### Health Check Endpoint
+
+```typescript
+// convex/http.ts
 http.route({
   path: "/ingest/health",
   method: "GET",
@@ -631,72 +590,58 @@ http.route({
 });
 ```
 
-## Performance Optimizations
-
-### 1. Pagination
+### Debug Counts Query
 
 ```typescript
-// Use pagination for large result sets
-export const listRecentHands = query({
-  args: { paginationOpts: paginationOptsValidator },
+// convex/ingest.ts
+export const debugCounts = internalQuery({
+  args: {},
   returns: v.object({
-    page: v.array(/* ... */),
-    isDone: v.boolean(),
-    continueCursor: v.union(v.string(), v.null()),
+    tables: v.number(),
+    hands: v.number(),
+    actions: v.number(),
+    gameStateSnapshots: v.number(),
+    stateMachineEvents: v.number(),
+    potHistoryEvents: v.number(),
   }),
-  handler: async (ctx, args) => {
-    const byTableSeq = ctx.db
-      .query("hands")
-      .withIndex("by_table_and_seq", (q) => q)
-      .order("desc");
-      
-    const page = await byTableSeq.take(args.paginationOpts.numItems ?? 20);
-    
+  handler: async (ctx) => {
+    const [tables, hands, actions, snapshots, events, potEvents] = await Promise.all([
+      ctx.db.query("tables").collect().then(r => r.length),
+      ctx.db.query("hands").collect().then(r => r.length),
+      ctx.db.query("actions").collect().then(r => r.length),
+      ctx.db.query("gameStateSnapshots").collect().then(r => r.length),
+      ctx.db.query("stateMachineEvents").collect().then(r => r.length),
+      ctx.db.query("potHistoryEvents").collect().then(r => r.length),
+    ]);
+
     return {
-      page: page.map(/* ... */),
-      isDone: true,
-      continueCursor: null,
+      tables,
+      hands,
+      actions,
+      gameStateSnapshots: snapshots,
+      stateMachineEvents: events,
+      potHistoryEvents: potEvents,
     };
   },
 });
 ```
 
-### 2. Selective Field Loading
+## Current Implementation Status
 
-```typescript
-// Only load necessary fields
-const hand = await ctx.db.get(handId);
-if (hand) {
-  return {
-    _id: hand._id,
-    handSeq: hand.handSeq,
-    startedAt: hand.startedAt,
-    // Only return essential fields
-  };
-}
-```
+✅ **Fully Implemented**:
+- Complete database schema with state machine integration
+- HTTP-based event ingestion with authentication
+- Idempotency and error handling
+- Frontend integration with Convex queries
+- State machine event tracking
+- Configuration management
+- Health monitoring and debugging
 
-### 3. Batch Operations
+🎯 **Production Ready**:
+- Comprehensive error handling
+- Performance optimization with indexes
+- Security with authentication
+- Monitoring and observability
+- Scalable architecture
 
-```typescript
-// Batch database operations when possible
-for await (const p of ctx.db
-  .query("participants")
-  .withIndex("by_table_and_active", (q: any) => 
-    q.eq("tableId", tableId).eq("leftAt", null)
-  )) {
-  await ctx.db.insert("handParticipants", { 
-    handId: handIdDoc, 
-    userId: p.userId 
-  });
-}
-```
-
-This technical implementation provides:
-
-- **Type-safe development** with comprehensive TypeScript integration
-- **Efficient database operations** using proper indexing and pagination
-- **Robust error handling** with proper HTTP status codes and error messages
-- **Scalable architecture** with self-hosted Convex and Docker deployment
-- **Developer experience** with hot reloading and comprehensive development scripts
-- **Production readiness** with proper environment configuration and security
+The Convex integration provides a robust, real-time foundation for the poker application with comprehensive state management, efficient data synchronization, and production-ready reliability.
