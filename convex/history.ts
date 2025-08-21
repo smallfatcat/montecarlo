@@ -72,7 +72,7 @@ export const listRecentHands = query({
       }),
     ),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const byTableSeq = ctx.db
       .query("hands")
       .withIndex("by_table_and_seq", (q) => q)
@@ -88,7 +88,7 @@ export const listRecentHands = query({
     const handsWithActionsCount = await Promise.all(
       allHands.map(async (h) => {
         let actionsCount = 0;
-        for await (const action of ctx.db
+        for await (const _ of ctx.db
           .query("actions")
           .withIndex("by_hand_and_order", (q) => q.eq("handId", h._id))) {
           actionsCount++;
