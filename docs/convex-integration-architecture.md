@@ -299,12 +299,12 @@ graph TB
     subgraph "Environment Variables"
         VITE_CONVEX_URL[http://127.0.0.1:3210]
         CONVEX_INGEST_URL[http://127.0.0.1:3210]
-        INGEST_SECRET[dev-secret-123]
+        INSTANCE_SECRET[dev-secret-123]
     end
     
     DevFrontend --> VITE_CONVEX_URL
     DevGameServer --> CONVEX_INGEST_URL
-    DevGameServer --> INGEST_SECRET
+    DevGameServer --> INSTANCE_SECRET
     
     VITE_CONVEX_URL --> ConvexBackend
     CONVEX_INGEST_URL --> ConvexBackend

@@ -295,7 +295,7 @@ export const handStarted = internalMutation({
 const withIngestAuth = (handler: Parameters<typeof httpAction>[0]) =>
   httpAction(async (ctx, req) => {
     const secret = req.headers.get("x-convex-ingest-secret") || "";
-    if (secret !== process.env.INGEST_SECRET) {
+    if (secret !== process.env.INSTANCE_SECRET) {
       return new Response("Unauthorized", { status: 401 });
     }
     return handler(ctx, req);
@@ -438,7 +438,7 @@ VITE_CONVEX_URL=http://127.0.0.1:3210
 
 # .env (game server)
 CONVEX_INGEST_URL=http://127.0.0.1:3210
-INGEST_SECRET=dev-secret-123
+INSTANCE_SECRET=dev-secret-123
 
 # .env (convex self-hosted)
 PORT=3210
@@ -453,7 +453,7 @@ INSTANCE_SECRET=your-secret-here
 ```bash
 # Production environment
 CONVEX_INGEST_URL=https://your-convex-instance.com
-INGEST_SECRET=production-secret-here
+INSTANCE_SECRET=production-secret-here
 VITE_CONVEX_URL=https://your-convex-instance.com
 ```
 
@@ -466,7 +466,7 @@ VITE_CONVEX_URL=https://your-convex-instance.com
   "scripts": {
     "dev:all": "concurrently \"npm run dev:convex:up\" \"npm run dev:convex\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "cd vite-app && VITE_CONVEX_URL=http://127.0.0.1:3210 npm run dev",
-    "dev:backend": "cd apps/game-server && CONVEX_INGEST_URL=http://127.0.0.1:3210 INGEST_SECRET=dev-secret-123 npm run dev",
+    "dev:backend": "cd apps/game-server && CONVEX_INGEST_URL=http://127.0.0.1:3210 INSTANCE_SECRET=dev-secret-123 npm run dev",
     "dev:convex": "npx convex dev",
     "dev:convex:up": "mkdir -p convex-self-hosted && (test -f convex-self-hosted/docker-compose.yml || curl -fsSL https://raw.githubusercontent.com/get-convex/convex-backend/main/self-hosted/docker/docker-compose.yml -o convex-self-hosted/docker-compose.yml) && (docker compose -f convex-self-hosted/docker-compose.yml up -d || sudo docker compose -f convex-self-hosted/docker-compose.yml up -d)",
     "dev:convex:down": "docker compose -f convex-self-hosted/docker-compose.yml down",

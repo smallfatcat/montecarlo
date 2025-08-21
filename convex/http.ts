@@ -7,7 +7,11 @@ const http = httpRouter();
 const withIngestAuth = (handler: Parameters<typeof httpAction>[0]) =>
   httpAction(async (ctx, req) => {
     const secret = req.headers.get("x-convex-ingest-secret") || "";
-    if (secret !== process.env.INGEST_SECRET) {
+    
+    // Get the secret from the configuration table
+    const expectedSecret = await ctx.runQuery(internal.ingest.getConfig, { key: "INSTANCE_SECRET" });
+    
+    if (!expectedSecret || secret !== expectedSecret) {
       return new Response("Unauthorized", { status: 401 });
     }
     return handler(ctx, req);

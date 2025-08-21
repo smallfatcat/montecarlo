@@ -1,6 +1,79 @@
 import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
+// Configuration management functions
+export const setConfig = internalMutation({
+  args: {
+    key: v.string(),
+    value: v.string(),
+    description: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Check if config already exists
+    const existing = await ctx.db
+      .query("config")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    
+    if (existing) {
+      // Update existing config
+      await ctx.db.patch(existing._id, {
+        value: args.value,
+        description: args.description,
+        updatedAt: Date.now(),
+      });
+    } else {
+      // Create new config
+      await ctx.db.insert("config", {
+        key: args.key,
+        value: args.value,
+        description: args.description,
+        updatedAt: Date.now(),
+      });
+    }
+    return null;
+  },
+});
+
+export const getConfig = internalQuery({
+  args: {
+    key: v.string(),
+  },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const config = await ctx.db
+      .query("config")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    
+    return config?.value ?? null;
+  },
+});
+
+export const initializeConfig = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    // Check if INSTANCE_SECRET already exists
+    const existingSecret = await ctx.db
+      .query("config")
+      .withIndex("by_key", (q) => q.eq("key", "INSTANCE_SECRET"))
+      .unique();
+    
+    if (!existingSecret) {
+      // Insert the INSTANCE_SECRET config
+      await ctx.db.insert("config", {
+        key: "INSTANCE_SECRET",
+        value: "389037ebff8d7e49fb67b26e06cb94e0f9d8171c9e49b5fba36a03b06fe6ec58",
+        description: "Secret key for authenticating ingest requests",
+        updatedAt: Date.now(),
+      });
+    }
+    return null;
+  },
+});
+
 const ensureIdempotent = async (ctx: any, eventId: string) => {
   const prior = await ctx.db
     .query("ingestEvents")

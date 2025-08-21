@@ -33,11 +33,19 @@ export default defineConfig(({ mode }) => ({
   base: mode === 'development' ? '/' : '/montecarlo/',
   server: {
     host: '0.0.0.0',
-    port: 5173,
+    port: 5173, // Changed to 8081 which is allowed by Cloudflare proxy
     watch: {
       usePolling: true,
       interval: 200,
     },
+    allowedHosts: [
+      '148.230.118.4',
+      'smallfatcat-dev.org',
+      'www.smallfatcat-dev.org',
+      'localhost',
+      '127.0.0.1',
+      '0.0.0.0',
+    ],
   },
   build: {
     treeshake: true,

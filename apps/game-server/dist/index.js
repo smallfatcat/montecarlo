@@ -19,7 +19,7 @@ async function buildServer() {
     // Store state machine adapters separately
     const stateMachineAdapters = new Map();
     // Include /http prefix for self-hosted Convex HTTP routes
-    const convex = new ConvexPublisher({ baseUrl: (process.env.CONVEX_INGEST_URL || '').replace(/\/$/, '') + '/http', secret: process.env.INGEST_SECRET });
+    const convex = new ConvexPublisher({ baseUrl: (process.env.CONVEX_INGEST_URL || '').replace(/\/$/, '') + '/http', secret: process.env.INSTANCE_SECRET });
     function getTable(tableId) {
         let t = tables.get(tableId);
         if (!t) {
