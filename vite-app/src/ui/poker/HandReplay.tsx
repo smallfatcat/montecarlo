@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from 'convex/react';
-import { api } from 'app-convex/_generated/api';
-import type { Id } from 'app-convex/_generated/dataModel';
+import { api } from 'convex-api';
+import type { Id } from 'convex-types';
 import { PokerTableHorseshoeView } from './PokerTableHorseshoeView';
 import { Button } from '../components/Button';
 import type { Card } from '../../blackjack/types';

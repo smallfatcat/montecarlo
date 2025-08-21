@@ -1,0 +1,60 @@
+name: "Montecarlo Security Analysis"
+
+# Specify which queries to run
+queries:
+  - security-and-quality
+  - security-extended
+
+# Specify paths to scan
+paths:
+  - apps/
+  - packages/
+  - vite-app/src/
+  - convex/
+
+# Specify paths to ignore
+paths-ignore:
+  - "**/*.test.ts"
+  - "**/*.test.js" 
+  - "**/__tests__/**"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/*.d.ts"
+  - "**/coverage/**"
+  - "**/.next/**"
+
+# Disable default queries that may produce noise
+disable-default-queries: false
+
+# Query filters to focus on security issues
+query-filters:
+  - include:
+      kind: 
+        - "problem"
+        - "path-problem"
+      severity:
+        - "error"
+        - "warning"
+      security-severity:
+        - "critical"
+        - "high"
+        - "medium"
+      tags:
+        - "security"
+        - "external/cwe/cwe-079" # XSS
+        - "external/cwe/cwe-089" # SQL Injection
+        - "external/cwe/cwe-078" # Command Injection
+        - "external/cwe/cwe-020" # Input Validation
+        - "external/cwe/cwe-022" # Path Traversal
+        - "external/cwe/cwe-094" # Code Injection
+        - "external/cwe/cwe-095" # Code Injection
+        - "external/cwe/cwe-116" # Encoding
+        - "external/cwe/cwe-352" # CSRF
+        - "external/cwe/cwe-601" # Open Redirect
+        - "external/cwe/cwe-918" # SSRF
+
+# Packs to include for additional security rules
+packs:
+  - "codeql/javascript-queries"
+  - "codeql/security-queries"

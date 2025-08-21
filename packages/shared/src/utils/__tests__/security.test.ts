@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { z } from 'zod'
 import {
   sanitizeHtml,
   sanitizeInput,
@@ -322,8 +323,10 @@ describe('Security Utilities', () => {
     })
 
     it('should reject unsafe content by default', () => {
+      // Use a more permissive schema that would pass initial validation but fail security check
+      const PermissiveSchema = z.string().min(1).max(100)
       const maliciousInput = '<script>alert("xss")</script>'
-      const result = validateAndSanitizeInput(maliciousInput, PlayerNameSchema)
+      const result = validateAndSanitizeInput(maliciousInput, PermissiveSchema)
       
       expect(result.success).toBe(false)
       if (!result.success) {

@@ -1,0 +1,425 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run weekly security scans on Mondays at 2 AM UTC
+    - cron: '0 2 * * 1'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  security-audit:
+    name: Security Audit & Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install Dependencies
+        run: |
+          npm ci
+          npm run install:all
+      
+      - name: NPM Audit - Root
+        run: |
+          echo "🔍 Running npm audit on root package..."
+          npm audit --audit-level=moderate --json > audit-root.json || true
+          
+      - name: NPM Audit - Workspaces
+        run: |
+          echo "🔍 Running npm audit on all workspaces..."
+          npm audit --workspaces --audit-level=moderate --json > audit-workspaces.json || true
+      
+      - name: Analyze Audit Results
+        run: |
+          echo "📊 Analyzing audit results..."
+          
+          # Check for high/critical vulnerabilities
+          HIGH_VULNS=$(cat audit-*.json | jq -r '.vulnerabilities // {} | to_entries[] | select(.value.severity == "high" or .value.severity == "critical") | .key' | wc -l)
+          
+          echo "High/Critical vulnerabilities found: $HIGH_VULNS"
+          
+          if [ "$HIGH_VULNS" -gt 0 ]; then
+            echo "❌ Critical security vulnerabilities detected!"
+            cat audit-*.json | jq -r '.vulnerabilities // {} | to_entries[] | select(.value.severity == "high" or .value.severity == "critical") | "\(.key): \(.value.severity) - \(.value.title)"'
+            exit 1
+          else
+            echo "✅ No critical vulnerabilities found"
+          fi
+
+  dependency-check:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'montecarlo'
+          path: '.'
+          format: 'JSON'
+          args: >
+            --enableRetired
+            --enableExperimental
+            --failOnCVSS 7
+            --exclude "**/node_modules/**"
+            --exclude "**/test/**"
+            --exclude "**/__tests__/**"
+      
+      - name: Upload Dependency Check Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: reports/
+
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript-typescript']
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          config-file: ./.github/codeql/codeql-config.yml
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install Dependencies
+        run: |
+          npm ci
+          npm run install:all
+      
+      - name: Build Project
+        run: |
+          npm run build:all
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"
+
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Run GitGuardian Secret Scan
+        uses: GitGuardian/ggshield-action@v1.25.0
+        env:
+          GITHUB_PUSH_BEFORE_SHA: ${{ github.event.before }}
+          GITHUB_PUSH_BASE_SHA: ${{ github.event.base }}
+          GITHUB_PULL_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
+
+  semgrep-scan:
+    name: Semgrep Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Run Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/javascript
+            p/typescript
+            p/nodejs
+            p/react
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+  security-tests:
+    name: Security Test Suite
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install Dependencies
+        run: |
+          npm ci
+          npm run install:all
+      
+      - name: Run Security Tests
+        run: |
+          echo "🧪 Running security-focused test suite..."
+          npm run test:security
+        env:
+          NODE_ENV: test
+      
+      - name: Generate Security Test Report
+        run: |
+          echo "📊 Generating security test coverage report..."
+          npm run test:security:coverage
+      
+      - name: Upload Security Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-test-results
+          path: |
+            coverage/
+            test-results/
+
+  docker-security:
+    name: Docker Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule' # Skip on scheduled runs to save resources
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Build Docker Images
+        run: |
+          # Build game server image
+          docker build -t montecarlo/game-server:security-scan -f apps/game-server/Dockerfile .
+          
+          # Build frontend image
+          docker build -t montecarlo/frontend:security-scan -f vite-app/Dockerfile .
+      
+      - name: Run Trivy Security Scan - Game Server
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'montecarlo/game-server:security-scan'
+          format: 'sarif'
+          output: 'trivy-game-server.sarif'
+      
+      - name: Run Trivy Security Scan - Frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'montecarlo/frontend:security-scan'
+          format: 'sarif'
+          output: 'trivy-frontend.sarif'
+      
+      - name: Upload Trivy Results to GitHub Security Tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-game-server.sarif'
+      
+      - name: Upload Trivy Results to GitHub Security Tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-frontend.sarif'
+
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [security-audit, dependency-check, codeql-analysis, secret-scan, semgrep-scan, security-tests]
+    if: always()
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: security-artifacts/
+      
+      - name: Generate Consolidated Security Report
+        run: |
+          echo "# 🔒 Security Scan Report" > security-report.md
+          echo "**Scan Date:** $(date -u)" >> security-report.md
+          echo "**Repository:** ${{ github.repository }}" >> security-report.md
+          echo "**Branch:** ${{ github.ref_name }}" >> security-report.md
+          echo "**Commit:** ${{ github.sha }}" >> security-report.md
+          echo "" >> security-report.md
+          
+          # Check job statuses
+          echo "## 📊 Scan Results Summary" >> security-report.md
+          echo "" >> security-report.md
+          
+          # Security Audit
+          if [ "${{ needs.security-audit.result }}" == "success" ]; then
+            echo "✅ **NPM Security Audit:** PASSED" >> security-report.md
+          else
+            echo "❌ **NPM Security Audit:** FAILED" >> security-report.md
+          fi
+          
+          # Dependency Check
+          if [ "${{ needs.dependency-check.result }}" == "success" ]; then
+            echo "✅ **OWASP Dependency Check:** PASSED" >> security-report.md
+          else
+            echo "❌ **OWASP Dependency Check:** FAILED" >> security-report.md
+          fi
+          
+          # CodeQL
+          if [ "${{ needs.codeql-analysis.result }}" == "success" ]; then
+            echo "✅ **CodeQL Analysis:** PASSED" >> security-report.md
+          else
+            echo "❌ **CodeQL Analysis:** FAILED" >> security-report.md
+          fi
+          
+          # Secret Scan
+          if [ "${{ needs.secret-scan.result }}" == "success" ]; then
+            echo "✅ **Secret Detection:** PASSED" >> security-report.md
+          else
+            echo "❌ **Secret Detection:** FAILED" >> security-report.md
+          fi
+          
+          # Semgrep
+          if [ "${{ needs.semgrep-scan.result }}" == "success" ]; then
+            echo "✅ **Semgrep Scan:** PASSED" >> security-report.md
+          else
+            echo "❌ **Semgrep Scan:** FAILED" >> security-report.md
+          fi
+          
+          # Security Tests
+          if [ "${{ needs.security-tests.result }}" == "success" ]; then
+            echo "✅ **Security Tests:** PASSED" >> security-report.md
+          else
+            echo "❌ **Security Tests:** FAILED" >> security-report.md
+          fi
+          
+          echo "" >> security-report.md
+          echo "## 🔍 Detailed Results" >> security-report.md
+          echo "" >> security-report.md
+          echo "Detailed scan results and artifacts are available in the GitHub Actions workflow run." >> security-report.md
+          echo "" >> security-report.md
+          echo "### 📋 Action Items" >> security-report.md
+          echo "" >> security-report.md
+          
+          # Check if any critical issues were found
+          FAILED_JOBS=0
+          if [ "${{ needs.security-audit.result }}" != "success" ]; then
+            echo "- 🚨 **Critical:** Review NPM audit findings and update vulnerable dependencies" >> security-report.md
+            FAILED_JOBS=$((FAILED_JOBS + 1))
+          fi
+          
+          if [ "${{ needs.dependency-check.result }}" != "success" ]; then
+            echo "- 🚨 **High:** Address OWASP dependency vulnerabilities (CVSS ≥ 7.0)" >> security-report.md
+            FAILED_JOBS=$((FAILED_JOBS + 1))
+          fi
+          
+          if [ "${{ needs.secret-scan.result }}" != "success" ]; then
+            echo "- 🚨 **Critical:** Remove or secure detected secrets immediately" >> security-report.md
+            FAILED_JOBS=$((FAILED_JOBS + 1))
+          fi
+          
+          if [ "$FAILED_JOBS" -eq 0 ]; then
+            echo "🎉 **No critical security issues detected!**" >> security-report.md
+            echo "" >> security-report.md
+            echo "The application passed all security scans. Continue monitoring for new vulnerabilities." >> security-report.md
+          fi
+          
+          echo "" >> security-report.md
+          echo "---" >> security-report.md
+          echo "*This report was automatically generated by the Security Scan workflow.*" >> security-report.md
+      
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.md
+      
+      - name: Comment Security Report on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('security-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+  security-notification:
+    name: Security Notification
+    runs-on: ubuntu-latest
+    needs: [security-audit, dependency-check, secret-scan]
+    if: always() && (needs.security-audit.result == 'failure' || needs.dependency-check.result == 'failure' || needs.secret-scan.result == 'failure')
+    
+    steps:
+      - name: Send Security Alert
+        uses: 8398a7/action-slack@v3
+        if: env.SLACK_WEBHOOK_URL != ''
+        with:
+          status: custom
+          custom_payload: |
+            {
+              text: "🚨 Critical Security Issues Detected",
+              attachments: [{
+                color: "danger",
+                fields: [{
+                  title: "Repository",
+                  value: "${{ github.repository }}",
+                  short: true
+                }, {
+                  title: "Branch",
+                  value: "${{ github.ref_name }}",
+                  short: true
+                }, {
+                  title: "Workflow",
+                  value: "Security Scan",
+                  short: true
+                }, {
+                  title: "Status",
+                  value: "FAILED - Immediate attention required",
+                  short: true
+                }],
+                actions: [{
+                  type: "button",
+                  text: "View Details",
+                  url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }]
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

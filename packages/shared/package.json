@@ -8,11 +8,15 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "test": "vitest",
+    "test:security": "vitest run src/**/__tests__/*security*.test.ts",
+    "test:security:coverage": "vitest run --coverage src/**/__tests__/*security*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "typescript": "~5.8.3",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "vitest": "^3.2.4"
   }
 }
 

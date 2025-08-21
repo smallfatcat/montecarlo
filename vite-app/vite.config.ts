@@ -1,113 +1,167 @@
-import { defineConfig } from 'vite'
-import path from 'node:path'
-import fs from 'node:fs'
-import { visualizer } from 'rollup-plugin-visualizer'
+import { defineConfig, loadEnv } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
 
-function readVersion(): string {
-  // Try to read from generated VERSION file first
-  const versionPath = path.resolve(__dirname, 'VERSION')
-  try {
-    if (fs.existsSync(versionPath)) {
-      const version = fs.readFileSync(versionPath, 'utf-8').trim()
-      if (version) {
-        return version
-      }
-    }
-  } catch (error) {
-    console.warn('[version] Could not read VERSION file:', error)
-  }
+// https://vitejs.dev/config/
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
   
-  // Fallback to package.json
-  const pkgPath = path.resolve(__dirname, 'package.json')
-  try {
-    const raw = fs.readFileSync(pkgPath, 'utf-8')
-    const json = JSON.parse(raw) as { version?: string }
-    return json.version ?? '0.0.0'
-  } catch (error) {
-    console.warn('[version] Could not read package.json:', error)
-    return '0.0.0'
-  }
-}
-
-export default defineConfig(({ mode }) => ({
-  base: mode === 'development' ? '/' : '/montecarlo/',
-  server: {
-    host: '0.0.0.0',
-    port: 5173, // Changed to 8081 which is allowed by Cloudflare proxy
-    watch: {
-      usePolling: true,
-      interval: 200,
+  return {
+    plugins: [react()],
+    
+    // Path resolution
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+        'convex-api': path.resolve(__dirname, '../convex/_generated/api'),
+        'convex-types': path.resolve(__dirname, '../convex/_generated/dataModel'),
+      },
     },
-    allowedHosts: [
-      '148.230.118.4',
-      'smallfatcat-dev.org',
-      'www.smallfatcat-dev.org',
-      'localhost',
-      '127.0.0.1',
-      '0.0.0.0',
-    ],
-  },
-  build: {
-    treeshake: true,
-    rollupOptions: {
-      onwarn(warning, warn) {
-        // Suppress framer-motion "use client" warnings
-        if (warning.code === 'MODULE_LEVEL_DIRECTIVE' && warning.message.includes('use client')) {
-          return
+    
+    // Define global constants
+    define: {
+      __DEV__: mode === 'development',
+    },
+    
+    // Development server configuration
+    server: {
+      port: 5173,
+      host: true,
+      headers: {
+        // Content Security Policy for development
+        'Content-Security-Policy': mode === 'development' 
+          ? `
+            default-src 'self';
+            script-src 'self' 'unsafe-eval' 'unsafe-inline';
+            style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+            img-src 'self' data: blob:;
+            font-src 'self' data: https://fonts.gstatic.com;
+            connect-src 'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* https://*.smallfatcat-dev.org wss://*.smallfatcat-dev.org https://convex.smallfatcat-dev.org wss://convex.smallfatcat-dev.org;
+            object-src 'none';
+            media-src 'self';
+            frame-src 'none';
+            worker-src 'self' blob:;
+            child-src 'self';
+            form-action 'self';
+            base-uri 'self';
+            manifest-src 'self';
+          `.replace(/\s+/g, ' ').trim()
+          : `
+            default-src 'self';
+            script-src 'self';
+            style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+            img-src 'self' data: blob:;
+            font-src 'self' data: https://fonts.gstatic.com;
+            connect-src 'self' wss: https: https://*.smallfatcat-dev.org wss://*.smallfatcat-dev.org;
+            object-src 'none';
+            media-src 'self';
+            frame-src 'none';
+            worker-src 'self' blob:;
+            child-src 'self';
+            form-action 'self';
+            base-uri 'self';
+            manifest-src 'self';
+            upgrade-insecure-requests;
+          `.replace(/\s+/g, ' ').trim(),
+        
+        // Additional security headers
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+      }
+    },
+    
+    // Build configuration
+    build: {
+      // Security-focused build settings
+      target: 'esnext',
+      sourcemap: mode === 'development',
+      
+      rollupOptions: {
+        output: {
+          // Secure file naming to prevent information disclosure
+          entryFileNames: 'assets/[name]-[hash].js',
+          chunkFileNames: 'assets/[name]-[hash].js',
+          assetFileNames: 'assets/[name]-[hash].[ext]'
         }
-        // Call the default warn function for other warnings
-        warn(warning)
+      },
+      
+      // Security optimizations
+      minify: mode === 'production',
+      
+      // Remove console logs and debugger statements in production
+      terserOptions: mode === 'production' ? {
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+        },
+      } : undefined,
+    },
+    
+    // Environment variable configuration
+    envPrefix: ['VITE_'],
+    
+    // Preview server configuration (for production builds)
+    preview: {
+      port: 4173,
+      headers: {
+        // Production CSP headers
+        'Content-Security-Policy': `
+          default-src 'self';
+          script-src 'self';
+          style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+          img-src 'self' data: blob:;
+          font-src 'self' data: https://fonts.gstatic.com;
+          connect-src 'self' wss: https: https://*.smallfatcat-dev.org wss://*.smallfatcat-dev.org;
+          object-src 'none';
+          media-src 'self';
+          frame-src 'none';
+          worker-src 'self' blob:;
+          child-src 'self';
+          form-action 'self';
+          base-uri 'self';
+          manifest-src 'self';
+          upgrade-insecure-requests;
+        `.replace(/\s+/g, ' ').trim(),
+        
+        // Additional security headers for production
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+      }
+    },
+    
+    // Test configuration
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: './src/test/setup.ts',
+      css: true,
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'json', 'html'],
+        exclude: [
+          'node_modules/',
+          'src/test/',
+          '**/*.d.ts',
+          '**/*.config.*',
+          '**/build/**',
+          '**/dist/**'
+        ],
+        thresholds: {
+          global: {
+            branches: 80,
+            functions: 80,
+            lines: 80,
+            statements: 80
+          }
+        }
       }
     }
-  },
-  resolve: {
-    alias: {
-      'app-convex': path.resolve(__dirname, '../convex'),
-    },
-  },
-  plugins: [
-    {
-      name: 'restart-on-package-json-change',
-      apply: 'serve',
-      configureServer(server) {
-        const pkgPath = path.resolve(__dirname, 'package.json')
-        const versionPath = path.resolve(__dirname, 'VERSION')
-        server.watcher.add(pkgPath)
-        server.watcher.add(versionPath)
-        const isPkg = (file: string) => path.basename(file) === 'package.json'
-        const isVersion = (file: string) => path.basename(file) === 'VERSION'
-        server.watcher.on('all', (_event, file) => {
-          if (file && (isPkg(file) || isVersion(file))) {
-            // eslint-disable-next-line no-console
-            console.log('[version-watch] Detected package.json or VERSION change; restarting Vite dev server...')
-            server.restart()
-          }
-        })
-      },
-      handleHotUpdate(ctx) {
-        if (path.basename(ctx.file) === 'package.json') {
-          // eslint-disable-next-line no-console
-          console.log('[version-watch] HMR package.json change; requesting restart...')
-          ctx.server.restart()
-          return []
-        }
-      }
-    },
-    ...(mode === 'analyze'
-      ? [
-          visualizer({
-            filename: 'dist/stats.html',
-            gzipSize: true,
-            brotliSize: true,
-            template: 'treemap',
-            open: false,
-          }),
-        ]
-      : []),
-  ],
-  define: {
-    __APP_VERSION__: JSON.stringify(readVersion()),
-  },
-}))
-
-
+  }
+})

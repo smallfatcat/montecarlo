@@ -8,10 +8,17 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "test": "vitest",
+    "test:security": "vitest run src/**/__tests__/*security*.test.ts",
+    "test:security:coverage": "vitest run --coverage src/**/__tests__/*security*.test.ts",
+    "test:integration": "vitest run src/**/__tests__/integration/*.test.ts",
+    "test:performance": "vitest run src/**/__tests__/performance/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "typescript": "~5.8.3"
+    "typescript": "~5.8.3",
+    "vitest": "^3.2.4",
+    "fast-check": "^4.2.0"
   },
   "dependencies": {
     "xstate": "^5.20.2"

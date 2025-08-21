@@ -93,21 +93,21 @@ export const ActionTypeSchema = z.enum(['fold', 'check', 'call', 'bet', 'raise']
 export const PokerActionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('fold')
-  }),
+  }).strict(),
   z.object({
     type: z.literal('check')
-  }),
+  }).strict(),
   z.object({
     type: z.literal('call')
-  }),
+  }).strict(),
   z.object({
     type: z.literal('bet'),
     amount: BetAmountSchema
-  }),
+  }).strict(),
   z.object({
     type: z.literal('raise'),
     amount: BetAmountSchema
-  })
+  }).strict()
 ])
 
 /**
