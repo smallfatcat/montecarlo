@@ -1,4 +1,6 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { loadServerConfig } from './config/env.js';
 import { createHttpServer } from './server/http.js';
 import { createSocketServer } from './server/socket.js';
@@ -7,6 +9,10 @@ import { ConvexPublisher } from './ingest/convexPublisher.js';
 import { StateMachineAdapter } from './ingest/stateMachineAdapter.js';
 import { createServerRuntimeTable } from './tables/serverRuntimeTable.js';
 import { InMemoryTokenStore } from './identity/tokenStore.js';
+// Load .env file from the game-server directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+config({ path: resolve(__dirname, '../.env') });
 async function buildServer() {
     const cfg = loadServerConfig();
     const app = createHttpServer(cfg);
@@ -20,6 +26,12 @@ async function buildServer() {
     const stateMachineAdapters = new Map();
     // Include /http prefix for self-hosted Convex HTTP routes
     const convex = new ConvexPublisher({ baseUrl: (process.env.CONVEX_INGEST_URL || '').replace(/\/$/, '') + '/http', secret: process.env.INSTANCE_SECRET });
+    // Debug environment variables
+    console.log('[DEBUG] Environment variables loaded:');
+    console.log('[DEBUG] CONVEX_INGEST_URL:', process.env.CONVEX_INGEST_URL);
+    console.log('[DEBUG] INSTANCE_SECRET:', process.env.INSTANCE_SECRET ? `${process.env.INSTANCE_SECRET.substring(0, 8)}...` : 'undefined');
+    console.log('[DEBUG] Convex publisher enabled:', convex.enabled);
+    console.log('[DEBUG] Convex base URL:', (process.env.CONVEX_INGEST_URL || '').replace(/\/$/, '') + '/http');
     function getTable(tableId) {
         let t = tables.get(tableId);
         if (!t) {
@@ -49,14 +61,14 @@ async function buildServer() {
                             playerToken: p.playerToken,
                             playerName: p.playerName
                         });
-                        return convex.seat?.(p) ?? Promise.resolve();
+                        return convex.seat?.({ ...p, tableId }) ?? Promise.resolve();
                     },
                     unseat: (p) => {
                         // Capture seat state change
                         stateMachineAdapter.captureSeatStateChange(p.seatIndex, 'unseated', {
                             playerToken: p.playerToken
                         });
-                        return convex.unseat?.(p) ?? Promise.resolve();
+                        return convex.unseat?.({ ...p, tableId }) ?? Promise.resolve();
                     },
                     handEnded: (p) => {
                         // Capture final game state
