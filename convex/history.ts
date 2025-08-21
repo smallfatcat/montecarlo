@@ -56,7 +56,7 @@ export const listMyHands = query({
 });
 
 export const listRecentHands = query({
-  args: { paginationOpts: paginationOptsValidator },
+  args: {},
   returns: v.object({
     page: v.array(
       v.object({
@@ -67,29 +67,52 @@ export const listRecentHands = query({
         seed: v.number(),
         startedAt: v.number(),
         endedAt: v.optional(v.number()),
+        buttonIndex: v.number(),
+        actionsCount: v.number(),
       }),
     ),
-    isDone: v.boolean(),
-    continueCursor: v.union(v.string(), v.null()),
   }),
   handler: async (ctx, args) => {
     const byTableSeq = ctx.db
       .query("hands")
       .withIndex("by_table_and_seq", (q) => q)
       .order("desc");
-    const page = await byTableSeq.take(args.paginationOpts.numItems ?? 20);
+    
+    // Get all hands instead of limiting with pagination
+    const allHands = [];
+    for await (const hand of byTableSeq) {
+      allHands.push(hand);
+    }
+    
+    // Get actions count for each hand
+    const handsWithActionsCount = await Promise.all(
+      allHands.map(async (h) => {
+        let actionsCount = 0;
+        for await (const action of ctx.db
+          .query("actions")
+          .withIndex("by_hand_and_order", (q) => q.eq("handId", h._id))) {
+          actionsCount++;
+        }
+        
+        return {
+          _id: h._id,
+          _creationTime: h._creationTime,
+          tableId: h.tableId,
+          handSeq: h.handSeq,
+          seed: h.seed,
+          startedAt: h.startedAt,
+          endedAt: h.endedAt,
+          buttonIndex: h.buttonIndex,
+          actionsCount,
+        };
+      })
+    );
+    
+    // Sort by actions count in descending order (most actions first)
+    const sortedHands = handsWithActionsCount.sort((a, b) => b.actionsCount - a.actionsCount);
+    
     return {
-      page: page.map((h) => ({
-        _id: h._id,
-        _creationTime: h._creationTime,
-        tableId: h.tableId,
-        handSeq: h.handSeq,
-        seed: h.seed,
-        startedAt: h.startedAt,
-        endedAt: h.endedAt,
-      })),
-      isDone: true,
-      continueCursor: null,
+      page: sortedHands,
     };
   },
 });

@@ -9,9 +9,7 @@ export function PokerHistoryPage() {
   const [replayHandId, setReplayHandId] = useState<Id<'hands'> | null>(null)
   
   // Fetch recent hands from Convex
-  const recentHands = useQuery(api.history.listRecentHands, { 
-    paginationOpts: { numItems: 50, cursor: null } 
-  })
+  const recentHands = useQuery(api.history.listRecentHands, {})
   
   // Fetch selected hand details
   const handDetail = useQuery(
@@ -90,7 +88,7 @@ export function PokerHistoryPage() {
             fontWeight: 600, 
             marginBottom: 20 
           }}>
-            Recent Hands ({recentHands?.page?.length || 0})
+            All Hands ({recentHands?.page?.length || 0})
           </h2>
           
           <div style={{ 
@@ -125,7 +123,7 @@ export function PokerHistoryPage() {
                     Hand #{hand.handSeq} • {formatTime(hand.startedAt)}
                   </div>
                   <div style={{ fontSize: 14, opacity: 0.8 }}>
-                    Button: Seat {hand.buttonIndex} • Status: {hand.endedAt ? 'Completed' : 'In Progress'}
+                    Button: Seat {hand.buttonIndex} • Status: {hand.endedAt ? 'Completed' : 'In Progress'} • Actions: {hand.actionsCount || 0}
                   </div>
                 </div>
                 
