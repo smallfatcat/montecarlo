@@ -3,7 +3,6 @@ import { useQuery } from 'convex/react';
 import { api } from 'convex-api';
 import type { Id } from 'convex-types';
 import { PokerTableHorseshoeView } from './PokerTableHorseshoeView';
-import { Button } from '../components/Button';
 import type { Card } from '../../blackjack/types';
 import type { PokerTableState } from '../../poker/types';
 
@@ -151,9 +150,8 @@ export function HandReplay({ handId, onClose }: HandReplayProps) {
     }
   };
 
-  const formatTimestamp = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString();
-  };
+  // Previously used to render start/end timestamps under the progress bar
+  // Removed from UI to reduce clutter but keeping utility around if needed in future.
 
   const getStepDescription = (snapshot: GameStateSnapshot) => {
     const trigger = snapshot.trigger || 'state_change';
@@ -200,15 +198,16 @@ export function HandReplay({ handId, onClose }: HandReplayProps) {
   }
 
   return (
-    <div className="flex flex-col" style={{ 
-      background: 'var(--color-poker-table-light)',
-      borderRadius: '12px',
-      border: '1px solid var(--color-poker-table-border)'
+    <div id="replay-root" className="flex flex-col" style={{ 
+      background: 'transparent',
+      borderRadius: 0,
+      border: 'none'
     }}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 rounded-t-lg" style={{
+      <div className="flex items-center justify-between p-4" style={{
         background: 'var(--color-poker-wood)',
-        borderBottom: '1px solid var(--color-poker-table-border)',
+        border: '1px solid var(--color-poker-table-border)',
+        borderRadius: 12,
         color: 'var(--color-neutral-50)'
       }}>
         <div>
@@ -217,78 +216,55 @@ export function HandReplay({ handId, onClose }: HandReplayProps) {
             Step {currentStep + 1} of {snapshots.length} • {getStepDescription(currentSnapshot)}
           </p>
         </div>
-        {onClose && (
-          <Button onClick={onClose} variant="danger" size="sm">
-            Close Replay
-          </Button>
-        )}
-      </div>
-
-      {/* Replay Controls */}
-      <div className="flex items-center justify-center gap-2 p-4 border-b" style={{
-        background: 'var(--color-poker-table-light)',
-        borderBottom: '1px solid var(--color-poker-table-border)'
-      }}>
-        <Button onClick={goToStart} disabled={currentStep === 0} variant="outline" size="sm">
-          ⏮️ Start
-        </Button>
-        <Button onClick={goBack} disabled={currentStep === 0} variant="outline" size="sm">
-          ⏪ Previous
-        </Button>
-        
-        <Button onClick={togglePlay} variant={isPlaying ? "danger" : "primary"} size="sm">
-          {isPlaying ? "⏸️ Pause" : "▶️ Play"}
-        </Button>
-        
-        <Button onClick={goForward} disabled={currentStep === snapshots.length - 1} variant="outline" size="sm">
-          ⏩ Next
-        </Button>
-        <Button onClick={goToEnd} disabled={currentStep === snapshots.length - 1} variant="outline" size="sm">
-          ⏭️ End
-        </Button>
-
-        <div className="ml-4 flex items-center gap-2">
-          <label className="text-sm" style={{ color: 'var(--color-neutral-200)' }}>Speed:</label>
-          <select 
-            value={playbackSpeed} 
-            onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
-            className="text-sm border rounded px-2 py-1"
-            style={{
-              background: 'var(--color-poker-table-light)',
-              border: '1px solid var(--color-poker-table-border)',
-              color: 'var(--color-neutral-200)'
-            }}
-          >
-            <option value={500}>0.5s</option>
-            <option value={1000}>1s</option>
-            <option value={2000}>2s</option>
-            <option value={3000}>3s</option>
-          </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button className="as-button" onClick={goToStart} disabled={currentStep === 0}>
+            ⏮️ Start
+          </button>
+          <button className="as-button" onClick={goBack} disabled={currentStep === 0}>
+            ⏪ Previous
+          </button>
+          <button className="as-button" onClick={togglePlay}>
+            {isPlaying ? "⏸️ Pause" : "▶️ Play"}
+          </button>
+          <button className="as-button" onClick={goForward} disabled={currentStep === snapshots.length - 1}>
+            ⏩ Next
+          </button>
+          <button className="as-button" onClick={goToEnd} disabled={currentStep === snapshots.length - 1}>
+            ⏭️ End
+          </button>
+          <div className="ml-4" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <label className="text-sm" style={{ color: 'var(--color-neutral-200)' }}>Speed:</label>
+            <select 
+              value={playbackSpeed} 
+              onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
+              className="text-sm border rounded px-2 py-1"
+              style={{
+                background: 'var(--color-poker-table-light)',
+                border: '1px solid var(--color-poker-table-border)',
+                color: 'var(--color-neutral-200)'
+              }}
+            >
+              <option value={500}>0.5s</option>
+              <option value={1000}>1s</option>
+              <option value={2000}>2s</option>
+              <option value={3000}>3s</option>
+            </select>
+          </div>
+          {onClose && (
+            <button className="as-button" onClick={onClose}>
+              Close Replay
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="px-4 py-2" style={{ background: 'var(--color-poker-table-light)' }}>
-        <div className="w-full rounded-full h-2" style={{ background: 'var(--color-poker-table-light)' }}>
-          <div 
-            className="h-2 rounded-full transition-all duration-300"
-            style={{ 
-              width: `${((currentStep + 1) / snapshots.length) * 100}%`,
-              background: 'var(--color-poker-green)'
-            }}
-          />
-        </div>
-        <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--color-neutral-300)' }}>
-          <span>{formatTimestamp(snapshots[0]?.timestamp || 0)}</span>
-          <span>{formatTimestamp(snapshots[snapshots.length - 1]?.timestamp || 0)}</span>
-        </div>
-      </div>
+      {/* Replay Controls (moved to header) */}
+
+      {/* Progress Bar removed for cleaner UI */}
 
       {/* Poker Table */}
-      <div className="p-4" style={{ 
-        background: 'var(--color-poker-table-light)', 
-        borderRadius: '12px',
-        border: '1px solid var(--color-poker-table-border)'
+      <div id="replay-table" className="p-4" style={{ 
+        background: 'var(--color-poker-table-light)'
       }}>
         {currentPokerState ? (
           <PokerTableHorseshoeView 
@@ -321,7 +297,7 @@ export function HandReplay({ handId, onClose }: HandReplayProps) {
       </div>
 
       {/* Step Details */}
-      <div className="p-4 border-t rounded-b-lg" style={{
+      <div id="replay-details" className="p-4 border-t rounded-b-lg" style={{
         background: 'var(--color-poker-wood)',
         borderTop: '1px solid var(--color-poker-table-border)',
         color: 'var(--color-neutral-200)'

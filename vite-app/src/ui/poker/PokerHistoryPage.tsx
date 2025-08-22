@@ -40,34 +40,28 @@ export function PokerHistoryPage() {
   }
 
   return (
-    <div style={{ 
+    <div id="history-page" style={{ 
       padding: 24, 
       maxWidth: 1800, 
       margin: '0 auto',
       color: 'white',
-      background: 'var(--color-neutral-800)',
       minHeight: '100vh'
     }}>
-      <h1 style={{ 
-        fontSize: 32, 
-        fontWeight: 700, 
-        marginBottom: 32,
-        textAlign: 'center',
-        background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent'
-      }}>
-        Poker Hand History
-      </h1>
-
-      {/* Hand Replay Section - Inline on page */}
-      {replayHandId && (
-        <div style={{
-          marginBottom: 24,
-          width: '100%',
-          maxWidth: '1600px',
-          margin: '0 auto 24px auto'
+      <div id="history-title" style={{ marginBottom: 16 }}>
+        <h1 style={{ 
+          fontSize: 32, 
+          fontWeight: 700, 
+          margin: 0,
+          textAlign: 'center',
+          color: 'var(--text)'
         }}>
+          Poker Hand History
+        </h1>
+      </div>
+
+      {/* Hand Replay Section */}
+      {replayHandId && (
+        <div id="history-replay" style={{ margin: '12px 0 24px 0' }}>
           <HandReplay 
             handId={replayHandId} 
             onClose={() => setReplayHandId(null)}
@@ -75,7 +69,7 @@ export function PokerHistoryPage() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gap: 24 }}>
+      <div id="history-content" style={{ display: 'grid', gap: 24 }}>
         {/* Recent hands list */}
         <div style={{ 
           border: '1px solid rgba(255,255,255,0.14)', 
@@ -129,26 +123,10 @@ export function PokerHistoryPage() {
                 
                 <div style={{ textAlign: 'right' }}>
                   <button
+                    className="as-button"
                     onClick={(e) => {
                       e.stopPropagation()
                       setReplayHandId(hand._id)
-                    }}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#667eea',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      fontSize: 14,
-                      fontWeight: 500,
-                      transition: 'background-color 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#5a6fd8'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#667eea'
                     }}
                   >
                     📺 Replay
@@ -177,22 +155,7 @@ export function PokerHistoryPage() {
                 <h3 style={{ fontSize: 20, fontWeight: 600 }}>
                   Hand #{handDetail.hand.handSeq} Details
                 </h3>
-                <button
-                  onClick={() => setReplayHandId(handDetail.hand._id)}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#667eea',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 14,
-                    fontWeight: 500,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8
-                  }}
-                >
+                <button className="as-button" onClick={() => setReplayHandId(handDetail.hand._id)}>
                   📺 Full Replay
                 </button>
               </div>

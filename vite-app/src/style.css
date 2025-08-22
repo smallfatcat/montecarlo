@@ -356,7 +356,7 @@ button:disabled {
 }
 
 /* Anchor buttons: make links look and behave like buttons while preserving link behavior */
-a.as-button {
+a.as-button, button.as-button {
   display: inline-block;
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.14);
@@ -370,17 +370,19 @@ a.as-button {
   cursor: pointer;
   transition: border-color 0.2s, background-color 0.2s, color 0.2s, transform 0.15s ease;
 }
-a.as-button:hover {
+a.as-button:hover, button.as-button:hover {
   border-color: var(--accent);
   background-color: rgba(100, 216, 203, 0.12);
   color: var(--text);
 }
 a.as-button:focus,
-a.as-button:focus-visible {
+a.as-button:focus-visible,
+button.as-button:focus,
+button.as-button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-a.as-button[aria-disabled="true"] {
+a.as-button[aria-disabled="true"], button.as-button[disabled] {
   pointer-events: none;
   background-color: rgba(255,255,255,0.06);
   color: var(--muted);

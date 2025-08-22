@@ -2,7 +2,7 @@ import { } from 'react'
 // import { motion } from 'framer-motion'
 import type { PokerTableState } from '../../poker/types'
 import type { } from '../../poker/types'
-import { Button, Input, Badge, Card } from '../components'
+import { Input, Badge, Card } from '../components'
 import { CardBackCycler } from '../components/CardBackCycler'
 import './PokerTableHorseshoeControls.css'
 
@@ -84,16 +84,16 @@ export function PokerTableHorseshoeControls(props: {
       className={`poker-controlbar poker-controlbar--${layoutVariant}`}
       style={baseStyle}
     >
-      <Button variant="primary" size="sm" onClick={() => onDealNext()} disabled={table.status === 'in_hand' || table.gameOver}>
+      <button className="as-button" onClick={() => onDealNext()} disabled={table.status === 'in_hand' || table.gameOver}>
         Deal
-      </Button>
+      </button>
       
       {layoutVariant === 'toolbar' && <CardBackCycler />}
       
       {onResetGame && (
-        <Button variant="secondary" size="sm" onClick={() => onResetGame()}>
+        <button className="as-button" onClick={() => onResetGame()}>
           Reset Game
-        </Button>
+        </button>
       )}
       
       <label className="control-label">
@@ -138,13 +138,9 @@ export function PokerTableHorseshoeControls(props: {
       )}
       
       {onLeaveSeat && mySeatIndex != null && (
-        <Button 
-          variant="danger"
-          size="sm"
-          onClick={onLeaveSeat}
-        >
+        <button className="as-button" onClick={onLeaveSeat}>
           Leave Seat
-        </Button>
+        </button>
       )}
       <label title="Hide all hole cards until showdown (except your own)">
         <input type="checkbox" checked={hideHoleCardsUntilShowdown} onChange={(e) => onToggleHideHoleCards(e.target.checked)} />
@@ -160,7 +156,7 @@ export function PokerTableHorseshoeControls(props: {
         <a
           className="as-button"
           href="#poker-history"
-          onClick={(e) => { try { onOpenHistory?.() } catch {} }}
+          onClick={() => { try { onOpenHistory?.() } catch {} }}
         >
           Open History
         </a>
@@ -169,7 +165,7 @@ export function PokerTableHorseshoeControls(props: {
         <a
           className="as-button"
           href="#lobby"
-          onClick={(e) => { try { props.onOpenLobby?.() } catch {} }}
+          onClick={() => { try { props.onOpenLobby?.() } catch {} }}
         >
           Back to Lobby
         </a>
@@ -177,9 +173,9 @@ export function PokerTableHorseshoeControls(props: {
       {reviewInfo && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: layoutVariant === 'toolbar' ? 16 : 0 }}>
           <span style={{ opacity: 0.85 }}>Review Hand #{reviewInfo.handId} • Step {reviewInfo.step}/{reviewInfo.total}</span>
-          <button onClick={onReviewPrev}>&laquo; Prev</button>
-          <button onClick={onReviewNext}>Next &raquo;</button>
-          <button onClick={onEndReview}>Exit Review</button>
+          <button className="as-button" onClick={onReviewPrev}>&laquo; Prev</button>
+          <button className="as-button" onClick={onReviewNext}>Next &raquo;</button>
+          <button className="as-button" onClick={onEndReview}>Exit Review</button>
         </div>
       )}
       {/* Removed duplicate Leave Seat button at bottom */}
