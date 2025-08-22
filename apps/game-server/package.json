@@ -5,11 +5,11 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "NODE_OPTIONS=\"--require ./load-env.cjs\" tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
+    "start": "NODE_OPTIONS=\"--require ./load-env.cjs\" node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev:client": "tsx src/dev/client.ts"
+    "dev:client": "NODE_OPTIONS=\"--require ./load-env.cjs\" tsx src/dev/client.ts"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",

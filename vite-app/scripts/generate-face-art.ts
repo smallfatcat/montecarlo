@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import 'dotenv/config'
 
 // Minimal Replicate API client via fetch
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN

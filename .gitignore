@@ -156,3 +156,4 @@ vite-app/public/cardback/*.png
 
 # Convex self-hosted server
 convex-self-hosted/
+apps/game-server/.env
