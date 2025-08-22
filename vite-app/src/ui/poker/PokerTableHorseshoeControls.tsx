@@ -156,8 +156,24 @@ export function PokerTableHorseshoeControls(props: {
       {layoutVariant === 'toolbar' && <span className="control-separator" />}
       {/* Removed layout editing controls and export/reset layout buttons */}
       {layoutVariant === 'toolbar' && <span className="control-separator" />}
-      {onOpenHistory && <Button onClick={onOpenHistory}>Open History</Button>}
-      {props.onOpenLobby && <Button onClick={props.onOpenLobby}>Back to Lobby</Button>}
+      {onOpenHistory && (
+        <a
+          className="as-button"
+          href="#poker-history"
+          onClick={(e) => { try { onOpenHistory?.() } catch {} }}
+        >
+          Open History
+        </a>
+      )}
+      {props.onOpenLobby && (
+        <a
+          className="as-button"
+          href="#lobby"
+          onClick={(e) => { try { props.onOpenLobby?.() } catch {} }}
+        >
+          Back to Lobby
+        </a>
+      )}
       {reviewInfo && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: layoutVariant === 'toolbar' ? 16 : 0 }}>
           <span style={{ opacity: 0.85 }}>Review Hand #{reviewInfo.handId} • Step {reviewInfo.step}/{reviewInfo.total}</span>

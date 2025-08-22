@@ -109,8 +109,8 @@ export function PokerLobby() {
     })
   }
 
-  function joinTable(id: string) {
-    try { window.location.hash = `#poker/${id}` } catch {}
+  function buildTableHref(id: string) {
+    return `#poker/${id}`
   }
 
   return (
@@ -158,7 +158,11 @@ export function PokerLobby() {
               </div>
             )}
             <div style={{ marginTop: 12 }}>
-              <button onClick={() => joinTable(t.tableId)} disabled={!identified}>Join</button>
+              {identified ? (
+                <a className="as-button" href={buildTableHref(t.tableId)}>Join</a>
+              ) : (
+                <a className="as-button" aria-disabled="true">Join</a>
+              )}
             </div>
           </div>
         ))}
